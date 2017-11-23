@@ -1,0 +1,3 @@
+[flake8]
+exclude = bin,include,lib,man
+max-line-length = 120

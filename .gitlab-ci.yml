@@ -1,0 +1,18 @@
+image: jfloff/alpine-python:3.4
+
+stages:
+  - test
+  - build
+  - deploy
+
+lint_python:
+  stage: test
+  script:
+    - pip install -r requirements.txt
+    - flake8 . # this also runs pydocstyle linting as a plugin of flake8 (see requirements.txt)
+
+test_python:
+  stage: test
+  script:
+    - pip install -r requirements.txt
+    - pytest

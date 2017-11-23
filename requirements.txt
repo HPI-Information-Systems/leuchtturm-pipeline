@@ -1,0 +1,7 @@
+# linting
+flake8
+flake8_docstrings
+
+#testing
+pytest
+pytest-gitignore # excludes gitignored files from pytest scope
