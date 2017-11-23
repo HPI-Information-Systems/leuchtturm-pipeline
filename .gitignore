@@ -1,6 +1,9 @@
 # Source directory for email raw text
 mails*/
 
+# Text Concat result file
+txtfiles.txt
+
 # NER result files
 results*.csv
 
