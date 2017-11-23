@@ -39,7 +39,7 @@ class FileLister():
         """Given ending and source dir, dump a list of all matching files in source dir as json objects."""
         found_files = self.find_files_in_dir(ending, source_dir)
 
-        with open(target_dir + '/txtfiles.txt', 'w') as outfile:
+        with open(target_dir + 'example-txts/txtfiles.txt', 'w') as outfile:
             for f in found_files:
                 with open(f) as infile:
                     json_string = self.parse_file_to_json(infile)
