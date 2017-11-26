@@ -35,10 +35,6 @@ class FileLister(luigi.Task):
 
         return files
 
-    def parse_file_to_json(self, text):
-        """Encode file as json string."""
-        return json.dumps({"raw": text}, ensure_ascii=False)
-
     def list_files(self, ending):
         """Given ending and source dir, dump a list of all matching files in source dir as json objects."""
         found_files = self.find_files_in_dir(ending)
@@ -46,10 +42,15 @@ class FileLister(luigi.Task):
         with io.open(self.output().path, 'w', encoding='utf8') as outfile:
             for f in found_files:
                 with io.open(f, 'r', encoding='utf8') as infile:
-                    outfile.write(self.parse_file_to_json(infile.read()) + '\n')
+                    outfile.write(
+                        json.dumps({"doc_id": os.path.basename(f).replace('.txt', ''),
+                                    "raw": infile.read()},
+                                   ensure_ascii=False) +
+                        '\n')
 
     def output(self):
         """File the list of json objects in a txtfiles textfile."""
+        # replace LocalTarget with HdfsTarget to make it run on Cluster
         return luigi.LocalTarget(self.target_dir +
                                  DATETIMESTAMP +
                                  '_txtfiles.txt')
