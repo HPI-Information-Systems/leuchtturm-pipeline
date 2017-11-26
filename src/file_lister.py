@@ -4,9 +4,11 @@
 import os
 import json
 import luigi
+import io
+from datetime import datetime
 
-SOURCE_DIR = "example-txts"
-TARGET_DIR = "example-txts"
+
+DATETIMESTAMP = datetime.now().strftime('%Y-%m-%d_%H:%M')
 
 
 class FileLister(luigi.Task):
@@ -19,40 +21,39 @@ class FileLister(luigi.Task):
     * dump to one list in file on given dir
     """
 
-    def find_files_in_dir(self, ending, source_dir):
+    source_dir = luigi.Parameter(default="./../tests/example-txts/")
+    target_dir = luigi.Parameter(default="./../tests/example-txts/")
+
+    def find_files_in_dir(self, ending):
         """Given ending and path to dir as a string, return list of filenames."""
-        directory = os.fsencode(source_dir)
         files = []
 
-        for f in os.listdir(directory):
+        for f in os.listdir(os.fsencode(self.source_dir)):
             filename = os.fsdecode(f)
             if filename.endswith(ending):
-                files.append(filename)
+                files.append(os.path.join(self.source_dir, filename))
 
         return files
 
-    def parse_file_to_json(self, file):
+    def parse_file_to_json(self, text):
         """Encode file as json string."""
-        dict_string = "{'raw':'"
-        dict_string += file.read()
-        dict_string += "'}"
-        json_string = json.dumps(dict_string)
-        return json_string
+        return json.dumps({"raw": text}, ensure_ascii=False)
 
-    def list_files(self, ending, source_dir, target_dir):
+    def list_files(self, ending):
         """Given ending and source dir, dump a list of all matching files in source dir as json objects."""
-        found_files = self.find_files_in_dir(ending, source_dir)
+        found_files = self.find_files_in_dir(ending)
 
-        with open(target_dir + '/txtfiles.txt', 'w') as outfile:
+        with io.open(self.output().path, 'w', encoding='utf8') as outfile:
             for f in found_files:
-                with open(f) as infile:
-                    json_string = self.parse_file_to_json(infile)
-                    outfile.write(json_string + '\n')
+                with io.open(f, 'r', encoding='utf8') as infile:
+                    outfile.write(self.parse_file_to_json(infile.read()) + '\n')
 
     def output(self):
         """File the list of json objects in a txtfiles textfile."""
-        return luigi.LocalTarget(TARGET_DIR + '/txtfiles.txt')
+        return luigi.LocalTarget(self.target_dir +
+                                 DATETIMESTAMP +
+                                 '_txtfiles.txt')
 
     def run(self):
         """Run the listing in the Luigi Task."""
-        self.list_files('.txt', SOURCE_DIR, TARGET_DIR)
+        self.list_files('.txt')
