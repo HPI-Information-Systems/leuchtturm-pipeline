@@ -76,7 +76,7 @@ class EnronFooterRemover(luigi.Task):
                                  '_txtfileswofooter.txt')
 
     def run(self):
-        """Replace footer with empty string."""
+        """Execute footer removal."""
         sc = SparkContext()
         # data = sc.textFile(self.input().path)
         data = open(self.input().path).read().splitlines()
@@ -86,8 +86,9 @@ class EnronFooterRemover(luigi.Task):
             for mail in result:
                 outfile.write("%s\n" % mail)
         sc.stop()
- 
+
     def remove_footer(self, input):
+        """Replace footer with empty string."""
         dict = json.loads(input)
         dict['body'] = dict['full_body'].replace(self.footer, '')
         return json.dumps(dict, ensure_ascii=False)
