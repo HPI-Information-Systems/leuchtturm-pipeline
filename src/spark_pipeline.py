@@ -111,7 +111,6 @@ class LanguageDetector(luigi.Task):
 
     def detect_language(self, input):
         """Add language to each entry."""
-
         dict = json.loads(input)
         dict['lang'] = detect(dict['full_body'])
         return json.dumps(dict, ensure_ascii=False)
@@ -162,7 +161,6 @@ class MetadataExtractor(luigi.Task):
 
     def extract_metadata(self, input):
         """Extract meta data of each email."""
-
         dict = json.loads(input)
         message = email.message_from_string(dict["full_body"])
         for metainfo in message.keys():
