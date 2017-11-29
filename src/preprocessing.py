@@ -81,6 +81,7 @@ class LanguageDetector(luigi.Task):
 
     This job uses Quagga by Tim Repke.
     """
+
     email_path = luigi.Parameter(default="mails/mail.txt")
     dump_path = luigi.Parameter(default='./luigi_dumps/language_detection/')
 
