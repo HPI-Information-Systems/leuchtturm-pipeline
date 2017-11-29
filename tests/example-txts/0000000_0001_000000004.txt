@@ -1,0 +1,14 @@
+Name:	SCCat.MPG
+MIME Type:	MPEG Video File
+
+Mapi-Access:	2
+Mapi-Attach-Filename:	SCCat.MPG
+Mapi-Attach-Flags:	0
+Mapi-Attach-Long-Filename:	SCCat.MPG
+Mapi-Attach-Method:	1
+Mapi-Attach-Mime-Sequence:	0
+Mapi-Attach-Mime-Tag:	application/octet-stream
+Mapi-Attach-Size:	1771006
+Mapi-Attachment-Hidden:	false
+Mapi-Rendering-Position:	-1
+Name:	SCCat.MPG

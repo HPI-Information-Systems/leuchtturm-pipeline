@@ -1,6 +1,0 @@
-On Unix systems (Linux, Mac OS X, etc.), binary mode does nothing - they treat text files the same way that any other files are treated.
-On Windows, however, text files are written with slightly modified line endings. 
-This causes a serious problem when dealing with actual binary
-files, like exe or jpg files. Therefore, when opening files which are not supposed to be text,
-even in Unix, you should use wb or rb. 
-Use plain w or r only for text files.

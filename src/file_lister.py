@@ -4,6 +4,7 @@
 import os
 import json
 import luigi
+from pyspark import SparkContext
 from datetime import datetime
 
 
@@ -21,7 +22,7 @@ class FileLister(luigi.Task):
     """
 
     source_dir = luigi.Parameter(default="./../tests/example-txts/")
-    target_dir = luigi.Parameter(default="./../tests/example-txts/")
+    target_dir = luigi.Parameter(default="./../tests/")
 
     def find_files_in_dir(self, ending):
         """Given ending and path to dir as a string, return list of filenames."""
@@ -39,7 +40,7 @@ class FileLister(luigi.Task):
                 with open(f, 'r', encoding='utf8') as infile:
                     outfile.write(
                         json.dumps({"doc_id": os.path.basename(f).replace('.txt', ''),
-                                    "raw": infile.read()},
+                                    "full_body": infile.read()},
                                    ensure_ascii=False) +
                         '\n')
 
@@ -53,3 +54,35 @@ class FileLister(luigi.Task):
     def run(self):
         """Run the listing in the Luigi Task."""
         self.list_files('.txt')
+
+
+class EnronFooterRemover(luigi.Task):
+    """Given a filepath, this task removes the footer that was added after the initial export of the data set."""
+
+    email_path = luigi.Parameter(default="./mails/mail.txt")
+    dump_path = luigi.Parameter(default='./luigi_dumps/enron_footer_remover/')
+    footer = ('***********\nEDRM Enron Email Data Set has been produced in EML, PST and NSF format by ZL '
+              'Technologies, Inc. This Data Set is licensed under a Creative Commons Attribution 3.0 United '
+              'States License <http://creativecommons.org/licenses/by/3.0/us/> . To provide attribution, please '
+              'cite to \"ZL Technologies, Inc. (http://www.zlti.com).\"\n***********\n')
+
+    def requires(self):
+        """Require e-mail text without headers."""
+        return FileLister()
+
+    def output(self):
+        """Override file at given path without footer."""
+        return luigi.LocalTarget('./../tests/pyspark')
+
+    def run(self):
+        """Replace footer with empty string."""
+        sc = SparkContext()
+        # data = sc.textFile(self.input().path)
+        data = open(self.input().path).read().splitlines()
+        myRdd = sc.parallelize(data)
+        myRdd.map(lambda x: self.remove_footer(x)).saveAsTextFile(self.output().path)
+
+    def remove_footer(self, input):
+        dict = json.loads(input)
+        dict['body'] = dict['full_body'].replace(self.footer, '')
+        return json.dumps(dict, ensure_ascii=False)
