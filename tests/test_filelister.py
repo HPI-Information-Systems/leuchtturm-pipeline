@@ -8,7 +8,7 @@ import codecs
 def test_find_files_in_dir():
     """Assert that file finder only selects txts."""
     luigi_task = FileLister(source_dir='./tests/example-txts/',
-                            target_dir='./tests/example-txts/')
+                            target_dir='./tests/')
 
     txts = luigi_task.find_files_in_dir('.txt')
     assert len(list(txts)) == 3
@@ -20,12 +20,11 @@ def test_find_files_in_dir():
 def test_run():
     """Assert luigi output is being produced and contains all example files."""
     luigi_task = FileLister(source_dir='./tests/example-txts/',
-                            target_dir='./tests/example-txts/')
+                            target_dir='./tests/')
 
-    files = luigi_task.find_files_in_dir('.txt')
     luigi_task.run()
 
-    assert len(os.listdir('./tests/example-txts/')) == len(list(files)) + 1
+    assert os.path.isfile(luigi_task.output().path)
 
     with codecs.open(luigi_task.output().path, 'r', encoding='utf8') as outfile:
         outfile_str = outfile.read()
