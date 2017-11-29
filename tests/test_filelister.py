@@ -11,10 +11,10 @@ def test_find_files_in_dir():
                             target_dir='./tests/example-txts/')
 
     txts = luigi_task.find_files_in_dir('.txt')
-    assert len(txts) == 3
+    assert len(list(txts)) == 3
 
     pdfs = luigi_task.find_files_in_dir('.pdf')
-    assert len(pdfs) == 0
+    assert len(list(pdfs)) == 0
 
 
 def test_run():
@@ -25,10 +25,12 @@ def test_run():
     files = luigi_task.find_files_in_dir('.txt')
     luigi_task.run()
 
-    assert len(os.listdir('./tests/example-txts/')) == len(files) + 1
+    assert len(os.listdir('./tests/example-txts/')) == len(list(files)) + 1
 
     with codecs.open(luigi_task.output().path, 'r', encoding='utf8') as outfile:
         outfile_str = outfile.read()
         assert 'On Unix systems (Linux, Mac OS X, etc.), binary' in outfile_str
         assert 'Jährlich verschleudert Amazon in der Cyber Monday Woche' in outfile_str
         assert 'On ne connaît de lui que son pseudo, le générique' in outfile_str
+
+    os.remove(luigi_task.output().path)

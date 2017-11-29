@@ -4,7 +4,6 @@
 import os
 import json
 import luigi
-import io
 from datetime import datetime
 
 
@@ -26,22 +25,18 @@ class FileLister(luigi.Task):
 
     def find_files_in_dir(self, ending):
         """Given ending and path to dir as a string, return list of filenames."""
-        files = []
-
         for f in os.listdir(os.fsencode(self.source_dir)):
             filename = os.fsdecode(f)
             if filename.endswith(ending):
-                files.append(os.path.join(self.source_dir, filename))
-
-        return files
+                yield os.path.join(self.source_dir, filename)
 
     def list_files(self, ending):
         """Given ending and source dir, dump a list of all matching files in source dir as json objects."""
         found_files = self.find_files_in_dir(ending)
 
-        with io.open(self.output().path, 'w', encoding='utf8') as outfile:
+        with open(self.output().path, 'w', encoding='utf8') as outfile:
             for f in found_files:
-                with io.open(f, 'r', encoding='utf8') as infile:
+                with open(f, 'r', encoding='utf8') as infile:
                     outfile.write(
                         json.dumps({"doc_id": os.path.basename(f).replace('.txt', ''),
                                     "raw": infile.read()},
