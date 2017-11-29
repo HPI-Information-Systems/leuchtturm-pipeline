@@ -7,6 +7,8 @@ import luigi
 from pyspark import SparkContext
 from datetime import datetime
 from langdetect import detect
+import email as email
+
 
 DATETIMESTAMP = datetime.now().strftime('%Y-%m-%d_%H:%M')
 
@@ -129,3 +131,41 @@ class LanguageDetector(luigi.Task):
         return luigi.LocalTarget(self.dump_path +
                                  DATETIMESTAMP +
                                  '_txtfileswlanguage.txt')
+
+
+class MetadataExtractor(luigi.Task):
+    """This bad boy gets all them metadatas bout y'alls emails."""
+
+    dump_path = luigi.Parameter(default='./luigi_dumps/metadata_extractor/')
+
+    def requires(self):
+        """Raw email data."""
+        return FileLister()
+
+    def output(self):
+        """Add metadata to each mail."""
+        return luigi.LocalTarget(self.dump_path +
+                                 DATETIMESTAMP +
+                                 '_txtfileswmetadata.txt')
+
+    def run(self):
+        """Excecute meta data extraction."""
+        sc = SparkContext()
+        # data = sc.textFile(self.input().path)
+        data = open(self.input().path).read().splitlines()
+        myRdd = sc.parallelize(data)
+        result = myRdd.map(lambda x: self.extract_metadata(x)).collect()
+        with open(self.output().path, 'w', encoding='utf8') as outfile:
+            for mail in result:
+                outfile.write("%s\n" % mail)
+        sc.stop()
+
+    def extract_metadata(self, input):
+        """Extract meta data of each email."""
+
+        dict = json.loads(input)
+        message = email.message_from_string(dict["full_body"])
+        for metainfo in message.keys():
+            dict[metainfo] = message[metainfo]
+
+        return json.dumps(dict, ensure_ascii=False)
