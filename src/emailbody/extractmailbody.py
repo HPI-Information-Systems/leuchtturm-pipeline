@@ -9,7 +9,6 @@ import numpy as np
 from sklearn.preprocessing import LabelEncoder
 import os.path
 # from flask.json import jsonify
-from pyspark import SparkContext
 
 
 line_embedding_size = 32
@@ -115,41 +114,3 @@ def getBody(sourcepath):
             body_text += head_body_indicator[i][0]
 
     return body_text
-
-
-def getBodyParallel(sourcepath):
-    """A currently unused method that shows how to split a huge file of mails into lines
-    to perform body extraction on."""
-
-    sc = SparkContext()
-
-    data = sc.textFile(sourcepath)
-
-    print(data)
-
-    bodies = data.map(lambda mail: extractBody(mail)).collect()
-
-    print(bodies)
-
-    sc.stop()
-
-    def extractBody(string):
-        text_lines = string.splitlines()
-
-        func_b = enron_two_zone_line_b_func
-        model = enron_two_zone_model
-        # embedding_b = enron_two_zone_line_b
-
-        text_embedded = embed(text_lines, [func_b])
-        head_body_predictions = model.predict(np.array([text_embedded])).tolist()[0]
-
-        head_body_indicator = list(zip(text_lines, head_body_predictions))
-
-        body_text = ''
-        for i in range(0, len(head_body_indicator)):
-            if int(head_body_indicator[i][1][0]) == int(1.0):
-                body_text += head_body_indicator[i][0]
-
-        return body_text
-
-
