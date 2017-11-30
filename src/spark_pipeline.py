@@ -14,6 +14,12 @@ import emailbody.extractmailbody as body_extractor
 from langdetect import detect
 import email as email
 
+import talon
+talon.init()
+from talon import quotations
+from talon.signature.bruteforce import extract_signature
+
+
 
 DATETIMESTAMP = datetime.now().strftime('%Y-%m-%d_%H-%M')
 
@@ -178,6 +184,42 @@ class EmailBodyExtractor(luigi.Task):
         return json.dumps(dict, ensure_ascii=False)
 
 
+class EmailCleaner(luigi.Task):
+    """This task uses Talon from Mailgun to clean emails."""
+
+    def requires(self):
+        """Dependency: FileLister like file with field: body."""
+        return EmailBodyExtractor()
+
+    def output(self):
+        """Write a HDFS target with timestamp."""
+        return luigi.contrib.hdfs.HdfsTarget('/pipeline/emails_cleaned/' +
+                                             DATETIMESTAMP +
+                                             '_emails_cleaned.txt')
+
+    def run(self):
+        """Run luigi task."""
+        sc = SparkContext()
+        data = sc.textFile(self.input().path)
+        results = data.map(lambda x: self.clean_entry(x)).collect()
+        with self.output().open('w') as f:
+            for result in results:
+                f.write(result + '\n')
+        sc.stop()
+
+    def clean_entry(self, entry):
+        """Read body, and clean it of noise using Talon."""
+        dict = json.loads(entry)
+        body = dict['body'].replace('\\n', '\n')
+        reply = quotations.extract_from_plain(body)
+        text, signat = extract_signature(reply)
+        dict['reply'] = reply
+        dict['reply_text'] = text
+        # dict['signature'] = signat
+
+        return json.dumps(dict, ensure_ascii=False)
+
+
 class LanguageDetector(luigi.Task):
     """
     Given a filepath, this task extracts the body of an e-mail and writes it to a file at the target path.
@@ -187,7 +229,7 @@ class LanguageDetector(luigi.Task):
 
     def requires(self):
         """Require e-mail text without headers and footer."""
-        return EmailBodyExtractor()
+        return EmailCleaner()
 
     def detect_language(self, input):
         """Add language to each entry."""
