@@ -75,7 +75,7 @@ class EnronFooterRemover(luigi.Task):
 
     def output(self):
         """Override file at given path without footer."""
-        return luigi.contrib.hdfs.LocalTarget(self.dump_path +
+        return luigi.contrib.hdfs.HdfsTarget(self.dump_path +
                                  DATETIMESTAMP +
                                  '_txtfileswofooter.txt')
 
