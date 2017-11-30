@@ -10,3 +10,8 @@ pyspark
 findspark
 langdetect
 talon
+keras
+git+https://www.github.com/farizrahman4u/keras-contrib.git
+keras
+numpy
+sklearn
