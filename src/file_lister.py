@@ -4,9 +4,6 @@
 import os
 import json
 import luigi
-# import luigi.contrib.hdfs
-# import findspark
-# findspark.init('/usr/hdp/2.6.3.0-235/spark2')
 from pyspark import SparkContext
 from datetime import datetime
 
@@ -49,7 +46,6 @@ class FileLister(luigi.Task):
 
     def output(self):
         """File the list of json objects in a txtfiles textfile."""
-        # replace LocalTarget with HdfsTarget to make it run on Cluster
         return luigi.LocalTarget(self.target_dir +
                                  DATETIMESTAMP +
                                  '_txtfiles.txt')
@@ -76,8 +72,6 @@ class EnronFooterRemover(luigi.Task):
     def output(self):
         """Override file at given path without footer."""
         return luigi.LocalTarget('./../tests/pyspark')
-        # !! On Server use this instead of previous line of code:
-        # return luigi.contrib.hdfs.HdfsTarget('/pipeline/output/footer/')
 
 
     def run(self):
