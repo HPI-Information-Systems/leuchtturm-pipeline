@@ -1,3 +1,5 @@
+"""This module cleans and filters non-email documents."""
+
 import luigi
 
 from spark_pipeline import FileLister
@@ -9,7 +11,7 @@ DATETIMESTAMP = datetime.now().strftime('%Y-%m-%d_%H-%M')
 
 
 class DocumentCleaner(luigi.Task):
-    """ Filter out non-emails, useless metadata files and cluttered content"""
+    """Filter out non-emails, useless metadata files and cluttered content."""
 
     dump_path = luigi.Parameter(default='./luigi_dumps/document_cleaner/')
 
