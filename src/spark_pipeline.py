@@ -4,6 +4,9 @@
 import os
 import json
 import luigi
+# import luigi.contrib.hdfs
+# import findspark
+# findspark.init('/usr/hdp/2.6.3.0-235/spark2')
 from pyspark import SparkContext
 import numpy as np
 from datetime import datetime
