@@ -15,7 +15,7 @@ from langdetect import detect
 import email as email
 
 
-DATETIMESTAMP = datetime.now().strftime('%Y-%m-%d_%H:%M')
+DATETIMESTAMP = datetime.now().strftime('%Y-%m-%d_%H-%M')
 
 
 class FileLister(luigi.Task):
