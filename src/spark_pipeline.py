@@ -4,9 +4,9 @@
 import os
 import json
 import luigi
-# import luigi.contrib.hdfs
-# import findspark
-# findspark.init('/usr/hdp/2.6.3.0-235/spark2')
+import luigi.contrib.hdfs
+import findspark
+findspark.init('/usr/hdp/2.6.3.0-235/spark2')
 from pyspark import SparkContext
 from datetime import datetime
 from langdetect import detect
@@ -51,8 +51,7 @@ class FileLister(luigi.Task):
 
     def output(self):
         """File the list of json objects in a txtfiles textfile."""
-        # replace LocalTarget with HdfsTarget to make it run on Cluster
-        return luigi.LocalTarget(self.target_dir +
+        return luigi.contrib.hdfs.HdfsTarget(self.target_dir +
                                  DATETIMESTAMP +
                                  '_txtfiles.txt')
 
@@ -76,17 +75,15 @@ class EnronFooterRemover(luigi.Task):
 
     def output(self):
         """Override file at given path without footer."""
-        return luigi.LocalTarget(self.dump_path +
+        return luigi.contrib.hdfs.LocalTarget(self.dump_path +
                                  DATETIMESTAMP +
                                  '_txtfileswofooter.txt')
 
     def run(self):
         """Execute footer removal."""
         sc = SparkContext()
-        # data = sc.textFile(self.input().path)
-        data = open(self.input().path).read().splitlines()
-        myRdd = sc.parallelize(data)
-        result = myRdd.map(lambda x: self.remove_footer(x)).collect()
+        data = sc.textFile(self.input().path)
+        result = data.map(lambda x: self.remove_footer(x)).collect()
         with open(self.output().path, 'w', encoding='utf8') as outfile:
             for mail in result:
                 outfile.write("%s\n" % mail)
@@ -131,7 +128,7 @@ class LanguageDetector(luigi.Task):
 
     def output(self):
         """Override file at given path without footer."""
-        return luigi.LocalTarget(self.dump_path +
+        return luigi.contrib.hdfs.LocalTarget(self.dump_path +
                                  DATETIMESTAMP +
                                  '_txtfileswlanguage.txt')
 
@@ -147,17 +144,15 @@ class MetadataExtractor(luigi.Task):
 
     def output(self):
         """Add metadata to each mail."""
-        return luigi.LocalTarget(self.dump_path +
+        return luigi.contrib.hdfs.HdfsTarget(self.dump_path +
                                  DATETIMESTAMP +
                                  '_txtfileswmetadata.txt')
 
     def run(self):
         """Excecute meta data extraction."""
         sc = SparkContext()
-        # data = sc.textFile(self.input().path)
-        data = open(self.input().path).read().splitlines()
-        myRdd = sc.parallelize(data)
-        result = myRdd.map(lambda x: self.extract_metadata(x)).collect()
+        data = sc.textFile(self.input().path)
+        result = data.map(lambda x: self.extract_metadata(x)).collect()
         with open(self.output().path, 'w', encoding='utf8') as outfile:
             for mail in result:
                 outfile.write("%s\n" % mail)
