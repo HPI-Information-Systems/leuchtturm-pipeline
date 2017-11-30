@@ -8,9 +8,9 @@ from pyspark import SparkContext
 from datetime import datetime
 import json
 import talon
-talon.init()
 from talon import quotations
 from talon.signature.bruteforce import extract_signature
+talon.init()
 
 
 DATETIMESTAMP = datetime.now().strftime('%Y-%m-%d_%H:%M')

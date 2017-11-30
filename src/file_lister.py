@@ -73,7 +73,6 @@ class EnronFooterRemover(luigi.Task):
         """Override file at given path without footer."""
         return luigi.LocalTarget('./../tests/pyspark')
 
-
     def run(self):
         """Replace footer with empty string."""
         sc = SparkContext()
@@ -84,6 +83,7 @@ class EnronFooterRemover(luigi.Task):
         myRdd.map(lambda x: self.remove_footer(x)).saveAsTextFile(self.output().path)
 
     def remove_footer(self, input):
+        """Execute footer removal."""
         dict = json.loads(input)
         dict['body'] = dict['full_body'].replace(self.footer, '')
         return json.dumps(dict, ensure_ascii=False)

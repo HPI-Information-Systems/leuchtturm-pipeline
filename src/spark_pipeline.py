@@ -203,8 +203,7 @@ class EmailBodyExtractor(luigi.Task):
         sc.stop()
 
     def get_body(self, input):
-        """The actual method that extracts and returns the body of an email."""
-
+        """Extract and return the body of an email."""
         dict = json.loads(input)
         mail_text = dict['full_body']
         text_lines = mail_text.splitlines()
