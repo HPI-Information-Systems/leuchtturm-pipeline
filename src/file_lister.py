@@ -76,13 +76,17 @@ class EnronFooterRemover(luigi.Task):
     def output(self):
         """Override file at given path without footer."""
         return luigi.LocalTarget('./../tests/pyspark')
+        # !! On Server use this instead of previous line of code:
+        # return luigi.contrib.hdfs.HdfsTarget('/pipeline/output/footer/')
+
 
     def run(self):
         """Replace footer with empty string."""
         sc = SparkContext()
-        # data = sc.textFile(self.input().path)
         data = open(self.input().path).read().splitlines()
         myRdd = sc.parallelize(data)
+        # !! On Server use this instead of previous two lines of code:
+        # data = sc.textFile(self.input().path)
         myRdd.map(lambda x: self.remove_footer(x)).saveAsTextFile(self.output().path)
 
     def remove_footer(self, input):
