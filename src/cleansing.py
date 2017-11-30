@@ -25,7 +25,7 @@ class EmailCleaner(luigi.Task):
 
     def output(self):
         """Write a HDFS target with timestamp."""
-        return luigi.contrib.hdfs.HdfsTarget('/pipeline/cleaner/' + DATETIMESTAMP + '_cleaner.txt')
+        return luigi.contrib.hdfs.HdfsTarget('/pipeline/emails_cleaned/' + DATETIMESTAMP + '_emails_cleaned.txt')
 
     def run(self):
         """Run luigi task."""
