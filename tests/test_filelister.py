@@ -1,6 +1,6 @@
 """This module contains all tests for FileLister."""
 
-from src.spark_pipeline import FileLister
+from src.file_lister import FileLister
 import os
 import codecs
 
