@@ -29,7 +29,6 @@ class FileLister(luigi.Task):
     """
 
     source_dir = luigi.Parameter(default="./../tests/example-txts/")
-    target_dir = luigi.Parameter(default="/pipeline/")
 
     def find_files_in_dir(self, ending):
         """Given ending and path to dir as a string, return list of filenames."""
@@ -53,10 +52,9 @@ class FileLister(luigi.Task):
 
     def output(self):
         """File the list of json objects in a txtfiles textfile."""
-        return luigi.contrib.hdfs.HdfsTarget('/pipeline/' +
-                                'emails_concatenated/' +
-                                DATETIMESTAMP +
-                                 '_emails_concatenated.txt')
+        return luigi.contrib.hdfs.HdfsTarget('/pipeline/emails_concatenated/' +
+                                             DATETIMESTAMP +
+                                             '_emails_concatenated.txt')
 
     def run(self):
         """Run the listing in the Luigi Task."""
@@ -77,10 +75,9 @@ class EnronFooterRemover(luigi.Task):
 
     def output(self):
         """Override file at given path without footer."""
-        return luigi.contrib.hdfs.HdfsTarget('/pipeline/' +
-                                'footer_removed/' +
-                                DATETIMESTAMP +
-                                 '_footer_removed.txt')
+        return luigi.contrib.hdfs.HdfsTarget('/pipeline/footer_removed/' +
+                                             DATETIMESTAMP +
+                                             '_footer_removed.txt')
 
     def run(self):
         """Execute footer removal."""
@@ -91,6 +88,7 @@ class EnronFooterRemover(luigi.Task):
         with self.output().open('w') as f:
             for result in results:
                 f.write(result + '\n')
+        sc.stop()
 
     def remove_footer(self, input):
         """Replace footer with empty string."""
@@ -99,67 +97,27 @@ class EnronFooterRemover(luigi.Task):
         return json.dumps(dict, ensure_ascii=False)
 
 
-class LanguageDetector(luigi.Task):
-    """
-    Given a filepath, this task extracts the body of an e-mail and writes it to a file at the target path.
-
-    This job uses Quagga by Tim Repke.
-    """
-
-    dump_path = luigi.Parameter(default='./luigi_dumps/language_detection/')
-
-    def requires(self):
-        """Require e-mail text without headers and footer."""
-        return EnronFooterRemover()
-
-    def detect_language(self, input):
-        """Add language to each entry."""
-        dict = json.loads(input)
-        dict['lang'] = detect(dict['full_body'])
-        return json.dumps(dict, ensure_ascii=False)
-
-    def run(self):
-        """Replace footer with empty string."""
-        sc = SparkContext()
-        data = open(self.input().path).read().splitlines()
-        myRdd = sc.parallelize(data)
-        result = myRdd.map(lambda x: self.detect_language(x)).collect()
-        with open(self.output().path, 'w', encoding='utf8') as outfile:
-            for mail in result:
-                outfile.write("%s\n" % mail)
-
-        sc.stop()
-
-    def output(self):
-        """Override file at given path without footer."""
-        return luigi.contrib.hdfs.LocalTarget(self.dump_path +
-                                 DATETIMESTAMP +
-                                 '_txtfileswlanguage.txt')
-
-
 class MetadataExtractor(luigi.Task):
     """This bad boy gets all them metadatas bout y'alls emails."""
 
-    dump_path = luigi.Parameter(default='./luigi_dumps/metadata_extractor/')
-
     def requires(self):
         """Raw email data."""
-        return FileLister()
+        return EnronFooterRemover()
 
     def output(self):
         """Add metadata to each mail."""
-        return luigi.contrib.hdfs.HdfsTarget(self.dump_path +
-                                 DATETIMESTAMP +
-                                 '_txtfileswmetadata.txt')
+        return luigi.contrib.hdfs.HdfsTarget('/pipeline/metadata_extracted/' +
+                                             DATETIMESTAMP +
+                                             '_metadata_extracted.txt')
 
     def run(self):
         """Excecute meta data extraction."""
         sc = SparkContext()
         data = sc.textFile(self.input().path)
-        result = data.map(lambda x: self.extract_metadata(x)).collect()
-        with open(self.output().path, 'w', encoding='utf8') as outfile:
-            for mail in result:
-                outfile.write("%s\n" % mail)
+        results = data.map(lambda x: self.extract_metadata(x)).collect()
+        with self.output().open('w') as f:
+            for result in results:
+                f.write(result + '\n')
         sc.stop()
 
     def extract_metadata(self, input):
@@ -173,9 +131,7 @@ class MetadataExtractor(luigi.Task):
 
 
 class EmailBodyExtractor(luigi.Task):
-    """This bad boy gets all them metadatas bout y'alls emails."""
-
-    dump_path = luigi.Parameter(default='./luigi_dumps/do_nothing/')
+    """This bad boy gets all them email booti bout y'alls emails."""
 
     def requires(self):
         """Raw email data."""
@@ -183,19 +139,18 @@ class EmailBodyExtractor(luigi.Task):
 
     def output(self):
         """Add pure body to each mail."""
-        return luigi.LocalTarget(self.dump_path +
-                                 DATETIMESTAMP +
-                                 '_emailbodies.txt')
+        return luigi.contrib.hdfs.HdfsTarget('/pipeline/emailbody_extracted/' +
+                                             DATETIMESTAMP +
+                                             '_emailbody_extracted.txt')
 
     def run(self):
         """Excecute body extraction."""
         sc = SparkContext()
-        data = open(self.input().path).read().splitlines()
-        myRdd = sc.parallelize(data)
-        result = myRdd.map(lambda x: self.get_body(x)).collect()
-        with open(self.output().path, 'w', encoding='utf8') as outfile:
-            for mail in result:
-                outfile.write("%s\n" % mail)
+        data = sc.textFile(self.input().path)
+        results = data.map(lambda x: self.get_body(x)).collect()
+        with self.output().open('w') as f:
+            for result in results:
+                f.write(result + '\n')
         sc.stop()
 
     def get_body(self, input):
@@ -221,3 +176,37 @@ class EmailBodyExtractor(luigi.Task):
         dict['body'] = body_text
 
         return json.dumps(dict, ensure_ascii=False)
+
+
+class LanguageDetector(luigi.Task):
+    """
+    Given a filepath, this task extracts the body of an e-mail and writes it to a file at the target path.
+
+    This job uses Quagga by Tim Repke.
+    """
+
+    def requires(self):
+        """Require e-mail text without headers and footer."""
+        return EmailBodyExtractor()
+
+    def detect_language(self, input):
+        """Add language to each entry."""
+        dict = json.loads(input)
+        dict['lang'] = detect(dict['full_body'])
+        return json.dumps(dict, ensure_ascii=False)
+
+    def run(self):
+        """Replace footer with empty string."""
+        sc = SparkContext()
+        data = sc.textFile(self.input().path)
+        results = data.map(lambda x: self.detect_language(x)).collect()
+        with self.output().open('w') as f:
+            for result in results:
+                f.write(result + '\n')
+        sc.stop()
+
+    def output(self):
+        """Override file at given path without footer."""
+        return luigi.contrib.hdfs.HdfsTarget('/pipeline/language_detected/' +
+                                             DATETIMESTAMP +
+                                             '_language_detected.txt')
