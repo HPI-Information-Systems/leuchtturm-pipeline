@@ -9,3 +9,5 @@ luigi
 pyspark
 findspark
 langdetect
+numpy
+codecs

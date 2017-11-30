@@ -13,7 +13,6 @@ from talon.signature.bruteforce import extract_signature
 talon.init()
 
 
-
 DATETIMESTAMP = datetime.now().strftime('%Y-%m-%d_%H:%M')
 
 

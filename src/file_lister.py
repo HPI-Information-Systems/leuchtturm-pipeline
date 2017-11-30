@@ -83,7 +83,7 @@ class EnronFooterRemover(luigi.Task):
         myRdd.map(lambda x: self.remove_footer(x)).saveAsTextFile(self.output().path)
 
     def remove_footer(self, input):
-        """Execute footer removal"""
+        """Execute footer removal."""
         dict = json.loads(input)
         dict['body'] = dict['full_body'].replace(self.footer, '')
         return json.dumps(dict, ensure_ascii=False)
