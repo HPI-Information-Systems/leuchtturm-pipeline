@@ -5,7 +5,9 @@ import os
 import json
 import luigi
 from pyspark import SparkContext
+import numpy as np
 from datetime import datetime
+import emailbody.extractmailbody as body_extractor
 from langdetect import detect
 import email as email
 
@@ -125,6 +127,8 @@ class LanguageDetector(luigi.Task):
             for mail in result:
                 outfile.write("%s\n" % mail)
 
+        sc.stop()
+
     def output(self):
         """Override file at given path without footer."""
         return luigi.LocalTarget(self.dump_path +
@@ -165,5 +169,56 @@ class MetadataExtractor(luigi.Task):
         message = email.message_from_string(dict["full_body"])
         for metainfo in message.keys():
             dict[metainfo] = message[metainfo]
+
+        return json.dumps(dict, ensure_ascii=False)
+
+
+class EmailBodyExtractor(luigi.Task):
+    """This bad boy gets all them metadatas bout y'alls emails."""
+
+    dump_path = luigi.Parameter(default='./luigi_dumps/do_nothing/')
+
+    def requires(self):
+        """Raw email data."""
+        return MetadataExtractor()
+
+    def output(self):
+        """Add pure body to each mail."""
+        return luigi.LocalTarget(self.dump_path +
+                                 DATETIMESTAMP +
+                                 '_emailbodies.txt')
+
+    def run(self):
+        """Excecute body extraction."""
+        sc = SparkContext()
+        data = open(self.input().path).read().splitlines()
+        myRdd = sc.parallelize(data)
+        result = myRdd.map(lambda x: self.get_body(x)).collect()
+        with open(self.output().path, 'w', encoding='utf8') as outfile:
+            for mail in result:
+                outfile.write("%s\n" % mail)
+        sc.stop()
+
+    def get_body(self, input):
+        """The actual method that extracts and returns the body of an email."""
+
+        dict = json.loads(input)
+        mail_text = dict['full_body']
+        text_lines = mail_text.splitlines()
+
+        func_b = body_extractor.enron_two_zone_line_b_func
+        model = body_extractor.enron_two_zone_model
+
+        text_embedded = body_extractor.embed(text_lines, [func_b])
+        head_body_predictions = model.predict(np.array([text_embedded])).tolist()[0]
+
+        head_body_indicator = list(zip(text_lines, head_body_predictions))
+
+        body_text = ''
+        for i in range(0, len(head_body_indicator)):
+            if int(head_body_indicator[i][1][0]) == int(1.0):
+                body_text += head_body_indicator[i][0]
+
+        dict['body'] = body_text
 
         return json.dumps(dict, ensure_ascii=False)

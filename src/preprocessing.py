@@ -8,6 +8,7 @@ import luigi
 import json
 import os
 import datetime
+
 from solr_communicator import SolrCommunicator
 from langdetect import detect
 import emailbody.extractmailbody as body_extractor
