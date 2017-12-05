@@ -26,7 +26,7 @@ class DocumentCleaner(luigi.Task):
                                  '_cleandocuments.txt')
 
     def run(self):
-        """Excecute meta data extraction."""
+        """Perform the task's action."""
         sc = SparkContext()
         # data = sc.textFile(self.input().path)
         data = open(self.input().path).read().splitlines()
@@ -39,8 +39,10 @@ class DocumentCleaner(luigi.Task):
         sc.stop()
 
     def clean_documents(self, input):
-        """Extract meta data of each email."""
+        """Isolate removal of unnecessary filels and clutter."""
         dict = json.loads(input)
+
+        clean_body = dict["full_body"]
 
         # document is email and should not enter the document pipeline
         if dict["full_body"].lower().startswith("subject"):
@@ -49,4 +51,13 @@ class DocumentCleaner(luigi.Task):
         elif dict["full_body"].lower().startswith("name"):
             return json.dumps({}, ensure_ascii=False)
         else:
-            return json.dumps(dict, ensure_ascii=False)
+            special_chars = ['"', "!", "#", "$", "%", "&", "'", "§", "(", ")", "*", "+",
+                             "-", ".", "/", ":", ";", "<", "=", ">", "?",
+                             "@", "[", "\\", "]", "^", "_", "`", "{", "|", "}", "~", "\n", "\u000b", "\f"]
+
+            for char in special_chars:
+                clean_body = clean_body.replace(char, "")
+
+        dict["full_body"] = clean_body.lower()
+            
+        return json.dumps(dict, ensure_ascii=False)
