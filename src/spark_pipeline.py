@@ -13,9 +13,7 @@ from datetime import datetime
 import emailbody.extractmailbody as body_extractor
 from langdetect import detect
 import email as email
-import talon
-talon.init()
-from talon import quotations
+import re
 from talon.signature.bruteforce import extract_signature
 
 
@@ -58,48 +56,12 @@ class FileLister(luigi.Task):
                         '\n')
 
 
-class EnronFooterRemover(luigi.Task):
-    """Given a filepath, this task removes the footer that was added after the initial export of the data set."""
-
-    footer = ('***********\nEDRM Enron Email Data Set has been produced in EML, PST and NSF format by ZL '
-              'Technologies, Inc. This Data Set is licensed under a Creative Commons Attribution 3.0 United '
-              'States License <http://creativecommons.org/licenses/by/3.0/us/> . To provide attribution, please '
-              'cite to \"ZL Technologies, Inc. (http://www.zlti.com).\"\n***********\n')
-
-    def requires(self):
-        """Require e-mail text without headers."""
-        return FileLister()
-
-    def output(self):
-        """Write a HDFS target with timestamp."""
-        return luigi.contrib.hdfs.HdfsTarget('/pipeline/footer_removed/' +
-                                             DATETIMESTAMP +
-                                             '_footer_removed.txt')
-
-    def run(self):
-        """Execute footer removal."""
-        sc = SparkContext()
-        data = sc.textFile(self.input().path)
-        # result = data.map(lambda x: self.remove_footer(x)).saveAsTextFile(self.output().path)
-        results = data.map(lambda x: self.remove_footer(x)).collect()
-        with self.output().open('w') as f:
-            for result in results:
-                f.write(result + '\n')
-        sc.stop()
-
-    def remove_footer(self, input):
-        """Replace footer with empty string."""
-        document = json.loads(input)
-        document['body'] = document['full_body'].replace(self.footer, '')
-        return json.dumps(document, ensure_ascii=False)
-
-
 class MetadataExtractor(luigi.Task):
     """This bad boy gets all them metadatas bout y'alls emails."""
 
     def requires(self):
         """Expect raw email data."""
-        return EnronFooterRemover()
+        return FileLister()
 
     def output(self):
         """Write a HDFS target with timestamp."""
@@ -177,6 +139,23 @@ class EmailBodyExtractor(luigi.Task):
 class EmailCleaner(luigi.Task):
     """This task uses Talon from Mailgun to clean emails."""
 
+    special_chars = [
+        '"', "!", "#", "$", "%", "&", "'", "§", "(", ")", "*", "+",
+        "-", ".", "/", ":", ";", "<", "=", ">", "?",
+        "@", "[", "\\", "]", "^", "_", "`", "{", "|", "}", "~", "\n", "\u000b", "\f"
+        ]
+
+    rules = [
+        r'----- Forwarded(.)*(From:(.)*|Subject:(.)*|To:(.)*|Sent:(.)*|Cc:(.)*|\n)*\n',
+        r'-----Original Message-----(From:(.)*|Subject:(.)*|To:(.)*|Sent:(.)*|Cc:(.)*|\n)*\n',
+        r'((From:)(.)*(\n)*)?To:(.)*(\n)*cc:(.)*(\n)*Subject:(.)*(\n)*',
+        r'\*\*\*\*\*\*\*\*\*\*\*\n\n(.)*\n\n\*\*\*\*\*\*\*\*\*\*\*'
+        ]
+
+    whitespace = [
+        r'(\n|\t)+'
+        ]
+
     def requires(self):
         """Require FileLister like file with field: body."""
         return EmailBodyExtractor()
@@ -200,12 +179,21 @@ class EmailCleaner(luigi.Task):
     def clean_entry(self, input):
         """Clean one entry."""
         document = json.loads(input)
-        body = document['body'].replace('\\n', '\n')
-        reply = quotations.extract_from_plain(body)
-        text, signat = extract_signature(reply)
-        document['reply'] = reply
-        document['reply_text'] = text
-        # dict['signature'] = signat
+
+        # run rules
+        body_cleaned = document['body'].replace('\\n', '\n')
+        for rule in self.rules:
+            body_cleaned = re.sub(rule, ' ', body_cleaned)
+
+        # run talon
+        body_cleaned, temp = extract_signature(body_cleaned)
+
+        # remove special chars and whitespace
+        for sc in self.special_chars:
+            body_cleaned = body_cleaned.replace(sc, ' ')
+        body_cleaned = re.sub(r'(\n|\t| )+', ' ', body_cleaned)
+
+        document['body'] = body_cleaned
 
         return json.dumps(document, ensure_ascii=False)
 
