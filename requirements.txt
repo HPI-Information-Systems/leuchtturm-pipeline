@@ -9,6 +9,7 @@ luigi
 pyspark
 findspark
 langdetect
+lxml
 talon
 keras
 git+https://www.github.com/farizrahman4u/keras-contrib.git
