@@ -146,10 +146,11 @@ class EmailCleaner(luigi.Task):
         ]
 
     rules = [
+        r'\*\*\*\*\*\*\*\*\*\*\*(\n)?EDRM Enron Email(.)*(\n)?\*\*\*\*\*\*\*\*\*\*\*',
         r'----- Forwarded(.)*(From:(.)*|Subject:(.)*|To:(.)*|Sent:(.)*|Cc:(.)*|\n)*\n',
         r'-----Original Message-----(From:(.)*|Subject:(.)*|To:(.)*|Sent:(.)*|Cc:(.)*|\n)*\n',
         r'((From:)(.)*(\n)*)?To:(.)*(\n)*cc:(.)*(\n)*Subject:(.)*(\n)*',
-        r'\*\*\*\*\*\*\*\*\*\*\*(\n)+(.)*(\n)+\*\*\*\*\*\*\*\*\*\*\*'
+        r'={76}(.|\n)*={76}'
         ]
 
     def requires(self):
