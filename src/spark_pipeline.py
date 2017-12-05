@@ -149,11 +149,7 @@ class EmailCleaner(luigi.Task):
         r'----- Forwarded(.)*(From:(.)*|Subject:(.)*|To:(.)*|Sent:(.)*|Cc:(.)*|\n)*\n',
         r'-----Original Message-----(From:(.)*|Subject:(.)*|To:(.)*|Sent:(.)*|Cc:(.)*|\n)*\n',
         r'((From:)(.)*(\n)*)?To:(.)*(\n)*cc:(.)*(\n)*Subject:(.)*(\n)*',
-        r'\*\*\*\*\*\*\*\*\*\*\*\n\n(.)*\n\n\*\*\*\*\*\*\*\*\*\*\*'
-        ]
-
-    whitespace = [
-        r'(\n|\t)+'
+        r'\*\*\*\*\*\*\*\*\*\*\*(\n)+(.)*(\n)+\*\*\*\*\*\*\*\*\*\*\*'
         ]
 
     def requires(self):
