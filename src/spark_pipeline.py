@@ -79,9 +79,9 @@ class MetadataExtractor(luigi.Task):
                 f.write(result + '\n')
         sc.stop()
 
-    def extract_metadata(self, input):
+    def extract_metadata(self, data):
         """Extract meta data of each email."""
-        document = json.loads(input)
+        document = json.loads(data)
         message = email.message_from_string(document["full_body"])
         for metainfo in message.keys():
             document[metainfo] = message[metainfo]
@@ -112,9 +112,9 @@ class EmailBodyExtractor(luigi.Task):
                 f.write(result + '\n')
         sc.stop()
 
-    def get_body(self, input):
+    def get_body(self, data):
         """Extract and return the body of an email."""
-        document = json.loads(input)
+        document = json.loads(data)
         mail_text = document['full_body']
         text_lines = mail_text.splitlines()
 
@@ -173,9 +173,9 @@ class EmailCleaner(luigi.Task):
                 f.write(result + '\n')
         sc.stop()
 
-    def clean_entry(self, input):
+    def clean_entry(self, data):
         """Clean one entry."""
-        document = json.loads(input)
+        document = json.loads(data)
 
         # run rules
         body_cleaned = document['body'].replace('\\n', '\n')
@@ -218,8 +218,8 @@ class LanguageDetector(luigi.Task):
                 f.write(result + '\n')
         sc.stop()
 
-    def detect_language(self, input):
+    def detect_language(self, data):
         """Add language to each entry."""
-        document = json.loads(input)
+        document = json.loads(data)
         document['lang'] = detect(document['full_body'])
         return json.dumps(document, ensure_ascii=False)
