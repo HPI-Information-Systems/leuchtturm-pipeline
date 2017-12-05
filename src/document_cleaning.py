@@ -38,17 +38,17 @@ class DocumentCleaner(luigi.Task):
                     outfile.write("%s\n" % mail)
         sc.stop()
 
-    def clean_documents(self, input):
+    def clean_documents(self, document_json):
         """Isolate removal of unnecessary filels and clutter."""
-        dict = json.loads(input)
+        document = json.loads(document_json)
 
-        clean_body = dict["full_body"]
+        clean_body = document["full_body"]
 
         # document is email and should not enter the document pipeline
-        if dict["full_body"].lower().startswith("subject"):
+        if document["full_body"].lower().startswith("subject"):
             return json.dumps({}, ensure_ascii=False)
         # document is weird meta data and not interesting
-        elif dict["full_body"].lower().startswith("name"):
+        elif document["full_body"].lower().startswith("name"):
             return json.dumps({}, ensure_ascii=False)
         else:
             special_chars = ['"', "!", "#", "$", "%", "&", "'", "§", "(", ")", "*", "+",
@@ -58,6 +58,6 @@ class DocumentCleaner(luigi.Task):
             for char in special_chars:
                 clean_body = clean_body.replace(char, "")
 
-        dict["full_body"] = clean_body.lower()
+        document["full_body"] = clean_body.lower()
             
-        return json.dumps(dict, ensure_ascii=False)
+        return json.dumps(document, ensure_ascii=False)
