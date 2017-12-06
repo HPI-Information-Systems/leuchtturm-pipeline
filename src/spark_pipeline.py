@@ -5,8 +5,7 @@ import os
 import json
 import luigi
 import luigi.contrib.hdfs
-import findspark
-findspark.init('/usr/hdp/2.6.3.0-235/spark2')
+# cc
 from pyspark import SparkContext
 import numpy as np
 from datetime import datetime
@@ -23,11 +22,11 @@ DATETIMESTAMP = datetime.now().strftime('%Y-%m-%d_%H-%M')
 class FileLister(luigi.Task):
     """A task for parsing files to json dicts and dumping them to a list."""
 
-    source_dir = luigi.Parameter(default="./../tests/example-txts/")
+    source_dir = luigi.Parameter(default="./example-txts/")
 
     def output(self):
         """Write a HDFS target with timestamp."""
-        return luigi.contrib.hdfs.HdfsTarget('/pipeline/emails_concatenated/' +
+        return luigi.LocalTarget('./luigi_dumps/test/' +
                                              DATETIMESTAMP +
                                              '_emails_concatenated.txt')
 
@@ -65,7 +64,7 @@ class MetadataExtractor(luigi.Task):
 
     def output(self):
         """Write a HDFS target with timestamp."""
-        return luigi.contrib.hdfs.HdfsTarget('/pipeline/metadata_extracted/' +
+        return luigi.LocalTarget('./luigi_dumps/test/' +
                                              DATETIMESTAMP +
                                              '_metadata_extracted.txt')
 
@@ -81,11 +80,40 @@ class MetadataExtractor(luigi.Task):
 
     def extract_metadata(self, data):
         """Extract meta data of each email."""
+        def clean_subject_line(subject_line):
+            return re.sub(r'(fw:|re:|aw:|fwd:) *', '', subject_line.lower())
+
+        # this does not conver all senders, but has a very high accuracy for Enron data
+        def clean_sender(sender):
+            #regex for finding emails
+            mailreg = re.compile(r'\b[\w.-]+?@\w+?\.\w+?\b')
+            mail = "".join((mailreg.findall(sender))[:1])
+
+            # regex for finding names that are clearly written
+            namereg = re.compile(r'[A-Z][a-zA-Z ]+')
+            name = re.sub(r' [a-z]+',"","".join((namereg.findall(sender))[:1]))
+
+            # regex for names that are seperated by a comma and a newline
+            anothernamereg = re.compile(r'[a-z]+,\n *[a-zA-Z]+')
+            another_name = "".join(anothernamereg.findall(sender)[:1]).replace("\n", "").replace(" ", "").replace(",", ", ").strip().title()
+
+            return {"email": mail,
+                    "name": another_name if another_name else name}
+
         document = json.loads(data)
+        document["header"] = {}
         message = email.message_from_string(document["full_body"])
         for metainfo in message.keys():
-            document[metainfo] = message[metainfo]
+            header_piece = ""
+            if metainfo == "Subject":
+                header_piece = clean_subject_line(message[metainfo])
+                document["header"][metainfo] = header_piece
 
+            elif metainfo == "From":
+                header_piece = clean_sender(message[metainfo])
+                document["header"]["sender"] = header_piece
+
+            document["full_body"] = ""
         return json.dumps(document, ensure_ascii=False)
 
 
@@ -98,7 +126,7 @@ class EmailBodyExtractor(luigi.Task):
 
     def output(self):
         """Write a HDFS target with timestamp."""
-        return luigi.contrib.hdfs.HdfsTarget('/pipeline/emailbody_extracted/' +
+        return luigi.LocalTarget('./luigi_dumps/test/' +
                                              DATETIMESTAMP +
                                              '_emailbody_extracted.txt')
 
@@ -159,7 +187,7 @@ class EmailCleaner(luigi.Task):
 
     def output(self):
         """Write a HDFS target with timestamp."""
-        return luigi.contrib.hdfs.HdfsTarget('/pipeline/emails_cleaned/' +
+        return luigi.LocalTarget('./luigi_dumps/test/' +
                                              DATETIMESTAMP +
                                              '_emails_cleaned.txt')
 
@@ -204,7 +232,7 @@ class LanguageDetector(luigi.Task):
 
     def output(self):
         """Write a HDFS target with timestamp."""
-        return luigi.contrib.hdfs.HdfsTarget('/pipeline/language_detected/' +
+        return luigi.LocalTarget('./luigi_dumps/test/' +
                                              DATETIMESTAMP +
                                              '_language_detected.txt')
 
