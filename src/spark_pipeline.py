@@ -15,7 +15,8 @@ from langdetect import detect
 import email as email
 import re
 from talon.signature.bruteforce import extract_signature
-
+import spacy
+nlp = spacy.load('en')
 
 DATETIMESTAMP = datetime.now().strftime('%Y-%m-%d_%H-%M')
 
@@ -205,8 +206,7 @@ class LanguageDetector(luigi.Task):
     def output(self):
         """Write a HDFS target with timestamp."""
         return luigi.contrib.hdfs.HdfsTarget('/pipeline/language_detected/' +
-                                             DATETIMESTAMP +
-                                             '_language_detected.txt')
+                                             'language_detected.txt')
 
     def run(self):
         """Run language detection."""
@@ -223,3 +223,59 @@ class LanguageDetector(luigi.Task):
         document = json.loads(data)
         document['lang'] = detect(document['full_body'])
         return json.dumps(document, ensure_ascii=False)
+
+
+class EntityExtractorAndCounter(luigi.Task):
+    """Extract entities with spacy and count them."""
+
+    def requires(self):
+        """Require the EmailPreprocessor of the preprocessing module."""
+        return LanguageDetector()
+
+    def output(self):
+        """File the counted entities in a counting_done textfile."""
+        return luigi.contrib.hdfs.HdfsTarget('/pipeline/entities_counted/' +
+                                             DATETIMESTAMP +
+                                             '_entities_counted.txt')
+
+    def run(self):
+        """Run the extraction in the Luigi Task."""
+        sc = SparkContext()
+        data = sc.textFile(self.input().path)
+        results = data.map(lambda x: self.extract_entities(x)).collect()
+        with self.output().open('w') as f:
+            for result in results:
+                f.write(result + '\n')
+        sc.stop()
+
+    def extract_entities(self, data):
+        document = json.loads(data)
+        doc = nlp(document['body'])
+        extracted_entities = []
+        for entity in doc.ents:
+            # some entities have a lot of ugly whitespaces in the beginning/end of string
+            stripped_text = entity.text.replace('\n', '\\n').strip()
+            duplicate_found = False
+            for existing_entity in extracted_entities:
+                if existing_entity["entity"] == stripped_text:
+                    duplicate_found = True
+                    existing_entity["entity_count"] += 1
+                    break
+            if not duplicate_found:
+                extracted_entities.append(
+                    self.make_solr_entity_document(stripped_text, entity.label_, 1)
+                )
+        # ADD ENTITIES, THEIR TYPE AND THEIR COUNT 'IN BULK' TO SOLR DATABASE
+        extracted_entities_strings = []
+        for entity in extracted_entities:
+            extracted_entities_strings.append(str(entity).replace("'", '"'))
+        document['entities'] = extracted_entities_strings
+        return json.dumps(document, ensure_ascii=False)
+
+    def make_solr_entity_document(self, entity, entity_type, entity_count):
+        """Build the json format of a document containing the entity info for passing it to solr."""
+        return {
+            "entity": entity,
+            "entity_type": entity_type,
+            "entity_count": entity_count
+        }
