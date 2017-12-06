@@ -59,5 +59,5 @@ class DocumentCleaner(luigi.Task):
                 clean_body = clean_body.replace(char, "")
 
         document["full_body"] = clean_body.lower()
-            
+
         return json.dumps(document, ensure_ascii=False)
