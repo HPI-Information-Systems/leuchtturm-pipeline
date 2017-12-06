@@ -9,7 +9,8 @@ luigi
 pyspark
 findspark
 langdetect
-git+https://www.github.com/farizrahman4u/keras-contrib.git
+talon
 keras
+git+https://www.github.com/farizrahman4u/keras-contrib.git
 numpy
 sklearn
