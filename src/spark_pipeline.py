@@ -249,6 +249,7 @@ class EntityExtractorAndCounter(luigi.Task):
         sc.stop()
 
     def extract_entities(self, data):
+        """Extract entities from each document into entities object"""
         document = json.loads(data)
         doc = nlp(document['body'])
         extracted_entities = []
@@ -263,17 +264,39 @@ class EntityExtractorAndCounter(luigi.Task):
                     break
             if not duplicate_found:
                 extracted_entities.append(
-                    self.make_solr_entity_document(stripped_text, entity.label_, 1)
+                    self.make_entity(stripped_text, entity.label_, 1)
                 )
         # ADD ENTITIES, THEIR TYPE AND THEIR COUNT 'IN BULK' TO SOLR DATABASE
         extracted_entities_strings = []
+        entities = {}
+        entities['PERSON'] = []
+        entities['NORP'] = []
+        entities['FAC'] = []
+        entities['ORG'] = []
+        entities['GPE'] = []
+        entities['LOC'] = []
+        entities['PRODUCT'] = []
+        entities['EVENT'] = []
+        entities['WORK_OF_ART'] = []
+        entities['LAW'] = []
+        entities['LANGUAGE'] = []
+        entities['DATE'] = []
+        entities['TIME'] = []
+        entities['PERCENT'] = []
+        entities['MONEY'] = []
+        entities['QUANTITY'] = []
+        entities['ORDINAL'] = []
+        entities['CARDINAL'] = []
         for entity in extracted_entities:
-            extracted_entities_strings.append(str(entity).replace("'", '"'))
-        document['entities'] = extracted_entities_strings
+            entity_type = str(entity['entity_type'])
+            entity.pop('entity_type', None)
+            entity_string = str(entity).replace("'", '"')
+            entities[entity_type].append(entity_string)
+        document['entities'] = entities
         return json.dumps(document, ensure_ascii=False)
 
-    def make_solr_entity_document(self, entity, entity_type, entity_count):
-        """Build the json format of a document containing the entity info for passing it to solr."""
+    def make_entity(self, entity, entity_type, entity_count):
+        """JSON Object defninition for entity"""
         return {
             "entity": entity,
             "entity_type": entity_type,
