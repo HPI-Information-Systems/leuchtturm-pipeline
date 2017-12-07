@@ -205,7 +205,7 @@ class LanguageDetector(luigi.Task):
         """Write a HDFS target with timestamp."""
         return luigi.contrib.hdfs.HdfsTarget('/pipeline/language_detected/' +
                                              DATETIMESTAMP +
-                                             'language_detected.txt')
+                                             '_language_detected.txt')
 
     def run(self):
         """Run language detection."""
@@ -267,7 +267,6 @@ class EntityExtractorAndCounter(luigi.Task):
                     self.make_entity(stripped_text, entity.label_, 1)
                 )
         # ADD ENTITIES, THEIR TYPE AND THEIR COUNT 'IN BULK' TO SOLR DATABASE
-        extracted_entities_strings = []
         entities = {}
         entities['PERSON'] = []
         entities['NORP'] = []
