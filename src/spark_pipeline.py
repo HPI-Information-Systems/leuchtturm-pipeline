@@ -55,6 +55,85 @@ class FileLister(luigi.Task):
                         '\n')
 
 
+class InlineEmailSplitter(luigi.Task):
+    """This task splits replies and forwards of an email into separate parts."""
+
+    splitters = [
+        # ----------- Forwarded by Max Mustermann on 24 Jan 2001 ------------
+        re.compile(r'[\s]*[-]+[ ]*Forwarded .*[ ]*[-]+', re.I),
+        # Thu, 24 Jun 2001 01:00:51 +0000 Max Mustermann <max@mustermann.com>:
+        re.compile(r'\S{3,10}, \d\d? \S{3,10} 20\d\d,? \d\d?:\d\d(:\d\d)?( \S+){3,6}@\S+:', re.I | re.M),
+        # ---- Max Mustermann wrote ----
+        re.compile(r'[\s]*[-]+.*(?:wrote|sent)[ ]*[-]+', re.I),
+        # ------ Original Message ------
+        re.compile(r'[\s]*[-]+[ ]*(?:Original Message|Reply Message)[ ]*[-]+', re.I),
+        # On Date, Max Mustermann wrote:
+        re.compile(r'(-*[>]?[ ]?On[ ].*,(.*\n){{0,2}}.*wrote:?-*)', re.I)
+        ]
+
+    header = re.compile(r'^[ ]*(?:From:.*[\n]?|To:.*[\n]?|Cc:.*[\n]?|Date:.*[\n]?|Sent:.*[\n]?|Subject:.*[\n]?)',
+                        re.I | re.M)
+
+    leading_spaces = re.compile(r'^(?:\n|\s|\t)+', re.M)
+
+    def requires(self):
+        """Expect raw email data."""
+        return FileLister()
+
+    def output(self):
+        """Produce HDFS target with new field parts."""
+        return luigi.contrib.hdfs.HdfsTarget('/pipeline/email_parts/' +
+                                             DATETIMESTAMP +
+                                             '_parts_detected.txt')
+
+    def run(self):
+        """Execute splitting."""
+        sc = SparkContext()
+        data = sc.textFile(self.input().path)
+        results = data.map(lambda x: self.process_email(x)).collect()
+        with self.output().open('w') as f:
+            for result in results:
+                f.write(result + '\n')
+        sc.stop()
+
+    def process_email(self, data):
+        """Split email into parts and extract metadata."""
+        document = json.loads(data)
+
+        parts = self.split_email(document['full_body'])
+
+        part_objects = []
+        for part in parts:
+            part_objects.append(self.extract_metadata(part))
+
+        document['parts'] = part_objects
+        return json.dumps(document, ensure_ascii=False)
+
+    def split_email(self, email):
+        """Split email into parts and return list of parts."""
+        parts = np.array([email])
+        for pattern in self.splitters:
+            new_parts = np.array([])
+            for part in parts:
+                current_part = re.split(pattern, part)
+                new_parts = np.append(new_parts, current_part)
+            parts = new_parts.flatten()
+
+        return parts
+
+    def extract_metadata(self, part):
+        """Extract metadata of one email part and return is at dictionary."""
+        part = re.sub(self.leading_spaces, '', part)
+        part_object = {}
+        part_object['header'] = {}
+        meta = email.message_from_string(part)
+        for meta_element in meta.keys():
+            part_object['header'][meta_element] = meta[meta_element]
+        part_object['text'] = re.sub(self.header, ' ', part)
+
+        return part_object
+
+
 class MetadataExtractor(luigi.Task):
     """This bad boy gets all them metadatas bout y'alls emails."""
 
@@ -226,6 +305,7 @@ class LanguageDetector(luigi.Task):
 
 class EntityExtractorAndCounter(luigi.Task):
     """Extract entities with spacy and count them."""
+
     nlp = spacy.load('en')
 
     def requires(self):
@@ -249,7 +329,7 @@ class EntityExtractorAndCounter(luigi.Task):
         sc.stop()
 
     def extract_entities(self, data):
-        """Extract entities from each document into entities object"""
+        """Extract entities from each document into entities object."""
         document = json.loads(data)
         doc = self.nlp(document['body'])
         extracted_entities = []
@@ -295,7 +375,7 @@ class EntityExtractorAndCounter(luigi.Task):
         return json.dumps(document, ensure_ascii=False)
 
     def make_entity(self, entity, entity_type, entity_count):
-        """JSON Object defninition for entity"""
+        """JSON Object defninition for entity."""
         return {
             "entity": entity,
             "entity_type": entity_type,
