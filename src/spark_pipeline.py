@@ -1,6 +1,5 @@
 """This module processes emails."""
 
-
 import os
 import json
 import luigi
@@ -15,7 +14,7 @@ from langdetect import detect
 import email as email
 import re
 from talon.signature.bruteforce import extract_signature
-
+import spacy
 
 DATETIMESTAMP = datetime.now().strftime('%Y-%m-%d_%H-%M')
 
@@ -223,3 +222,82 @@ class LanguageDetector(luigi.Task):
         document = json.loads(data)
         document['lang'] = detect(document['full_body'])
         return json.dumps(document, ensure_ascii=False)
+
+
+class EntityExtractorAndCounter(luigi.Task):
+    """Extract entities with spacy and count them."""
+    nlp = spacy.load('en')
+
+    def requires(self):
+        """Require the EmailPreprocessor of the preprocessing module."""
+        return LanguageDetector()
+
+    def output(self):
+        """File the counted entities in a counting_done textfile."""
+        return luigi.contrib.hdfs.HdfsTarget('/pipeline/entities_counted/' +
+                                             DATETIMESTAMP +
+                                             '_entities_counted.txt')
+
+    def run(self):
+        """Run the extraction in the Luigi Task."""
+        sc = SparkContext()
+        data = sc.textFile(self.input().path)
+        results = data.map(lambda x: self.extract_entities(x)).collect()
+        with self.output().open('w') as f:
+            for result in results:
+                f.write(result + '\n')
+        sc.stop()
+
+    def extract_entities(self, data):
+        """Extract entities from each document into entities object"""
+        document = json.loads(data)
+        doc = self.nlp(document['body'])
+        extracted_entities = []
+        for entity in doc.ents:
+            # some entities have a lot of ugly whitespaces in the beginning/end of string
+            stripped_text = entity.text.replace('\n', '\\n').strip()
+            duplicate_found = False
+            for existing_entity in extracted_entities:
+                if existing_entity["entity"] == stripped_text:
+                    duplicate_found = True
+                    existing_entity["entity_count"] += 1
+                    break
+            if not duplicate_found:
+                extracted_entities.append(
+                    self.make_entity(stripped_text, entity.label_, 1)
+                )
+        # ADD ENTITIES, THEIR TYPE AND THEIR COUNT 'IN BULK' TO SOLR DATABASE
+        entities = {}
+        entities['PERSON'] = []
+        entities['NORP'] = []
+        entities['FAC'] = []
+        entities['ORG'] = []
+        entities['GPE'] = []
+        entities['LOC'] = []
+        entities['PRODUCT'] = []
+        entities['EVENT'] = []
+        entities['WORK_OF_ART'] = []
+        entities['LAW'] = []
+        entities['LANGUAGE'] = []
+        entities['DATE'] = []
+        entities['TIME'] = []
+        entities['PERCENT'] = []
+        entities['MONEY'] = []
+        entities['QUANTITY'] = []
+        entities['ORDINAL'] = []
+        entities['CARDINAL'] = []
+        for entity in extracted_entities:
+            entity_type = str(entity['entity_type'])
+            entity.pop('entity_type', None)
+            entity_string = str(entity).replace("'", '"')
+            entities[entity_type].append(entity_string)
+        document['entities'] = entities
+        return json.dumps(document, ensure_ascii=False)
+
+    def make_entity(self, entity, entity_type, entity_count):
+        """JSON Object defninition for entity"""
+        return {
+            "entity": entity,
+            "entity_type": entity_type,
+            "entity_count": entity_count
+        }
