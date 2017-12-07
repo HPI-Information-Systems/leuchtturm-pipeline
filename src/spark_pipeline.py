@@ -71,7 +71,8 @@ class InlineEmailSplitter(luigi.Task):
         re.compile(r'(-*[>]?[ ]?On[ ].*,(.*\n){{0,2}}.*wrote:?-*)', re.I)
         ]
 
-    header = re.compile(r'^[ ]*(?:From:.*[\n]?|To:.*[\n]?|Cc:.*[\n]?|Date:.*[\n]?|Sent:.*[\n]?|Subject:.*[\n]?)', re.I | re.M)
+    header = re.compile(r'^[ ]*(?:From:.*[\n]?|To:.*[\n]?|Cc:.*[\n]?|Date:.*[\n]?|Sent:.*[\n]?|Subject:.*[\n]?)',
+                        re.I | re.M)
 
     leading_spaces = re.compile(r'^(?:\n|\s|\t)+', re.M)
 
@@ -304,6 +305,7 @@ class LanguageDetector(luigi.Task):
 
 class EntityExtractorAndCounter(luigi.Task):
     """Extract entities with spacy and count them."""
+
     nlp = spacy.load('en')
 
     def requires(self):
@@ -327,7 +329,7 @@ class EntityExtractorAndCounter(luigi.Task):
         sc.stop()
 
     def extract_entities(self, data):
-        """Extract entities from each document into entities object"""
+        """Extract entities from each document into entities object."""
         document = json.loads(data)
         doc = self.nlp(document['body'])
         extracted_entities = []
@@ -373,7 +375,7 @@ class EntityExtractorAndCounter(luigi.Task):
         return json.dumps(document, ensure_ascii=False)
 
     def make_entity(self, entity, entity_type, entity_count):
-        """JSON Object defninition for entity"""
+        """JSON Object defninition for entity."""
         return {
             "entity": entity,
             "entity_type": entity_type,
