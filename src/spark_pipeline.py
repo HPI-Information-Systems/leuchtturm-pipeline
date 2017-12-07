@@ -1,6 +1,5 @@
 """This module processes emails."""
 
-
 import os
 import json
 import luigi
@@ -16,7 +15,6 @@ import email as email
 import re
 from talon.signature.bruteforce import extract_signature
 import spacy
-nlp = spacy.load('en')
 
 DATETIMESTAMP = datetime.now().strftime('%Y-%m-%d_%H-%M')
 
@@ -206,6 +204,7 @@ class LanguageDetector(luigi.Task):
     def output(self):
         """Write a HDFS target with timestamp."""
         return luigi.contrib.hdfs.HdfsTarget('/pipeline/language_detected/' +
+                                             DATETIMESTAMP +
                                              'language_detected.txt')
 
     def run(self):
@@ -227,6 +226,7 @@ class LanguageDetector(luigi.Task):
 
 class EntityExtractorAndCounter(luigi.Task):
     """Extract entities with spacy and count them."""
+    nlp = spacy.load('en')
 
     def requires(self):
         """Require the EmailPreprocessor of the preprocessing module."""
@@ -251,7 +251,7 @@ class EntityExtractorAndCounter(luigi.Task):
     def extract_entities(self, data):
         """Extract entities from each document into entities object"""
         document = json.loads(data)
-        doc = nlp(document['body'])
+        doc = self.nlp(document['body'])
         extracted_entities = []
         for entity in doc.ents:
             # some entities have a lot of ugly whitespaces in the beginning/end of string
