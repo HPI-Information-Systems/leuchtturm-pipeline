@@ -14,6 +14,8 @@ from langdetect import detect
 import email as email
 import re
 from talon.signature.bruteforce import extract_signature
+from dateutil import parser
+import time
 
 
 DATETIMESTAMP = datetime.now().strftime('%Y-%m-%d_%H-%M')
@@ -83,6 +85,9 @@ class MetadataExtractor(luigi.Task):
         def clean_subject_line(subject_line):
             return re.sub(r'(fw:|re:|aw:|fwd:) *', '', subject_line.lower())
 
+        def unify_date(date_string):
+            return time.mktime(parser.parse(date_string).timetuple())
+
         # this does not conver all senders, but has a very high accuracy for Enron data
         def clean_sender(sender):
             #regex for finding emails
@@ -112,6 +117,10 @@ class MetadataExtractor(luigi.Task):
             elif metainfo == "From":
                 header_piece = clean_sender(message[metainfo])
                 document["header"]["sender"] = header_piece
+            elif metainfo == "Date":
+                header_piece = unify_date(message[metainfo])
+                document["header"][metainfo] = header_piece
+
 
             document["full_body"] = ""
         return json.dumps(document, ensure_ascii=False)
