@@ -52,7 +52,7 @@ class FileLister(luigi.Task):
                 with open(f, 'r', encoding='utf8') as infile:
                     outfile.write(
                         json.dumps({"doc_id": os.path.basename(f).replace('.txt', ''),
-                                    "full_body": infile.read()},
+                                    "raw": infile.read()},
                                    ensure_ascii=False) +
                         '\n')
 
@@ -102,7 +102,7 @@ class InlineEmailSplitter(luigi.Task):
         """Split email into parts and extract metadata."""
         document = json.loads(data)
 
-        parts = self.split_email(document['full_body'])
+        parts = self.split_email(document['raw'])
 
         part_objects = []
         for part in parts:
@@ -131,7 +131,7 @@ class InlineEmailSplitter(luigi.Task):
         meta = email.message_from_string(part)
         for meta_element in meta.keys():
             part_object['header'][meta_element] = meta[meta_element]
-        part_object['text'] = re.sub(self.header, ' ', part)
+        part_object['body'] = re.sub(self.header, ' ', part)
 
         return part_object
 
@@ -141,7 +141,7 @@ class MetadataExtractor(luigi.Task):
 
     def requires(self):
         """Expect raw email data."""
-        return FileLister()
+        return InlineEmailSplitter()
 
     def output(self):
         """Write a HDFS target with timestamp."""
@@ -186,7 +186,7 @@ class MetadataExtractor(luigi.Task):
 
         document = json.loads(data)
         document["header"] = {}
-        message = email.message_from_string(document["full_body"])
+        message = email.message_from_string(document["raw"])
         for metainfo in message.keys():
             header_piece = ""
             if metainfo == "Subject":
@@ -231,7 +231,7 @@ class EmailBodyExtractor(luigi.Task):
     def get_body(self, data):
         """Extract and return the body of an email."""
         document = json.loads(data)
-        mail_text = document['full_body']
+        mail_text = document['raw']
         text_lines = mail_text.splitlines()
 
         func_b = body_extractor.enron_two_zone_line_b_func
@@ -290,25 +290,27 @@ class EmailCleaner(luigi.Task):
         sc.stop()
 
     def clean_entry(self, data):
-        """Clean one entry."""
+        """Clean main body and parts of one entry."""
         document = json.loads(data)
 
-        # run rules
-        body_cleaned = document['body'].replace('\\n', '\n')
+        document['body'] = self.clean_text(document['body'].replace('\\n', '\n'))
+
+        for index, part in enumerate(document['parts']):
+            document['parts'][index]['body'] = self.clean_text(document['parts'][index]['body'].replace('\\n', '\n'))
+
+        return json.dumps(document, ensure_ascii=False)
+
+    def clean_text(self, text):
+        """Clean an email text."""
+        body_cleaned = text
         for rule in self.rules:
             body_cleaned = re.sub(rule, ' ', body_cleaned)
 
-        # run talon
         body_cleaned, temp = extract_signature(body_cleaned)
-
-        # remove special chars and whitespace
         for sc in self.special_chars:
             body_cleaned = body_cleaned.replace(sc, ' ')
-        body_cleaned = re.sub(r'(\n|\t| )+', ' ', body_cleaned)
 
-        document['body'] = body_cleaned
-
-        return json.dumps(document, ensure_ascii=False)
+        return re.sub(r'(\n|\t| )+', ' ', body_cleaned)
 
 
 class LanguageDetector(luigi.Task):
@@ -337,7 +339,7 @@ class LanguageDetector(luigi.Task):
     def detect_language(self, data):
         """Add language to each entry."""
         document = json.loads(data)
-        document['lang'] = detect(document['full_body'])
+        document['lang'] = detect(document['body'])
         return json.dumps(document, ensure_ascii=False)
 
 
