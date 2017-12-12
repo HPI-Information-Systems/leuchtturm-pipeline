@@ -4,7 +4,8 @@ import os
 import json
 import luigi
 import luigi.contrib.hdfs
-# cc
+import findspark
+findspark.init('/usr/hdp/2.6.3.0-235/spark2')
 from pyspark import SparkContext
 import numpy as np
 from datetime import datetime
@@ -13,10 +14,9 @@ from langdetect import detect
 import email as email
 import re
 from talon.signature.bruteforce import extract_signature
+import spacy
 from dateutil import parser
 import time
-
-import spacy
 
 DATETIMESTAMP = datetime.now().strftime('%Y-%m-%d_%H-%M')
 
@@ -24,11 +24,11 @@ DATETIMESTAMP = datetime.now().strftime('%Y-%m-%d_%H-%M')
 class FileLister(luigi.Task):
     """A task for parsing files to json dicts and dumping them to a list."""
 
-    source_dir = luigi.Parameter(default="./example-txts/")
+    source_dir = luigi.Parameter(default="./../tests/example-txts/")
 
     def output(self):
         """Write a HDFS target with timestamp."""
-        return luigi.LocalTarget('./luigi_dumps/test/' +
+        return luigi.contrib.hdfs.HdfsTarget('/pipeline/emails_concatenated/' +
                                              DATETIMESTAMP +
                                              '_emails_concatenated.txt')
 
@@ -145,9 +145,9 @@ class MetadataExtractor(luigi.Task):
 
     def output(self):
         """Write a HDFS target with timestamp."""
-        return luigi.LocalTarget('./luigi_dumps/test/' +
+        return luigi.contrib.hdfs.HdfsTarget('/pipeline/metadata_extracted/' +
                                              DATETIMESTAMP +
-                                             '_metadata_extracted.txt')
+                                             '_parts_detected.txt')
 
     def run(self):
         """Excecute meta data extraction."""
@@ -168,21 +168,41 @@ class MetadataExtractor(luigi.Task):
             return time.mktime(parser.parse(date_string).timetuple())
 
         # this does not conver all senders, but has a very high accuracy for Enron data
-        def clean_sender(sender):
+        def clean_person(person):
             #regex for finding emails
             mailreg = re.compile(r'\b[\w.-]+?@\w+?\.\w+?\b')
-            mail = "".join((mailreg.findall(sender))[:1])
+            mail = "".join((mailreg.findall(person))[:1])
 
             # regex for finding names that are clearly written
             namereg = re.compile(r'[A-Z][a-zA-Z ]+')
-            name = re.sub(r' [a-z]+',"","".join((namereg.findall(sender))[:1]))
+            name = re.sub(r' [a-z]+',"","".join((namereg.findall(person))[:1]))
 
             # regex for names that are seperated by a comma and a newline
             anothernamereg = re.compile(r'[a-z]+,\n *[a-zA-Z]+')
-            another_name = "".join(anothernamereg.findall(sender)[:1]).replace("\n", "").replace(" ", "").replace(",", ", ").strip().title()
+            another_name = "".join(anothernamereg.findall(person)[:1]).replace("\n", "").replace(" ", "").replace(",", ", ").strip().title()
 
             return {"email": mail,
                     "name": another_name if another_name else name}
+
+        def clean_recipients(recipients_string, type):
+            recipients = []
+
+            def split_recipients(string):
+                recipients = []
+                if ">," in string:
+                    recipients = string.split(">,\n")
+                else:
+                    recipients = string.split(",\n")
+                return recipients
+
+            sep_rec_strings = split_recipients(recipients_string)
+
+            for rec_string in sep_rec_strings:
+                cleaned_person = clean_person(rec_string)
+                cleaned_person["type"] = type
+                recipients.append(cleaned_person)
+                
+            return recipients
 
         document = json.loads(data)
         document["header"] = {}
@@ -194,14 +214,15 @@ class MetadataExtractor(luigi.Task):
                 document["header"][metainfo] = header_piece
 
             elif metainfo == "From":
-                header_piece = clean_sender(message[metainfo])
+                header_piece = clean_person(message[metainfo])
                 document["header"]["sender"] = header_piece
             elif metainfo == "Date":
                 header_piece = unify_date(message[metainfo])
                 document["header"][metainfo] = header_piece
+            elif metainfo == "To" or metainfo == "Cc":
+                header_piece = clean_recipients(message[metainfo], metainfo)
+                document["header"]["recipients"] = header_piece
 
-
-            document["full_body"] = ""
         return json.dumps(document, ensure_ascii=False)
 
 
@@ -214,7 +235,7 @@ class EmailBodyExtractor(luigi.Task):
 
     def output(self):
         """Write a HDFS target with timestamp."""
-        return luigi.LocalTarget('./luigi_dumps/test/' +
+        return luigi.contrib.hdfs.HdfsTarget('/pipeline/emailbody_extracted/' +
                                              DATETIMESTAMP +
                                              '_emailbody_extracted.txt')
 
@@ -275,7 +296,7 @@ class EmailCleaner(luigi.Task):
 
     def output(self):
         """Write a HDFS target with timestamp."""
-        return luigi.LocalTarget('./luigi_dumps/test/' +
+        return luigi.contrib.hdfs.HdfsTarget('/pipeline/emails_cleaned/' +
                                              DATETIMESTAMP +
                                              '_emails_cleaned.txt')
 
@@ -322,7 +343,7 @@ class LanguageDetector(luigi.Task):
 
     def output(self):
         """Write a HDFS target with timestamp."""
-        return luigi.LocalTarget('./luigi_dumps/test/' +
+        return luigi.contrib.hdfs.HdfsTarget('/pipeline/language_detected/' +
                                              DATETIMESTAMP +
                                              '_language_detected.txt')
 
