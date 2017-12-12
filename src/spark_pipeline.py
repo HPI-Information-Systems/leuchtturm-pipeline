@@ -383,3 +383,30 @@ class EntityExtractorAndCounter(luigi.Task):
             "entity_type": entity_type,
             "entity_count": entity_count
         }
+
+
+class WriteToSolr(luigi.WrapperTask):
+    """Write documents to a solr core."""
+
+    host = luigi.Parameter(default='https://b1184.byod.hpi.de:8983/solr')
+    core = luigi.Parameter(default='entities')
+
+    def requires(self):
+        """Require last task of pipeline."""
+        return EntityExtractorAndCounter()
+
+    def run(self):
+        """Iterate over documents and add them to solr db."""
+        sc = SparkContext()
+        documents = sc.textFile(self.input().path).collect()
+
+        for document in documents:
+            self.add_document_to_solr(document)
+
+    def add_document_to_solr(self, document):
+        """Add a single document to solr db."""
+        os.system(
+            'curl' + self.host + '/' + self.core +
+            '/update?commit=true -H "Content-Type: text/json" --data-binary \'' +
+            '{"add":{"doc":' + document + '}}' + '\''
+            )
