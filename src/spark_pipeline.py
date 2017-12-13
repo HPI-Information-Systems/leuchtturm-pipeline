@@ -35,7 +35,7 @@ class FileLister(luigi.Task):
     def output(self):
         """Write a HDFS target with timestamp."""
         return luigi.contrib.hdfs.HdfsTarget('/pipeline/emails_concatenated/' +
-                                             TIMESTAMPEXTENSION +
+                                             DATETIMESTAMP +
                                              'emails_concatenated.txt')
 
     def run(self):
