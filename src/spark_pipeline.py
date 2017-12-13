@@ -166,7 +166,7 @@ class MetadataExtractor(luigi.Task):
 
         # this does not conver all senders, but has a very high accuracy for Enron data
         def clean_person(person):
-            #regex for finding emails
+            # regex for finding emails
             mailreg = re.compile(r'\b[\w.-]+?@\w+?\.\w+?\b')
             mail = "".join((mailreg.findall(person))[:1])
 
@@ -503,5 +503,3 @@ class CreateValidJson(luigi.Task):
             f.write(lastResult + '\n')
             f.write(']')
         sc.stop()
-
-class
