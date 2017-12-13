@@ -1,22 +1,59 @@
 """Neo4j test sender"""
 
+import luigi
+import luigi.contrib.hdfs
+from datetime import datetime
+import json
 from neo4j.v1 import GraphDatabase
 
-uri = "bolt://b3986.byod.hpi.de:7687"
-driver = GraphDatabase.driver(uri)
 
-def add_friends(tx, name, friend_name):
-    tx.run("MERGE (a:Person {name: $name}) "
-           "MERGE (a)-[:KNOWS]->(friend:Person {name: $friend_name})",
-           name=name, friend_name=friend_name)
+DATETIMESTAMP = datetime.now().strftime('%Y-%m-%d_%H-%M')
 
-def print_friends(tx, name):
-    for record in tx.run("MATCH (a:Person)-[:KNOWS]->(friend) WHERE a.name = $name "
-                         "RETURN friend.name ORDER BY friend.name", name=name):
-        print(record["friend.name"])
+class Neo4jCommunicator(luigi.Task):
+    """This task communicates with neo4j via the official python driver."""
+    
+    uri = "bolt://b3986.byod.hpi.de:7687"
+    driver = GraphDatabase.driver(uri)
+    source_file = luigi.Parameter(default="json.json")
 
-with driver.session() as session:
-    session.write_transaction(add_friends, "Arthur", "Ich")
-    session.write_transaction(add_friends, "Arthur", "teste")
-    session.write_transaction(add_friends, "Arthur", "gern")
-    session.read_transaction(print_friends, "Arthur")
+    # def requires(self):
+    #     """Require e-mail meta-data."""
+    #     return MetadataExtractor()
+
+    # def output(self):
+    #     """Write a HDFS target with timestamp."""
+    #     return luigi.contrib.hdfs.HdfsTarget('/pipeline/language_detected/' +
+    #                                          DATETIMESTAMP +
+    #                                          '_language_detected.txt')
+
+    def run(self):
+        """Run the neo4j communication."""
+        def add_communication(tx, sender, recipients):
+            # tx.run("MERGE (sender:Person {name: $name_sender, email: $email_sender})", name_sender=sender['name'], email_sender=sender['email'])
+            for recipient in recipients:
+                tx.run("MERGE (sender:Person {name: $name_sender, email: $email_sender}) "
+                        "MERGE (recipient:Person {name: $name_recipient, email: $email_recipient}) "
+                        "MERGE (sender)-[:WRITESTO]->(recipient)",
+                    name_sender=sender['name'], email_sender=sender['email'], name_recipient=recipient['name'], email_recipient=recipient['email'])
+                print('sender:' + str(sender))
+                print('recipient:' + str(recipient))
+                print('------------------------------')
+        
+        def print_communication(tx, name):
+            for record in tx.run("MATCH (sender:Person)-[:WRITESTO]->(recipient) WHERE sender.name = $name "
+                                "RETURN recipient.name ORDER BY recipient.name", name=name):
+                print(record["recipient.name"])
+            
+        with open(self.source_file) as f:
+            for index, line in enumerate(iter(f)):
+                mail = json.loads(line)
+                sender = mail['header']['sender']
+                recipients = mail['header']['recipients']
+                mail_id = mail['doc_id']
+                
+                with self.driver.session() as session:
+                    session.write_transaction(add_communication, sender, recipients)
+                    session.read_transaction(print_communication, sender['name'])
+                    
+
+    
