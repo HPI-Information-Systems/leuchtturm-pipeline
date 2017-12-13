@@ -348,7 +348,10 @@ class LanguageDetector(luigi.Task):
     def detect_language(self, data):
         """Add language to each entry."""
         document = json.loads(data)
-        document['lang'] = detect(document['body'])
+        try:
+            document['lang'] = detect(document['body'])
+        except Exception as e:
+            document['lang'] = 'unknown'
         return json.dumps(document, ensure_ascii=False)
 
 
