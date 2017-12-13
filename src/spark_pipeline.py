@@ -17,12 +17,12 @@ from talon.signature.bruteforce import extract_signature
 import spacy
 from dateutil import parser
 import time
+from hdfs import InsecureClient
 
 DATETIMESTAMP = datetime.now().strftime('%Y-%m-%d_%H-%M')
 
-
 class FileLister(luigi.Task):
-    """A task for parsing files to json dicts and dumping them to a list."""
+    """A task for parsing files from HDFS to json dicts and dumping them to a list."""
 
     source_dir = luigi.Parameter(default="./../tests/example-txts/")
 
@@ -34,28 +34,16 @@ class FileLister(luigi.Task):
 
     def run(self):
         """Run the listing."""
-        self.list_files('.txt')
-
-    def find_files_in_dir(self, ending):
-        """Given ending and path to dir as a string, return list of filenames."""
-        for f in os.listdir(os.fsencode(self.source_dir)):
-            filename = os.fsdecode(f)
-            if filename.endswith(ending):
-                yield os.path.join(self.source_dir, filename)
-
-    def list_files(self, ending):
-        """Given ending and source dir, dump a list of all matching files in source dir as json objects."""
-        found_files = self.find_files_in_dir(ending)
-
+        client = InsecureClient('http://b7689.byod.hpi.de:50070')
         with self.output().open('w') as outfile:
-            for f in found_files:
-                with open(f, 'r', encoding='utf8') as infile:
+            for file in client.list('/pipeline/raw_emails/mails/'):
+
+                with client.read('/pipeline/raw_emails/mails/' + file, encoding='utf-8') as reader:
                     outfile.write(
-                        json.dumps({"doc_id": os.path.basename(f).replace('.txt', ''),
-                                    "raw": infile.read()},
+                        json.dumps({"doc_id": file.replace('.txt', ''),
+                                    "raw": str(reader.read()) },
                                    ensure_ascii=False) +
                         '\n')
-
 
 class InlineEmailSplitter(luigi.Task):
     """This task splits replies and forwards of an email into separate parts."""
@@ -84,7 +72,7 @@ class InlineEmailSplitter(luigi.Task):
 
     def output(self):
         """Produce HDFS target with new field parts."""
-        return luigi.contrib.hdfs.HdfsTarget('/pipeline/email_parts/' +
+        return luigi.contrib.hdfs.HdfsTarget('/pipeline/parts_detected/' +
                                              DATETIMESTAMP +
                                              '_parts_detected.txt')
 
@@ -147,7 +135,7 @@ class MetadataExtractor(luigi.Task):
         """Write a HDFS target with timestamp."""
         return luigi.contrib.hdfs.HdfsTarget('/pipeline/metadata_extracted/' +
                                              DATETIMESTAMP +
-                                             '_parts_detected.txt')
+                                             '_metadata_extracted.txt')
 
     def run(self):
         """Excecute meta data extraction."""
@@ -201,7 +189,7 @@ class MetadataExtractor(luigi.Task):
                 cleaned_person = clean_person(rec_string)
                 cleaned_person["type"] = type
                 recipients.append(cleaned_person)
-                
+
             return recipients
 
         document = json.loads(data)
