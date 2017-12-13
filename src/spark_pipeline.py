@@ -19,7 +19,8 @@ from dateutil import parser
 import time
 from hdfs import InsecureClient
 
-
+# Set this variable to true if you want all tasks to be run again
+# Default should be true
 rerun = True
 
 if (rerun):
