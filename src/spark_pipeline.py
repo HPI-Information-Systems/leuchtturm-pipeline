@@ -261,7 +261,7 @@ class EmailBodyExtractor(luigi.Task):
 
     def requires(self):
         """Expect raw email data."""
-        return MetadataExtractor()
+        return EmailDeduplicator()
 
     def output(self):
         """Write a HDFS target with timestamp."""
