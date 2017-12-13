@@ -28,6 +28,7 @@ if (rerun):
 else:
     DATETIMESTAMP = ''
 
+
 class FileLister(luigi.Task):
     """A task for parsing files from HDFS to json dicts and dumping them to a list."""
 
@@ -49,8 +50,9 @@ class FileLister(luigi.Task):
                     outfile.write(
                         json.dumps({"doc_id": file.replace('.txt', ''),
                                     "raw": str(reader.read()) },
-                                   ensure_ascii=False) +
+                                    ensure_ascii=False) +
                         '\n')
+
 
 class InlineEmailSplitter(luigi.Task):
     """This task splits replies and forwards of an email into separate parts."""
@@ -170,7 +172,7 @@ class MetadataExtractor(luigi.Task):
 
             # regex for finding names that are clearly written
             namereg = re.compile(r'[A-Z][a-zA-Z ]+')
-            name = re.sub(r' [a-z]+',"","".join((namereg.findall(person))[:1]))
+            name = re.sub(r' [a-z]+', "", "".join((namereg.findall(person))[:1]))
 
             # regex for names that are seperated by a comma and a newline
             anothernamereg = re.compile(r'[a-z]+,\n *[a-zA-Z]+')
@@ -219,6 +221,39 @@ class MetadataExtractor(luigi.Task):
                 document["header"]["recipients"] = header_piece
 
         return json.dumps(document, ensure_ascii=False)
+
+
+class EmailDeduplicator(luigi.Task):
+
+    def requies(self):
+        """Expect cleaned meta data."""
+        return MetadataExtractor()
+
+    def output(self):
+        """Write a HDFS target with timestamp."""
+        return luigi.contrib.hdfs.HdfsTarget('/pipeline/emails_deduplicated/' +
+                                             DATETIMESTAMP +
+                                             'emails_deduplicated.txt')
+
+    def run(self):
+        hashmap = set()
+
+        sc = SparkContext()
+        data = sc.textFile(self.input().path).collect()
+
+        for idx, val in enumerate(data):
+            document = json.loads(val)
+            key = json.dumps(document['header'])
+
+            if (hashmap.has(key)):
+                data.pop(idx)
+            else:
+                hashmap.add(key)
+
+        with self.output().open('w') as f:
+            for date in data:
+                f.write(date + '\n')
+        sc.stop()
 
 
 class EmailBodyExtractor(luigi.Task):
@@ -357,7 +392,7 @@ class LanguageDetector(luigi.Task):
         document = json.loads(data)
         try:
             document['lang'] = detect(document['body'])
-        except Exception as e:
+        except Exception:
             document['lang'] = 'unknown'
         return json.dumps(document, ensure_ascii=False)
 
@@ -441,30 +476,32 @@ class EntityExtractorAndCounter(luigi.Task):
             "entity_count": entity_count
         }
 
+
 class CreateValidJson(luigi.Task):
-        """This task creates valid JSON - nice."""
+    """This task creates valid JSON - nice."""
 
-        def requires(self):
-            """Require finished pipeline."""
-            return EntityExtractorAndCounter()
+    def requires(self):
+        """Require finished pipeline."""
+        return EntityExtractorAndCounter()
 
-        def output(self):
-            """Write a HDFS target with timestamp."""
-            return luigi.contrib.hdfs.HdfsTarget('/pipeline/json_created/' +
-                                                 DATETIMESTAMP +
-                                                 'json_created.txt')
+    def output(self):
+        """Write a HDFS target with timestamp."""
+        return luigi.contrib.hdfs.HdfsTarget('/pipeline/json_created/' +
+                                             DATETIMESTAMP +
+                                             'json_created.txt')
 
-        def run(self):
-            """Run json creation."""
+    def run(self):
+        """Run json creation."""
+        sc = SparkContext()
+        data = sc.textFile(self.input().path)
+        results = data.collect()
+        with self.output().open('w') as f:
+            f.write('[' + '\n')
+            lastResult = results.pop()
+            for result in results:
+                f.write(result + ',' + '\n')
+            f.write(lastResult + '\n')
+            f.write(']')
+        sc.stop()
 
-            sc = SparkContext()
-            data = sc.textFile(self.input().path)
-            results = data.collect()
-            with self.output().open('w') as f:
-                f.write('[' + '\n')
-                lastResult = results.pop()
-                for result in results:
-                    f.write(result + ',' + '\n')
-                f.write(lastResult + '\n')
-                f.write(']')
-            sc.stop()
+class
