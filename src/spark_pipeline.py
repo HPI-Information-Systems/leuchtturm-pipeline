@@ -439,3 +439,31 @@ class EntityExtractorAndCounter(luigi.Task):
             "entity_type": entity_type,
             "entity_count": entity_count
         }
+
+class CreateValidJson(luigi.Task):
+        """This task creates valid JSON - nice."""
+
+        def requires(self):
+            """Require finished pipeline."""
+            return EntityExtractorAndCounter()
+
+        def output(self):
+            """Write a HDFS target with timestamp."""
+            return luigi.contrib.hdfs.HdfsTarget('/pipeline/json_created/' +
+                                                 DATETIMESTAMP +
+                                                 'json_created.txt')
+
+        def run(self):
+            """Run json creation."""
+
+            sc = SparkContext()
+            data = sc.textFile(self.input().path)
+            results = data.collect()
+            with self.output().open('w') as f:
+                f.write('[' + '\n')
+                lastResult = results.pop()
+                for result in results:
+                    f.write(result + ',' + '\n')
+                f.write(lastResult + '\n')
+                f.write(']')
+            sc.stop()
