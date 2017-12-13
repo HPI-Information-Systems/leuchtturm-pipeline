@@ -15,6 +15,7 @@ import email as email
 import re
 from talon.signature.bruteforce import extract_signature
 import spacy
+import pysolr
 
 DATETIMESTAMP = datetime.now().strftime('%Y-%m-%d_%H-%M')
 
@@ -388,8 +389,7 @@ class EntityExtractorAndCounter(luigi.Task):
 class WriteToSolr(luigi.WrapperTask):
     """Write documents to a solr core."""
 
-    host = luigi.Parameter(default='https://b1184.byod.hpi.de:8983/solr')
-    core = luigi.Parameter(default='entities')
+    solr = pysolr.Solr('http://b1184.byod.hpi.de:8983/solr/emails_shard1_replica1', timeout=10)
 
     def requires(self):
         """Require last task of pipeline."""
@@ -401,12 +401,11 @@ class WriteToSolr(luigi.WrapperTask):
         documents = sc.textFile(self.input().path).collect()
 
         for document in documents:
-            self.add_document_to_solr(document)
+        	print(document)
+        	self.add_document_to_solr(document)
+
+        sc.close()
 
     def add_document_to_solr(self, document):
         """Add a single document to solr db."""
-        os.system(
-            'curl' + self.host + '/' + self.core +
-            '/update?commit=true -H "Content-Type: text/json" --data-binary \'' +
-            '{"add":{"doc":' + document + '}}' + '\''
-            )
+        self.solr.add(json.loads([document]))
