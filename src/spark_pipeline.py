@@ -19,7 +19,13 @@ from dateutil import parser
 import time
 from hdfs import InsecureClient
 
-DATETIMESTAMP = datetime.now().strftime('%Y-%m-%d_%H-%M')
+
+rerun = True
+
+if (rerun):
+    DATETIMESTAMP = datetime.now().strftime('%Y-%m-%d_%H-%M') + '_'
+else:
+    DATETIMESTAMP = ''
 
 class FileLister(luigi.Task):
     """A task for parsing files from HDFS to json dicts and dumping them to a list."""
@@ -29,8 +35,8 @@ class FileLister(luigi.Task):
     def output(self):
         """Write a HDFS target with timestamp."""
         return luigi.contrib.hdfs.HdfsTarget('/pipeline/emails_concatenated/' +
-                                             DATETIMESTAMP +
-                                             '_emails_concatenated.txt')
+                                             TIMESTAMPEXTENSION +
+                                             'emails_concatenated.txt')
 
     def run(self):
         """Run the listing."""
@@ -74,7 +80,7 @@ class InlineEmailSplitter(luigi.Task):
         """Produce HDFS target with new field parts."""
         return luigi.contrib.hdfs.HdfsTarget('/pipeline/parts_detected/' +
                                              DATETIMESTAMP +
-                                             '_parts_detected.txt')
+                                             'parts_detected.txt')
 
     def run(self):
         """Execute splitting."""
@@ -135,7 +141,7 @@ class MetadataExtractor(luigi.Task):
         """Write a HDFS target with timestamp."""
         return luigi.contrib.hdfs.HdfsTarget('/pipeline/metadata_extracted/' +
                                              DATETIMESTAMP +
-                                             '_metadata_extracted.txt')
+                                             'metadata_extracted.txt')
 
     def run(self):
         """Excecute meta data extraction."""
@@ -225,7 +231,7 @@ class EmailBodyExtractor(luigi.Task):
         """Write a HDFS target with timestamp."""
         return luigi.contrib.hdfs.HdfsTarget('/pipeline/emailbody_extracted/' +
                                              DATETIMESTAMP +
-                                             '_emailbody_extracted.txt')
+                                             'emailbody_extracted.txt')
 
     def run(self):
         """Excecute body extraction."""
@@ -286,7 +292,7 @@ class EmailCleaner(luigi.Task):
         """Write a HDFS target with timestamp."""
         return luigi.contrib.hdfs.HdfsTarget('/pipeline/emails_cleaned/' +
                                              DATETIMESTAMP +
-                                             '_emails_cleaned.txt')
+                                             'emails_cleaned.txt')
 
     def run(self):
         """Run cleansing task."""
@@ -333,7 +339,7 @@ class LanguageDetector(luigi.Task):
         """Write a HDFS target with timestamp."""
         return luigi.contrib.hdfs.HdfsTarget('/pipeline/language_detected/' +
                                              DATETIMESTAMP +
-                                             '_language_detected.txt')
+                                             'language_detected.txt')
 
     def run(self):
         """Run language detection."""
@@ -368,7 +374,7 @@ class EntityExtractorAndCounter(luigi.Task):
         """File the counted entities in a counting_done textfile."""
         return luigi.contrib.hdfs.HdfsTarget('/pipeline/entities_counted/' +
                                              DATETIMESTAMP +
-                                             '_entities_counted.txt')
+                                             'entities_counted.txt')
 
     def run(self):
         """Run the extraction in the Luigi Task."""
