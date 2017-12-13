@@ -9,6 +9,7 @@ from neo4j.v1 import GraphDatabase
 
 DATETIMESTAMP = datetime.now().strftime('%Y-%m-%d_%H-%M')
 
+
 class Neo4jCommunicator(luigi.Task):
     """This task communicates with neo4j via the official python driver."""
     
@@ -28,21 +29,19 @@ class Neo4jCommunicator(luigi.Task):
 
     def run(self):
         """Run the neo4j communication."""
-        def add_communication(tx, sender, recipients):
-            # tx.run("MERGE (sender:Person {name: $name_sender, email: $email_sender})", name_sender=sender['name'], email_sender=sender['email'])
+        def add_communication(tx, sender, recipients, mail_id):
             for recipient in recipients:
                 tx.run("MERGE (sender:Person {name: $name_sender, email: $email_sender}) "
                         "MERGE (recipient:Person {name: $name_recipient, email: $email_recipient}) "
-                        "MERGE (sender)-[:WRITESTO]->(recipient)",
-                    name_sender=sender['name'], email_sender=sender['email'], name_recipient=recipient['name'], email_recipient=recipient['email'])
-                print('sender:' + str(sender))
-                print('recipient:' + str(recipient))
-                print('------------------------------')
+                        "MERGE (sender)-[w:WRITESTO]->(recipient)",
+                        # "WITH MATCH (w) WHERE NOT EXISTS(w.mail_list) SET w.mail_list = '' "
+                        # "SET w.mail_list = w.mail_list + $mail_id"
+                    name_sender=sender['name'], email_sender=sender['email'], name_recipient=recipient['name'], email_recipient=recipient['email'], mail_id=mail_id)
         
-        def print_communication(tx, name):
-            for record in tx.run("MATCH (sender:Person)-[:WRITESTO]->(recipient) WHERE sender.name = $name "
-                                "RETURN recipient.name ORDER BY recipient.name", name=name):
-                print(record["recipient.name"])
+        # def print_communication(tx, name):
+        #     for record in tx.run("MATCH (sender:Person)-[:WRITESTO]->(recipient) WHERE sender.name = $name "
+        #                         "RETURN recipient.name ORDER BY recipient.name", name=name):
+        #         print(record["recipient.name"])
             
         with open(self.source_file) as f:
             for index, line in enumerate(iter(f)):
@@ -52,8 +51,5 @@ class Neo4jCommunicator(luigi.Task):
                 mail_id = mail['doc_id']
                 
                 with self.driver.session() as session:
-                    session.write_transaction(add_communication, sender, recipients)
-                    session.read_transaction(print_communication, sender['name'])
-                    
-
-    
+                    session.write_transaction(add_communication, sender, recipients, mail_id)
+                    # session.read_transaction(print_communication, sender['name'])
