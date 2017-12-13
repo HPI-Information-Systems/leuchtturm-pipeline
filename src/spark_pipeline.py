@@ -24,7 +24,7 @@ DATETIMESTAMP = datetime.now().strftime('%Y-%m-%d_%H-%M')
 class FileLister(luigi.Task):
     """A task for parsing files from HDFS to json dicts and dumping them to a list."""
 
-    source_dir = luigi.Parameter(default="./../tests/example-txts/")
+    source_dir = luigi.Parameter(default="/pipeline/raw_emails/mails/")
 
     def output(self):
         """Write a HDFS target with timestamp."""
@@ -36,9 +36,9 @@ class FileLister(luigi.Task):
         """Run the listing."""
         client = InsecureClient('http://b7689.byod.hpi.de:50070')
         with self.output().open('w') as outfile:
-            for file in client.list('/pipeline/raw_emails/mails/'):
+            for file in client.list(self.source_dir):
 
-                with client.read('/pipeline/raw_emails/mails/' + file, encoding='utf-8') as reader:
+                with client.read(self.source_dir + file, encoding='utf-8') as reader:
                     outfile.write(
                         json.dumps({"doc_id": file.replace('.txt', ''),
                                     "raw": str(reader.read()) },
