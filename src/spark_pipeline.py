@@ -224,8 +224,9 @@ class MetadataExtractor(luigi.Task):
 
 
 class EmailDeduplicator(luigi.Task):
+    """Deduplicate emails. Recognize emails by their header."""
 
-    def requies(self):
+    def requires(self):
         """Expect cleaned meta data."""
         return MetadataExtractor()
 
@@ -236,16 +237,18 @@ class EmailDeduplicator(luigi.Task):
                                              'emails_deduplicated.txt')
 
     def run(self):
+        """Perform duplicate removal."""
         hashmap = set()
 
         sc = SparkContext()
-        data = sc.textFile(self.input().path).collect()
+        data = sc.textFile(self.input().path)
+        data = data.collect()
 
         for idx, val in enumerate(data):
             document = json.loads(val)
             key = json.dumps(document['header'])
 
-            if (hashmap.has(key)):
+            if (key in hashmap):
                 data.pop(idx)
             else:
                 hashmap.add(key)
