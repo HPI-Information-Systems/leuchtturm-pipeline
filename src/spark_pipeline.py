@@ -406,6 +406,15 @@ class WriteToSolr(luigi.WrapperTask):
 
         sc.close()
 
+    def transform_lists_to_objects(document):
+        for type in documents["entities"].keys():
+            document["entitities"][type] = dict(enumerate(document["entitities"][type]))
+
+        documents["parts"] = dict(enumerate(documents["parts"]))
+        documents["header"]["recipients"] = dict(enumerate(documents["header"]["recipients"]))
+
+
+
     def add_document_to_solr(self, document):
         """Add a single document to solr db."""
         self.solr.add(json.loads([document]))
