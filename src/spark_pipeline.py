@@ -229,11 +229,13 @@ class EmailDeduplicator(luigi.Task):
 
     def requires(self):
         """Expect cleaned meta data."""
-        raise NotImplementedError('Subclass responsibility')
+        return MetadataExtractor()
 
     def output(self):
         """Write a HDFS target with timestamp."""
-        raise NotImplementedError('Subclass responsibility')
+        return luigi.contrib.hdfs.HdfsTarget('/pipeline/emails_deduplicated/' +
+                                             DATETIMESTAMP +
+                                             'emails_deduplicated.txt')
 
     def run(self):
         """Perform duplicate removal."""
@@ -252,7 +254,8 @@ class EmailDeduplicator(luigi.Task):
             recipients_mail_addresses = []
             recipients = header['recipients']
             for recipient in recipients:
-                recipients_mail_addresses.append(recipient['email'])
+                recipient_and_type = (recipient['email'], recipient['type'])
+                    recipients_mail_addresses.append(recipient_and_type)
 
             subject = header['Subject']
             date = header['Date']
