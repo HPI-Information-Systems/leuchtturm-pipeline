@@ -224,22 +224,19 @@ class MetadataExtractor(luigi.Task):
         return json.dumps(document, ensure_ascii=False)
 
 
-class FirstEmailDeduplicator(EmailDeduplicator):
+class EmailDeduplicator(luigi.Task):
     """Deduplicate emails. Recognize emails by their header."""
 
     def requires(self):
         """Expect cleaned meta data."""
-        return MetadataExtractor()
+        raise NotImplementedError('Subclass responsibility')
 
     def output(self):
         """Write a HDFS target with timestamp."""
-        return luigi.contrib.hdfs.HdfsTarget('/pipeline/emails_deduplicated/' +
-                                             DATETIMESTAMP +
-                                             'emails_deduplicated_first.txt')
+        raise NotImplementedError('Subclass responsibility')
 
-    # def run(self):
-    #    """Perform duplicate removal."""
-    """
+    def run(self):
+        """Perform duplicate removal."""
         hashmap = set()
 
         sc = SparkContext()
@@ -248,7 +245,22 @@ class FirstEmailDeduplicator(EmailDeduplicator):
 
         for idx, val in enumerate(data):
             document = json.loads(val)
-            key = json.dumps(document['header'])
+
+            header = document['header']
+            sender_mail_address = header['sender']['email']
+
+            recipients_mail_addresses = []
+            recipients = header['recipients']
+            for recipient in recipients:
+                recipients_mail_addresses.append(recipient['email'])
+
+            subject = header['Subject']
+            date = header['Date']
+
+            key = [sender_mail_address]
+            key.append(recipients_mail_addresses)
+            key.append(subject)
+            key.append(date)
 
             if (key in hashmap):
                 data.pop(idx)
@@ -259,7 +271,6 @@ class FirstEmailDeduplicator(EmailDeduplicator):
             for date in data:
                 f.write(date + '\n')
         sc.stop()
-        """
 
 
 class EmailBodyExtractor(luigi.Task):
@@ -267,7 +278,7 @@ class EmailBodyExtractor(luigi.Task):
 
     def requires(self):
         """Expect raw email data."""
-        return FirstEmailDeduplicator()
+        return EmailDeduplicator()
 
     def output(self):
         """Write a HDFS target with timestamp."""
@@ -370,51 +381,12 @@ class EmailCleaner(luigi.Task):
         return re.sub(r'(\n|\t| )+', ' ', body_cleaned)
 
 
-class SecondEmailDeduplicator(EmailDeduplicator):
-    """Deduplicate emails. Recognize emails by their header."""
-
-    def requires(self):
-        """Expect cleaned meta data."""
-        return EmailCleaner()
-
-    def output(self):
-        """Write a HDFS target with timestamp."""
-        return luigi.contrib.hdfs.HdfsTarget('/pipeline/emails_deduplicated/' +
-                                             DATETIMESTAMP +
-                                             'emails_deduplicated_second.txt')
-
-    # def run(self):
-    #    """Perform duplicate removal."""
-    """
-        hashmap = set()
-
-        sc = SparkContext()
-        data = sc.textFile(self.input().path)
-        data = data.collect()
-
-        for idx, val in enumerate(data):
-            document = json.loads(val)
-            key = json.dumps(document['header'])
-
-            if (key in hashmap):
-                data.pop(idx)
-            else:
-                hashmap.add(key)
-
-        with self.output().open('w') as f:
-            for date in data:
-                f.write(date + '\n')
-        sc.stop()
-        """
-
-
-
 class LanguageDetector(luigi.Task):
     """This task detects the language of a text using langdetect."""
 
     def requires(self):
         """Require e-mail text without headers and footer."""
-        return SecondEmailDeduplicator()
+        return EmailCleaner()
 
     def output(self):
         """Write a HDFS target with timestamp."""
