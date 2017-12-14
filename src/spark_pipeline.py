@@ -387,9 +387,9 @@ class EntityExtractorAndCounter(luigi.Task):
 
 
 class WriteToSolr(luigi.WrapperTask):
-    """Write documents to a solr core."""
+    """Write  to a solr core."""
 
-    solr = pysolr.Solr('http://b1184.byod.hpi.de:8983/solr/emails_shard1_replica1', timeout=10)
+    solr = pysolr.Solr('http://b1184.byod.hpi.de:8983/solr/entities', timeout=10)
 
     def requires(self):
         """Require last task of pipeline."""
@@ -401,20 +401,28 @@ class WriteToSolr(luigi.WrapperTask):
         documents = sc.textFile(self.input().path).collect()
 
         for document in documents:
-        	print(document)
-        	self.add_document_to_solr(document)
+            print(document)
+            document = self.transform_lists_to_objects(json.loads(document))
+            self.add_document_to_solr(document)
 
-        sc.close()
+        sc.stop()
 
-    def transform_lists_to_objects(document):
-        for type in documents["entities"].keys():
-            document["entitities"][type] = dict(enumerate(document["entitities"][type]))
+    def transform_lists_to_objects(self, document):
+        # entities to object
+        for type in document["entities"].keys():
+            document["entities"][type] = dict(enumerate(document["entities"][type]))
 
-        documents["parts"] = dict(enumerate(documents["parts"]))
-        documents["header"]["recipients"] = dict(enumerate(documents["header"]["recipients"]))
+        # parts to object
+        document["parts"] = dict(enumerate(document["parts"]))
+
+        # recipients to object
+        if "header" in document.keys():
+            document["header"]["recipients"] = dict(enumerate(document["header"]["recipients"]))
+
+        return document
 
 
 
     def add_document_to_solr(self, document):
         """Add a single document to solr db."""
-        self.solr.add(json.loads([document]))
+        self.solr.add([document])
