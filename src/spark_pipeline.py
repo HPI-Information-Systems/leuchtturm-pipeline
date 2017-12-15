@@ -15,13 +15,10 @@ import email as email
 import re
 from talon.signature.bruteforce import extract_signature
 import spacy
-<<<<<<< HEAD
 import pysolr
-=======
 from dateutil import parser
 import time
 from hdfs import InsecureClient
->>>>>>> dev
 
 # Set this variable to true if you want all tasks to be run again
 # Default should be true
@@ -451,7 +448,7 @@ class CreateValidJson(luigi.Task):
 
         def requires(self):
             """Require finished pipeline."""
-            return EntityExtractorAndCounter()
+            return WriteToSolr()
 
         def output(self):
             """Write a HDFS target with timestamp."""
@@ -475,7 +472,7 @@ class CreateValidJson(luigi.Task):
             sc.stop()
 
 
-class WriteToSolr(luigi.WrapperTask):
+class WriteToSolr(luigi.Task):
     """Write  to a solr core."""
 
     solr = pysolr.Solr('http://b1184.byod.hpi.de:8983/solr/entities', timeout=10)
@@ -484,16 +481,27 @@ class WriteToSolr(luigi.WrapperTask):
         """Require last task of pipeline."""
         return EntityExtractorAndCounter()
 
+    def output(self):
+        return luigi.contrib.hdfs.HdfsTarget('/pipeline/solr_format/' +
+                                             DATETIMESTAMP +
+                                             'solr_format.txt')
+
     def run(self):
         """Iterate over documents and add them to solr db."""
         sc = SparkContext()
         documents = sc.textFile(self.input().path).collect()
 
+        results = []
+
         for document in documents:
             print(document)
             document = self.transform_lists_to_objects(json.loads(document))
-            self.add_document_to_solr(document)
+            # self.add_document_to_solr(document)
+            results.append(document)
 
+        with self.output().open('w') as f:
+            for result in results:
+                f.write(result + '\n')
         sc.stop()
 
     def transform_lists_to_objects(self, document):
