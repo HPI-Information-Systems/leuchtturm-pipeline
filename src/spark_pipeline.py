@@ -7,6 +7,17 @@ import findspark
 findspark.init('/usr/hdp/2.6.3.0-235/spark2')
 from pyspark import SparkContext
 from datetime import datetime
+import numpy as np
+import email as email
+import re
+from hdfs import InsecureClient
+from dateutil import parser
+import time
+from talon.signature.bruteforce import extract_signature
+from langdetect import detect
+import spacy
+from flatten_dict import flatten
+import pysolr
 
 # Set this variable to true if you want all tasks to be run again
 # Default should be true
@@ -19,8 +30,6 @@ else:
 
 class FileLister(luigi.Task):
     """A task for parsing files from HDFS to json dicts and dumping them to a list."""
-
-    from hdfs import InsecureClient
 
     source_dir = luigi.Parameter(default="/pipeline/raw_emails/mails/")
 
@@ -46,10 +55,6 @@ class FileLister(luigi.Task):
 
 class InlineEmailSplitter(luigi.Task):
     """This task splits replies and forwards of an email into separate parts."""
-
-    import numpy as np
-    import email as email
-    import re
 
     splitters = [
         # ----------- Forwarded by Max Mustermann on 24 Jan 2001 ------------
@@ -129,11 +134,6 @@ class InlineEmailSplitter(luigi.Task):
 
 class MetadataExtractor(luigi.Task):
     """This bad boy gets all them metadatas bout y'alls emails."""
-
-    import re
-    import email as email
-    from dateutil import parser
-    import time
 
     def requires(self):
         """Expect raw email data."""
@@ -225,9 +225,6 @@ class MetadataExtractor(luigi.Task):
 class EmailBodyExtractor(luigi.Task):
     """This bad boy gets all them email booti bout y'alls emails."""
 
-    import numpy as np
-    import emailbody.extractmailbody as body_extractor
-
     def requires(self):
         """Expect raw email data."""
         return MetadataExtractor()
@@ -250,6 +247,8 @@ class EmailBodyExtractor(luigi.Task):
 
     def get_body(self, data):
         """Extract and return the body of an email."""
+        import emailbody.extractmailbody as body_extractor
+
         document = json.loads(data)
         mail_text = document['raw']
         text_lines = mail_text.splitlines()
@@ -274,9 +273,6 @@ class EmailBodyExtractor(luigi.Task):
 
 class EmailCleaner(luigi.Task):
     """This task uses Talon from Mailgun to clean emails."""
-
-    from talon.signature.bruteforce import extract_signature
-    import re
 
     special_chars = [
         '"', "!", "#", "$", "%", "&", "'", "§", "(", ")", "*", "+",
@@ -339,8 +335,6 @@ class EmailCleaner(luigi.Task):
 class LanguageDetector(luigi.Task):
     """This task detects the language of a text using langdetect."""
 
-    from langdetect import detect
-
     def requires(self):
         """Require e-mail text without headers and footer."""
         return EmailCleaner()
@@ -373,8 +367,6 @@ class LanguageDetector(luigi.Task):
 
 class EntityExtractorAndCounter(luigi.Task):
     """Extract entities with spacy and count them."""
-
-    import spacy
 
     nlp = spacy.load('en')
 
@@ -483,9 +475,6 @@ class CreateValidJson(luigi.Task):
 
 class WriteToSolr(luigi.Task):
     """Write  to a solr core."""
-
-    from flatten_dict import flatten
-    import pysolr
 
     solr = pysolr.Solr('http://b1184.byod.hpi.de:8983/solr/emails_test', timeout=20)
 
