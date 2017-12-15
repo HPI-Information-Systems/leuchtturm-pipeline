@@ -458,7 +458,7 @@ class CreateValidJson(luigi.Task):
 
         def requires(self):
             """Require finished pipeline."""
-            return WriteToSolr()
+            return EntityExtractorAndCounter()
 
         def output(self):
             """Write a HDFS target with timestamp."""
@@ -484,53 +484,34 @@ class CreateValidJson(luigi.Task):
 class WriteToSolr(luigi.Task):
     """Write  to a solr core."""
 
+    from flatten_dict import flatten
     import pysolr
 
-    solr = pysolr.Solr('http://b1184.byod.hpi.de:8983/solr/entities', timeout=10)
+    solr = pysolr.Solr('http://b1184.byod.hpi.de:8983/solr/emails_test', timeout=20)
 
     def requires(self):
         """Require last task of pipeline."""
         return EntityExtractorAndCounter()
-
-    def output(self):
-        """Write a HDFS target with timestamp."""
-        return luigi.contrib.hdfs.HdfsTarget('/pipeline/solr_format/' +
-                                             DATETIMESTAMP +
-                                             'solr_format.txt')
 
     def run(self):
         """Iterate over documents and add them to solr db."""
         sc = SparkContext()
         documents = sc.textFile(self.input().path).collect()
 
-        results = []
-
         for document in documents:
-            print(document)
-            document = self.transform_lists_to_objects(json.loads(document))
-            # self.add_document_to_solr(document)
-            results.append(document)
+            document = self.flatten_document(json.loads(document))
+            self.solr.add([document])
 
-        with self.output().open('w') as f:
-            for result in results:
-                f.write(result + '\n')
-        sc.stop()
+        sc.close()
 
-    def transform_lists_to_objects(self, document):
-        """Transform list of docs to objects."""
-        # entities to object
-        for type in document["entities"].keys():
-            document["entities"][type] = dict(enumerate(document["entities"][type]))
-
-        # parts to object
+    def flatten_document(self, document):
+        """Remove nested structures to make doc fit solr requirements."""
         document["parts"] = dict(enumerate(document["parts"]))
 
-        # recipients to object
-        if "header" in document.keys():
-            document["header"]["recipients"] = dict(enumerate(document["header"]["recipients"]))
+        def dot_reducer(k1, k2):
+            if k1 is None:
+                return k2
+            else:
+                return str(k1) + "." + str(k2)
 
-        return document
-
-    def add_document_to_solr(self, document):
-        """Add a single document to solr db."""
-        self.solr.add([document])
+        return flatten(document, reducer=dot_reducer)
