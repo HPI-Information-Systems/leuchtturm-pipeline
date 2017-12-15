@@ -28,10 +28,11 @@ if (rerun):
 else:
     DATETIMESTAMP = ''
 
+
 class FileLister(luigi.Task):
     """A task for parsing files from HDFS to json dicts and dumping them to a list."""
 
-    source_dir = luigi.Parameter(default="/pipeline/raw_emails/mails/")
+    source_dir = luigi.Parameter(default="/pipeline/raw_emails/manymailsmails/manymails/")
 
     def output(self):
         """Write a HDFS target with timestamp."""
@@ -476,7 +477,7 @@ class CreateValidJson(luigi.Task):
 class WriteToSolr(luigi.Task):
     """Write  to a solr core."""
 
-    solr = pysolr.Solr('http://b1184.byod.hpi.de:8983/solr/emails_test', timeout=20)
+    solr = pysolr.Solr('http://b1184.byod.hpi.de:8983/solr/manymails', timeout=20)
 
     def requires(self):
         """Require last task of pipeline."""
@@ -491,7 +492,7 @@ class WriteToSolr(luigi.Task):
             document = self.flatten_document(json.loads(document))
             self.solr.add([document])
 
-        sc.close()
+        sc.stop()
 
     def flatten_document(self, document):
         """Remove nested structures to make doc fit solr requirements."""
