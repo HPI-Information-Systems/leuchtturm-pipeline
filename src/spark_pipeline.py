@@ -1,24 +1,12 @@
 """This module processes emails."""
 
-import os
 import json
 import luigi
 import luigi.contrib.hdfs
 import findspark
 findspark.init('/usr/hdp/2.6.3.0-235/spark2')
 from pyspark import SparkContext
-import numpy as np
 from datetime import datetime
-import emailbody.extractmailbody as body_extractor
-from langdetect import detect
-import email as email
-import re
-from talon.signature.bruteforce import extract_signature
-import spacy
-import pysolr
-from dateutil import parser
-import time
-from hdfs import InsecureClient
 
 # Set this variable to true if you want all tasks to be run again
 # Default should be true
@@ -31,6 +19,8 @@ else:
 
 class FileLister(luigi.Task):
     """A task for parsing files from HDFS to json dicts and dumping them to a list."""
+
+    from hdfs import InsecureClient
 
     source_dir = luigi.Parameter(default="/pipeline/raw_emails/mails/")
 
@@ -53,8 +43,13 @@ class FileLister(luigi.Task):
                                    ensure_ascii=False) +
                         '\n')
 
+
 class InlineEmailSplitter(luigi.Task):
     """This task splits replies and forwards of an email into separate parts."""
+
+    import numpy as np
+    import email as email
+    import re
 
     splitters = [
         # ----------- Forwarded by Max Mustermann on 24 Jan 2001 ------------
@@ -135,6 +130,11 @@ class InlineEmailSplitter(luigi.Task):
 class MetadataExtractor(luigi.Task):
     """This bad boy gets all them metadatas bout y'alls emails."""
 
+    import re
+    import email as email
+    from dateutil import parser
+    import time
+
     def requires(self):
         """Expect raw email data."""
         return InlineEmailSplitter()
@@ -165,13 +165,13 @@ class MetadataExtractor(luigi.Task):
 
         # this does not conver all senders, but has a very high accuracy for Enron data
         def clean_person(person):
-            #regex for finding emails
+            # regex for finding emails
             mailreg = re.compile(r'\b[\w.-]+?@\w+?\.\w+?\b')
             mail = "".join((mailreg.findall(person))[:1])
 
             # regex for finding names that are clearly written
             namereg = re.compile(r'[A-Z][a-zA-Z ]+')
-            name = re.sub(r' [a-z]+',"","".join((namereg.findall(person))[:1]))
+            name = re.sub(r' [a-z]+', "", "".join((namereg.findall(person))[:1]))
 
             # regex for names that are seperated by a comma and a newline
             anothernamereg = re.compile(r'[a-z]+,\n *[a-zA-Z]+')
@@ -225,6 +225,9 @@ class MetadataExtractor(luigi.Task):
 class EmailBodyExtractor(luigi.Task):
     """This bad boy gets all them email booti bout y'alls emails."""
 
+    import numpy as np
+    import emailbody.extractmailbody as body_extractor
+
     def requires(self):
         """Expect raw email data."""
         return MetadataExtractor()
@@ -271,6 +274,9 @@ class EmailBodyExtractor(luigi.Task):
 
 class EmailCleaner(luigi.Task):
     """This task uses Talon from Mailgun to clean emails."""
+
+    from talon.signature.bruteforce import extract_signature
+    import re
 
     special_chars = [
         '"', "!", "#", "$", "%", "&", "'", "§", "(", ")", "*", "+",
@@ -333,6 +339,8 @@ class EmailCleaner(luigi.Task):
 class LanguageDetector(luigi.Task):
     """This task detects the language of a text using langdetect."""
 
+    from langdetect import detect
+
     def requires(self):
         """Require e-mail text without headers and footer."""
         return EmailCleaner()
@@ -358,13 +366,15 @@ class LanguageDetector(luigi.Task):
         document = json.loads(data)
         try:
             document['lang'] = detect(document['body'])
-        except Exception as e:
+        except Exception:
             document['lang'] = 'unknown'
         return json.dumps(document, ensure_ascii=False)
 
 
 class EntityExtractorAndCounter(luigi.Task):
     """Extract entities with spacy and count them."""
+
+    import spacy
 
     nlp = spacy.load('en')
 
@@ -458,7 +468,6 @@ class CreateValidJson(luigi.Task):
 
         def run(self):
             """Run json creation."""
-
             sc = SparkContext()
             data = sc.textFile(self.input().path)
             results = data.collect()
@@ -475,6 +484,8 @@ class CreateValidJson(luigi.Task):
 class WriteToSolr(luigi.Task):
     """Write  to a solr core."""
 
+    import pysolr
+
     solr = pysolr.Solr('http://b1184.byod.hpi.de:8983/solr/entities', timeout=10)
 
     def requires(self):
@@ -482,6 +493,7 @@ class WriteToSolr(luigi.Task):
         return EntityExtractorAndCounter()
 
     def output(self):
+        """Write a HDFS target with timestamp."""
         return luigi.contrib.hdfs.HdfsTarget('/pipeline/solr_format/' +
                                              DATETIMESTAMP +
                                              'solr_format.txt')
@@ -505,6 +517,7 @@ class WriteToSolr(luigi.Task):
         sc.stop()
 
     def transform_lists_to_objects(self, document):
+        """Transform list of docs to objects."""
         # entities to object
         for type in document["entities"].keys():
             document["entities"][type] = dict(enumerate(document["entities"][type]))
