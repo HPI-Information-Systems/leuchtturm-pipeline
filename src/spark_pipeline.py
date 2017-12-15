@@ -15,46 +15,46 @@ import email as email
 import re
 from talon.signature.bruteforce import extract_signature
 import spacy
+<<<<<<< HEAD
 import pysolr
+=======
+from dateutil import parser
+import time
+from hdfs import InsecureClient
+>>>>>>> dev
 
-DATETIMESTAMP = datetime.now().strftime('%Y-%m-%d_%H-%M')
+# Set this variable to true if you want all tasks to be run again
+# Default should be true
+rerun = True
 
+if (rerun):
+    DATETIMESTAMP = datetime.now().strftime('%Y-%m-%d_%H-%M') + '_'
+else:
+    DATETIMESTAMP = ''
 
 class FileLister(luigi.Task):
-    """A task for parsing files to json dicts and dumping them to a list."""
+    """A task for parsing files from HDFS to json dicts and dumping them to a list."""
 
-    source_dir = luigi.Parameter(default="./../tests/example-txts/")
+    source_dir = luigi.Parameter(default="/pipeline/raw_emails/mails/")
 
     def output(self):
         """Write a HDFS target with timestamp."""
         return luigi.contrib.hdfs.HdfsTarget('/pipeline/emails_concatenated/' +
                                              DATETIMESTAMP +
-                                             '_emails_concatenated.txt')
+                                             'emails_concatenated.txt')
 
     def run(self):
         """Run the listing."""
-        self.list_files('.txt')
-
-    def find_files_in_dir(self, ending):
-        """Given ending and path to dir as a string, return list of filenames."""
-        for f in os.listdir(os.fsencode(self.source_dir)):
-            filename = os.fsdecode(f)
-            if filename.endswith(ending):
-                yield os.path.join(self.source_dir, filename)
-
-    def list_files(self, ending):
-        """Given ending and source dir, dump a list of all matching files in source dir as json objects."""
-        found_files = self.find_files_in_dir(ending)
-
+        client = InsecureClient('http://b7689.byod.hpi.de:50070')
         with self.output().open('w') as outfile:
-            for f in found_files:
-                with open(f, 'r', encoding='utf8') as infile:
+            for file in client.list(self.source_dir):
+
+                with client.read(self.source_dir + file, encoding='utf-8') as reader:
                     outfile.write(
-                        json.dumps({"doc_id": os.path.basename(f).replace('.txt', ''),
-                                    "raw": infile.read()},
+                        json.dumps({"doc_id": file.replace('.txt', ''),
+                                    "raw": str(reader.read()) },
                                    ensure_ascii=False) +
                         '\n')
-
 
 class InlineEmailSplitter(luigi.Task):
     """This task splits replies and forwards of an email into separate parts."""
@@ -83,9 +83,9 @@ class InlineEmailSplitter(luigi.Task):
 
     def output(self):
         """Produce HDFS target with new field parts."""
-        return luigi.contrib.hdfs.HdfsTarget('/pipeline/email_parts/' +
+        return luigi.contrib.hdfs.HdfsTarget('/pipeline/parts_detected/' +
                                              DATETIMESTAMP +
-                                             '_parts_detected.txt')
+                                             'parts_detected.txt')
 
     def run(self):
         """Execute splitting."""
@@ -146,7 +146,7 @@ class MetadataExtractor(luigi.Task):
         """Write a HDFS target with timestamp."""
         return luigi.contrib.hdfs.HdfsTarget('/pipeline/metadata_extracted/' +
                                              DATETIMESTAMP +
-                                             '_metadata_extracted.txt')
+                                             'metadata_extracted.txt')
 
     def run(self):
         """Excecute meta data extraction."""
@@ -160,10 +160,67 @@ class MetadataExtractor(luigi.Task):
 
     def extract_metadata(self, data):
         """Extract meta data of each email."""
+        def clean_subject_line(subject_line):
+            return re.sub(r'(fw:|re:|aw:|fwd:) *', '', subject_line.lower())
+
+        def unify_date(date_string):
+            return time.mktime(parser.parse(date_string).timetuple())
+
+        # this does not conver all senders, but has a very high accuracy for Enron data
+        def clean_person(person):
+            #regex for finding emails
+            mailreg = re.compile(r'\b[\w.-]+?@\w+?\.\w+?\b')
+            mail = "".join((mailreg.findall(person))[:1])
+
+            # regex for finding names that are clearly written
+            namereg = re.compile(r'[A-Z][a-zA-Z ]+')
+            name = re.sub(r' [a-z]+',"","".join((namereg.findall(person))[:1]))
+
+            # regex for names that are seperated by a comma and a newline
+            anothernamereg = re.compile(r'[a-z]+,\n *[a-zA-Z]+')
+            another_name = "".join(anothernamereg.findall(person)[:1]).replace("\n", "").replace(" ", "").replace(",", ", ").strip().title()
+
+            return {"email": mail,
+                    "name": another_name if another_name else name}
+
+        def clean_recipients(recipients_string, type):
+            recipients = []
+
+            def split_recipients(string):
+                recipients = []
+                if ">," in string:
+                    recipients = string.split(">,\n")
+                else:
+                    recipients = string.split(",\n")
+                return recipients
+
+            sep_rec_strings = split_recipients(recipients_string)
+
+            for rec_string in sep_rec_strings:
+                cleaned_person = clean_person(rec_string)
+                cleaned_person["type"] = type
+                recipients.append(cleaned_person)
+
+            return recipients
+
         document = json.loads(data)
+        document["header"] = {}
         message = email.message_from_string(document["raw"])
         for metainfo in message.keys():
-            document[metainfo] = message[metainfo]
+            header_piece = ""
+            if metainfo == "Subject":
+                header_piece = clean_subject_line(message[metainfo])
+                document["header"][metainfo] = header_piece
+
+            elif metainfo == "From":
+                header_piece = clean_person(message[metainfo])
+                document["header"]["sender"] = header_piece
+            elif metainfo == "Date":
+                header_piece = unify_date(message[metainfo])
+                document["header"][metainfo] = header_piece
+            elif metainfo == "To" or metainfo == "Cc":
+                header_piece = clean_recipients(message[metainfo], metainfo)
+                document["header"]["recipients"] = header_piece
 
         return json.dumps(document, ensure_ascii=False)
 
@@ -179,7 +236,7 @@ class EmailBodyExtractor(luigi.Task):
         """Write a HDFS target with timestamp."""
         return luigi.contrib.hdfs.HdfsTarget('/pipeline/emailbody_extracted/' +
                                              DATETIMESTAMP +
-                                             '_emailbody_extracted.txt')
+                                             'emailbody_extracted.txt')
 
     def run(self):
         """Excecute body extraction."""
@@ -240,7 +297,7 @@ class EmailCleaner(luigi.Task):
         """Write a HDFS target with timestamp."""
         return luigi.contrib.hdfs.HdfsTarget('/pipeline/emails_cleaned/' +
                                              DATETIMESTAMP +
-                                             '_emails_cleaned.txt')
+                                             'emails_cleaned.txt')
 
     def run(self):
         """Run cleansing task."""
@@ -287,7 +344,7 @@ class LanguageDetector(luigi.Task):
         """Write a HDFS target with timestamp."""
         return luigi.contrib.hdfs.HdfsTarget('/pipeline/language_detected/' +
                                              DATETIMESTAMP +
-                                             '_language_detected.txt')
+                                             'language_detected.txt')
 
     def run(self):
         """Run language detection."""
@@ -302,7 +359,10 @@ class LanguageDetector(luigi.Task):
     def detect_language(self, data):
         """Add language to each entry."""
         document = json.loads(data)
-        document['lang'] = detect(document['body'])
+        try:
+            document['lang'] = detect(document['body'])
+        except Exception as e:
+            document['lang'] = 'unknown'
         return json.dumps(document, ensure_ascii=False)
 
 
@@ -319,7 +379,7 @@ class EntityExtractorAndCounter(luigi.Task):
         """File the counted entities in a counting_done textfile."""
         return luigi.contrib.hdfs.HdfsTarget('/pipeline/entities_counted/' +
                                              DATETIMESTAMP +
-                                             '_entities_counted.txt')
+                                             'entities_counted.txt')
 
     def run(self):
         """Run the extraction in the Luigi Task."""
@@ -386,6 +446,35 @@ class EntityExtractorAndCounter(luigi.Task):
         }
 
 
+class CreateValidJson(luigi.Task):
+        """This task creates valid JSON - nice."""
+
+        def requires(self):
+            """Require finished pipeline."""
+            return EntityExtractorAndCounter()
+
+        def output(self):
+            """Write a HDFS target with timestamp."""
+            return luigi.contrib.hdfs.HdfsTarget('/pipeline/json_created/' +
+                                                 DATETIMESTAMP +
+                                                 'json_created.txt')
+
+        def run(self):
+            """Run json creation."""
+
+            sc = SparkContext()
+            data = sc.textFile(self.input().path)
+            results = data.collect()
+            with self.output().open('w') as f:
+                f.write('[' + '\n')
+                lastResult = results.pop()
+                for result in results:
+                    f.write(result + ',' + '\n')
+                f.write(lastResult + '\n')
+                f.write(']')
+            sc.stop()
+
+
 class WriteToSolr(luigi.WrapperTask):
     """Write  to a solr core."""
 
@@ -420,8 +509,6 @@ class WriteToSolr(luigi.WrapperTask):
             document["header"]["recipients"] = dict(enumerate(document["header"]["recipients"]))
 
         return document
-
-
 
     def add_document_to_solr(self, document):
         """Add a single document to solr db."""
