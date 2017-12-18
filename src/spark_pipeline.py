@@ -32,7 +32,7 @@ else:
 class FileLister(luigi.Task):
     """A task for parsing files from HDFS to json dicts and dumping them to a list."""
 
-    source_dir = luigi.Parameter(default="/pipeline/raw_emails/manymailsmails/manymails/")
+    source_dir = luigi.Parameter(default="/pipeline/raw_emails/manymails/manymails/")
 
     def output(self):
         """Write a HDFS target with timestamp."""
@@ -490,7 +490,10 @@ class WriteToSolr(luigi.Task):
 
         for document in documents:
             document = self.flatten_document(json.loads(document))
-            self.solr.add([document])
+            try:
+                self.solr.add([document])
+            except Exception:
+                print('Failure on ' + document['doc_id'] + '\n')
 
         sc.stop()
 
