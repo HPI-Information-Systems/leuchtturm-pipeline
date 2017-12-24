@@ -30,11 +30,10 @@ if (rerun):
 else:
     DATETIMESTAMP = ''
 
-
 class FileLister(luigi.Task):
     """A task for parsing files from HDFS to json dicts and dumping them to a list."""
 
-    source_dir = luigi.Parameter(default="/pipeline/raw_emails/manymails/manymails/")
+    source_dir = luigi.Parameter(default="/user/admin/enrontest")
 
     def output(self):
         """Write a HDFS target with timestamp."""
@@ -46,14 +45,15 @@ class FileLister(luigi.Task):
         """Run the listing."""
         client = InsecureClient('http://b7689.byod.hpi.de:50070')
         with self.output().open('w') as outfile:
-            for file in client.list(self.source_dir):
-
-                with client.read(self.source_dir + file, encoding='utf-8') as reader:
-                    outfile.write(
-                        json.dumps({"doc_id": file.replace('.txt', ''),
-                                    "raw": str(reader.read()) },
-                                    ensure_ascii=False) +
-                        '\n')
+            for dir in client.list(self.source_dir):
+                for subdir in client.list(self.source_dir + '/' + dir):
+                    for file in client.list(self.source_dir + '/' + dir + '/' + subdir):
+                        with client.read(self.source_dir + '/' + dir + '/' + subdir + '/' + file, encoding='utf-8') as reader:
+                            outfile.write(
+                                json.dumps({"doc_id": file.replace('.txt', ''),
+                                            "raw": str(reader.read()) },
+                                            ensure_ascii=False) +
+                                '\n')
 
 
 class InlineEmailSplitter(luigi.Task):
@@ -581,7 +581,7 @@ class CreateValidJson(luigi.Task):
 class WriteToSolr(luigi.Task):
     """Write  to a solr core."""
 
-    solr = pysolr.Solr('http://b1184.byod.hpi.de:8983/solr/manymails', timeout=20)
+    solr = pysolr.Solr('http://b1184.byod.hpi.de:8983/solr/allthemails', timeout=20)
 
     def requires(self):
         """Require last task of pipeline."""
