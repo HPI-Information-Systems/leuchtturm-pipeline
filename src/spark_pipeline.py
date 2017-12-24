@@ -240,7 +240,7 @@ class Neo4jCommunicator(luigi.Task):
         sc = SparkContext()
         data = sc.textFile(self.input().path)
         results = data.map(lambda x: self.write2neo(x)).collect()
-        
+
         sc.stop()
 
     def add_communication(self, tx, sender, recipients, mail_id):
@@ -581,7 +581,8 @@ class CreateValidJson(luigi.Task):
 class WriteToSolr(luigi.Task):
     """Write  to a solr core."""
 
-    solr = pysolr.Solr('http://b1184.byod.hpi.de:8983/solr/allthemails', timeout=20)
+
+    solr = pysolr.Solr('http://b1184.byod.hpi.de:8983/solr/allthemails')
 
     def requires(self):
         """Require last task of pipeline."""
@@ -592,12 +593,15 @@ class WriteToSolr(luigi.Task):
         sc = SparkContext()
         documents = sc.textFile(self.input().path).collect()
 
-        for document in documents:
-            document = self.flatten_document(json.loads(document))
-            try:
-                self.solr.add([document])
-            except Exception:
-                print('Failure on ' + document['doc_id'] + '\n')
+        docs_to_push = []
+        for idx, document in enumerate(documents):
+            docs_to_push.append(self.flatten_document(json.loads(document)))
+            if ((idx + 1) % 100 == 0):
+                try:
+                    self.solr.add(docs_to_push)
+                except Exception:
+                    print('==============> Failure on chunk : ' + idx + ' <==============')
+                docs_to_push = []
 
         sc.stop()
 
@@ -612,6 +616,3 @@ class WriteToSolr(luigi.Task):
                 return str(k1) + "." + str(k2)
 
         return flatten(document, reducer=dot_reducer)
-
-
-   
