@@ -33,7 +33,7 @@ else:
 class FileLister(luigi.Task):
     """A task for parsing files from HDFS to json dicts and dumping them to a list."""
 
-    source_dir = luigi.Parameter(default="/user/admin/enron")
+    source_dir = luigi.Parameter(default="/user/admin/enron/TEXT")
 
     def output(self):
         """Write a HDFS target with timestamp."""
