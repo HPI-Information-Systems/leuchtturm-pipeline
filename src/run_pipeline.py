@@ -8,4 +8,4 @@ client = InsecureClient('http://b7689.byod.hpi.de:50070')
 
 for dir in client.list(source_dir):
                 for subdir in client.list(source_dir + '/' + dir):
-                    os.system('PYTHONPATH="." luigi --module spark_pipeline FileLister --FileLister-path ' + '"' + source_dir + '/' + dir + '/' + subdir + '"')
+                    os.system('PYTHONPATH="." luigi --module spark_pipeline WriteToSolr --FileLister-path ' + '"' + source_dir + '/' + dir + '/' + subdir + '"')
