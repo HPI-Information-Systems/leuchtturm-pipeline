@@ -1,6 +1,5 @@
 """This module processes emails."""
 
-from email_deduplicator import EmailDeduplicator
 import os
 import json
 import luigi
@@ -260,10 +259,11 @@ class EmailDeduplicator(luigi.Task):
             subject = header['Subject']
             date = header['Date']
 
-            key = [sender_mail_address]
-            key.append(recipients_mail_addresses)
-            key.append(subject)
-            key.append(date)
+            key = sender_mail_address
+            for mail in recipients_mail_addresses:
+                key += mail
+            key += subject
+            key += date
 
             if (key in hashmap):
                 data.pop(idx)
