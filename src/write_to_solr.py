@@ -30,13 +30,14 @@ def write_to_solr():
         document = json.loads(document)
         document["parts"] = dict(enumerate(document["parts"]))
 
-        return json.dumps(flatten(document, reducer=dot_reducer))
+        return json.dumps(flatten(document, reducer=dot_reducer), ensure_ascii=False)
 
     # TODO: add config, or maybe not for a db task?!
     sc = SparkContext()
 
     documents = sc.textFile(input_path)
 
+    # TODO: fix this, range does sth different than I thought...
     step = 100
     for idx in range(0, documents.size(), step):
         docs_to_push = documents.range(idx, idx + step).map(lambda x: flatten_document(x)).collect()
