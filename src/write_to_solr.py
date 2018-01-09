@@ -8,7 +8,7 @@ findspark.init('/usr/hdp/2.6.3.0-235/spark2')
 from pyspark import SparkContext
 
 
-input_path = "/path/to/files/listed/data-frame"
+input_path = '/path/to/files/listed/data-frame'
 solr_collection = pysolr.Solr('http://b1184.byod.hpi.de:8983/solr/allthemails')
 
 
@@ -24,11 +24,11 @@ def write_to_solr():
         if k1 is None:
             return k2
         else:
-            return str(k1) + "." + str(k2)
+            return str(k1) + '.' + str(k2)
 
     def flatten_document(document):
         document = json.loads(document)
-        document["parts"] = dict(enumerate(document["parts"]))
+        document['parts'] = dict(enumerate(document['parts']))
 
         return json.dumps(flatten(document, reducer=dot_reducer), ensure_ascii=False)
 
@@ -49,5 +49,5 @@ def write_to_solr():
     sc.stop()
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     write_to_solr()

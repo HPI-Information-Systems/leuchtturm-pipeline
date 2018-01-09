@@ -12,8 +12,8 @@ findspark.init('/usr/hdp/2.6.3.0-235/spark2')
 from pyspark import SparkContext
 
 
-input_path = "/path/to/files/listed/data-frame"
-output_path = "/path/to/output/data-frame"
+input_path = '/path/to/files/listed/data-frame'
+output_path = '/path/to/output/data-frame'
 
 
 """Run entire text processing pipeline.
@@ -29,18 +29,18 @@ def run_knowledge_mining_pipeline():
 
     data = sc.textFile(input_path)
 
-    data = data.map(lambda x: split_email(x))
-    data = data.map(lambda x: extract_metadata(x))
-    data = data.map(lambda x: deduplicate_emails(x))
-    data = data.map(lambda x: extract_body(x))
-    data = data.map(lambda x: clean_entry(x))
-    data = data.map(lambda x: detect_language(x))
-    data = data.map(lambda x: extract_entities(x))
+    data = data.map(lambda x: split_email(x)) \
+               .map(lambda x: extract_metadata(x)) \
+               .map(lambda x: deduplicate_emails(x)) \
+               .map(lambda x: extract_body(x)) \
+               .map(lambda x: clean_entry(x)) \
+               .map(lambda x: detect_language(x)) \
+               .map(lambda x: extract_entities(x))
 
     data.saveAsTextFile(output_path)
 
     sc.stop()
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     run_knowledge_mining_pipeline()
