@@ -7,7 +7,8 @@ findspark.init('/usr/hdp/2.6.3.0-235/spark2')
 from pyspark import SparkContext
 
 
-input_folder = 'hdfs://172.18.20.109/enron_text'
+input_folder = '/enron_text'
+input_path = 'hdfs://172.18.20.109' + input_folder
 output_path = 'hdfs://172.18.20.109/pipeline/files_listed'
 hdfs_client = InsecureClient('http://b7689.byod.hpi.de:50070')
 
@@ -33,16 +34,12 @@ def collect_files():
 
     for directory in hdfs_client.list(input_folder):
         for subdirectory in hdfs_client.list(input_folder + '/' + directory):
-            rdd = rdd.union(sc.wholeTextFiles(input_folder + '/' + directory + '/' + subdirectory,
+            rdd = rdd.union(sc.wholeTextFiles(input_path + '/' + directory + '/' + subdirectory,
                                               minPartitions=None,
-                                              use_unicode=True))
+                                              use_unicode=True)
+                            .filter(lambda x: filter_emails(x)))
 
-    print(rdd.count())
-
-    rdd = rdd.filter(lambda x: filter_emails(x)) \
-             .map(lambda x: create_document(x))
-
-    print(rdd.count())
+    rdd = rdd.map(lambda x: create_document(x))
 
     rdd.saveAsTextFile(output_path)
 
