@@ -10,8 +10,8 @@ from knowledge_mining import extract_entities
 from pyspark import SparkContext
 
 
-input_path = '/path/to/files/listed/data-frame'
-output_path = '/path/to/output/data-frame'
+input_path = 'hdfs://172.18.20.109/pipeline/files_listed'
+output_path = 'hdfs://172.18.20.109/pipeline/pipeline_results'
 
 
 def run_knowledge_mining_pipeline():
