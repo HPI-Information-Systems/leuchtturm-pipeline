@@ -5,12 +5,16 @@ flake8_docstrings
 #testing
 pytest
 pytest-gitignore # excludes gitignored files from pytest scope
-luigi
 pyspark
-findspark
 langdetect
 git+https://www.github.com/farizrahman4u/keras-contrib.git
 keras
 numpy
 sklearn
 neo4j-driver
+talon
+python-dateutil
+spacy
+tensorflow
+pysolr
+h5py
