@@ -1,25 +1,19 @@
-"""This collects and dumps text documents to a spark rdd."""
+"""This job collects and dumps text documents to a spark rdd."""
 
 import json
-from hdfs import InsecureClient
-import findspark
-findspark.init('/usr/hdp/2.6.3.0-235/spark2')
 from pyspark import SparkContext
 
 
-input_folder = '/enron_text'
-input_path = 'hdfs://172.18.20.109' + input_folder
+input_path = 'hdfs://172.18.20.109/enron_text/*/*/*'
 output_path = 'hdfs://172.18.20.109/pipeline/files_listed'
-hdfs_client = InsecureClient('http://b7689.byod.hpi.de:50070')
 
 
-"""Read all txt documents from a folder and collect them in one rdd.
-
-Arguments: none.
-Returns: void.
-"""
 def collect_files():
-    """Run file listing."""
+    """Read all txt documents from a folder and collect them in one rdd.
+
+    Arguments: none.
+    Returns: void.
+    """
     def filter_emails(data):
         return data[1].startswith('Subject:')
 
@@ -30,17 +24,10 @@ def collect_files():
 
     sc = SparkContext()
 
-    rdd = sc.emptyRDD()
-
-    for directory in hdfs_client.list(input_folder):
-        for subdirectory in hdfs_client.list(input_folder + '/' + directory):
-            rdd = rdd.union(sc.wholeTextFiles(input_path + '/' + directory + '/' + subdirectory,
-                                              minPartitions=None,
-                                              use_unicode=True)
-                            .filter(lambda x: filter_emails(x)))
-
-    rdd = rdd.map(lambda x: create_document(x))
-
+    rdd = sc.wholeTextFiles(input_path,
+                            minPartitions=None,
+                            use_unicode=True)
+    rdd = rdd.filter(lambda x: filter_emails(x)).map(lambda x: create_document(x))
     rdd.saveAsTextFile(output_path)
 
     sc.stop()
