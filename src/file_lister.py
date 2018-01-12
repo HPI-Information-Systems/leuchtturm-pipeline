@@ -27,8 +27,9 @@ def collect_files():
     rdd = sc.wholeTextFiles(input_path,
                             minPartitions=None,
                             use_unicode=True)
-    rdd = rdd.filter(lambda x: filter_emails(x)).map(lambda x: create_document(x))
-    rdd.saveAsTextFile(output_path)
+    rdd.filter(lambda x: filter_emails(x)) \
+       .map(lambda x: create_document(x)) \
+       .saveAsTextFile(output_path)
 
     sc.stop()
 
