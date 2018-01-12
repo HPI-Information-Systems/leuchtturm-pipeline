@@ -1,14 +1,12 @@
 """This module runs pipeline tasks in correct order."""
 
-from .knowledge_mining import split_email
-from .knowledge_mining import extract_metadata
-from .knowledge_mining import deduplicate_emails
-from .knowledge_mining import extract_body
-from .knowledge_mining import clean_entry
-from .knowledge_mining import detect_language
-from .knowledge_mining import extract_entities
-import findspark
-findspark.init('/usr/hdp/2.6.3.0-235/spark2')
+from knowledge_mining import split_email
+from knowledge_mining import extract_metadata
+from knowledge_mining import deduplicate_emails
+from knowledge_mining import extract_body
+from knowledge_mining import clean_entry
+from knowledge_mining import detect_language
+from knowledge_mining import extract_entities
 from pyspark import SparkContext
 
 
