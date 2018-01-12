@@ -9,16 +9,15 @@ import time
 from talon.signature.bruteforce import extract_signature
 from langdetect import detect
 import spacy
-import emailbody.extractmailbody as body_extractor
+# import emailbody.extractmailbody as body_extractor
 
 
-"""Split email into parts and extract metadata.
-
-Arguments: data, a string in json format that has field raw.
-Returns: a string in json format with field parts.
-"""
 def split_email(data):
-    """Perform email splitting and extract metadata of parts."""
+    """Split email into parts and extract metadata.
+
+    Arguments: data, a string in json format that has field raw.
+    Returns: a string in json format with field parts.
+    """
     splitters = [  # ----------- Forwarded by Max Mustermann on 24 Jan 2001 ------------
                    re.compile(r'[\s]*[-]+[ ]*Forwarded .*[ ]*[-]+', re.I),
                    # Thu, 24 Jun 2001 01:00:51 +0000 Max Mustermann <max@mustermann.com>:
@@ -72,13 +71,12 @@ def split_email(data):
     return json.dumps(document, ensure_ascii=False)
 
 
-"""Extract meta data of each email.
-
-Arguments: data, a string in json format that has field raw.
-Returns: a string in json format with field header.
-"""
 def extract_metadata(data):
-    """Perform meta data extraction."""
+    """Extract meta data of each email.
+
+    Arguments: data, a string in json format that has field raw.
+    Returns: a string in json format with field header.
+    """
     def clean_subject_line(subject_line):
         return re.sub(r'(fw:|re:|aw:|fwd:) *', '', subject_line.lower())
 
@@ -145,54 +143,51 @@ def extract_metadata(data):
     return json.dumps(document, ensure_ascii=False)
 
 
-"""Deduplicate emails. Recognize emails by their header.
-
-Arguments: tba.
-Returns: tba.
-"""
 def deduplicate_emails(data):
-    """Perform duplicate removal."""
+    """Deduplicate emails. Recognize emails by their header.
+
+    Arguments: tba.
+    Returns: tba.
+    """
     # TODO: implement with mapreduce, since hashset might be inefficient and cause problems on very large datasets.
 
     return data
 
 
-"""Extract email body of each email.
-
-Arguments: data, a string in json format that has field raw.
-Returns: a string in json format with field body.
-"""
 def extract_body(data):
-    """Extract and return the body of an email."""
+    """Extract email body of each email.
+
+    Arguments: data, a string in json format that has field raw.
+    Returns: a string in json format with field body.
+    """
     document = json.loads(data)
     mail_text = document['raw']
-    text_lines = mail_text.splitlines()
+    # text_lines = mail_text.splitlines()
 
-    func_b = body_extractor.enron_two_zone_line_b_func
-    model = body_extractor.enron_two_zone_model
+    # func_b = body_extractor.enron_two_zone_line_b_func
+    # model = body_extractor.enron_two_zone_model
 
-    text_embedded = body_extractor.embed(text_lines, [func_b])
-    head_body_predictions = model.predict(np.array([text_embedded])).tolist()[0]
+    # text_embedded = body_extractor.embed(text_lines, [func_b])
+    # head_body_predictions = model.predict(np.array([text_embedded])).tolist()[0]
 
-    head_body_indicator = list(zip(text_lines, head_body_predictions))
+    # head_body_indicator = list(zip(text_lines, head_body_predictions))
 
-    body_text = ''
-    for i in range(0, len(head_body_indicator)):
-        if int(head_body_indicator[i][1][0]) == int(1.0):
-            body_text += head_body_indicator[i][0]
+    # body_text = ''
+    # for i in range(0, len(head_body_indicator)):
+    #     if int(head_body_indicator[i][1][0]) == int(1.0):
+    #         body_text += head_body_indicator[i][0]
 
-    document['body'] = body_text
+    document['body'] = mail_text
 
     return json.dumps(document, ensure_ascii=False)
 
 
-"""Clean body of everything nlp algorithms might disturb.
-
-Arguments: data, a string in json format that has field body.
-Returns: a string in json format with field body.
-"""
 def clean_entry(data):
-    """Perform body cleaning."""
+    """Clean body of everything nlp algorithms might disturb.
+
+    Arguments: data, a string in json format that has field body.
+    Returns: a string in json format with field body.
+    """
     special_chars = ['"', "!", "#", "$", "%", "&", "'", "§", "(", ")", "*", "+",
                      "-", ".", "/", ":", ";", "<", "=", ">", "?",
                      "@", "[", "\\", "]", "^", "_", "`", "{", "|", "}", "~", "\n", "\u000b", "\f"]
@@ -225,13 +220,12 @@ def clean_entry(data):
     return json.dumps(document, ensure_ascii=False)
 
 
-"""Detect language of each email.
-
-Arguments: data, a string in json format that has field body (cleaned).
-Returns: a string in json format with field lang.
-"""
 def detect_language(data):
-    """Perform language detection."""
+    """Detect language of each email.
+
+    Arguments: data, a string in json format that has field body (cleaned).
+    Returns: a string in json format with field lang.
+    """
     document = json.loads(data)
     try:
         document['lang'] = detect(document['body'])
@@ -240,15 +234,15 @@ def detect_language(data):
     return json.dumps(document, ensure_ascii=False)
 
 
-"""Extract entities of each email.
-
-Arguments: data, a string in json format that has field body (cleaned).
-Returns: a string in json format with field entities.
-"""
 nlp = spacy.load('en')
 
+
 def extract_entities(data):
-    """Perform entity extraction using spacy."""
+    """Extract entities of each email.
+
+    Arguments: data, a string in json format that has field body (cleaned).
+    Returns: a string in json format with field entities.
+    """
     def make_entity(entity, entity_type, entity_count):
         """JSON Object defninition for entity."""
         return {

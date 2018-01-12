@@ -16,14 +16,13 @@ input_path = '/path/to/files/listed/data-frame'
 output_path = '/path/to/output/data-frame'
 
 
-"""Run entire text processing pipeline.
-
-Requires: File listing.
-Arguments: none.
-Returns: void.
-"""
 def run_knowledge_mining_pipeline():
-    """Read listed files into spark context and start pipeline."""
+    """Run entire text processing pipeline.
+
+    Requires: File listing.
+    Arguments: none.
+    Returns: void.
+    """
     # TODO: config
     sc = SparkContext()
 
