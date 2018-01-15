@@ -1,25 +1,23 @@
 """This module writes pipeline results to a solr database."""
 
 import pysolr
+from hdfs import Client
 from flatten_dict import flatten
 import json
-import findspark
-findspark.init('/usr/hdp/2.6.3.0-235/spark2')
-from pyspark import SparkContext
 
 
-input_path = '/path/to/files/listed/data-frame'
+input_path = '/pipeline/pipeline_results'
+hdfs_client = Client('http://172.18.20.109:50070')
 solr_collection = pysolr.Solr('http://b1184.byod.hpi.de:8983/solr/allthemails')
 
 
-"""Write pipeline results to a predefined solr collection.
-
-Requires: Text mining pipline ran.
-Arguments: none.
-Returns: void.
-"""
 def write_to_solr():
-    """Iterate over documents and add them to solr db."""
+    """Write pipeline results to a predefined solr collection.
+
+    Requires: Text mining pipline ran.
+    Arguments: none.
+    Returns: void.
+    """
     def dot_reducer(k1, k2):
         if k1 is None:
             return k2
@@ -32,21 +30,25 @@ def write_to_solr():
 
         return json.dumps(flatten(document, reducer=dot_reducer), ensure_ascii=False)
 
-    # TODO: add config, or maybe not for a db task?!
-    sc = SparkContext()
-
-    documents = sc.textFile(input_path)
-
-    # TODO: fix this, range does sth different than I thought...
-    step = 100
-    for idx in range(0, documents.size(), step):
-        docs_to_push = documents.range(idx, idx + step).map(lambda x: flatten_document(x)).collect()
-        try:
-            solr_collection.add(docs_to_push)
-        except Exception:
-            print('==============> Failure on chunk : ' + idx + ' <==============')
-
-    sc.stop()
+    for partition in hdfs_client.list(input_path):
+        with hdfs_client.read(input_path + '/' + partition, encoding='utf-8', delimiter='\n') as reader:
+            docs_to_push = []
+            count = 0
+            for document in reader:
+                docs_to_push.append(flatten_document(document))
+                count += 1
+                if (count % 300 == 0):
+                    try:
+                        solr_collection.add(docs_to_push)
+                    except Exception:
+                        print('Failure')
+                    docs_to_push = []
+            if (len(docs_to_push)):
+                try:
+                    solr_collection.add(docs_to_push)
+                except Exception:
+                    print('Failure')
+                docs_to_push = []
 
 
 if __name__ == '__main__':
