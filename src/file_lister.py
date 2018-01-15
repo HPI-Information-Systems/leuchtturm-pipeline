@@ -25,7 +25,7 @@ def collect_files():
     sc = SparkContext()
 
     rdd = sc.wholeTextFiles(input_path,
-                            minPartitions=None,
+                            minPartitions=24,
                             use_unicode=True)
     rdd.filter(lambda x: filter_emails(x)) \
        .map(lambda x: create_document(x)) \

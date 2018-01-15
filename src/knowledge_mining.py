@@ -9,7 +9,6 @@ import time
 from talon.signature.bruteforce import extract_signature
 from langdetect import detect
 import spacy
-# import emailbody.extractmailbody as body_extractor
 
 
 def split_email(data):
