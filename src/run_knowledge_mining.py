@@ -21,10 +21,9 @@ def run_knowledge_mining_pipeline():
     Arguments: none.
     Returns: void.
     """
-    # TODO: config
     sc = SparkContext()
 
-    data = sc.textFile(input_path)
+    data = sc.textFile(input_path, minPartitions=24)
 
     data = data.map(lambda x: split_email(x)) \
                .map(lambda x: extract_metadata(x)) \
