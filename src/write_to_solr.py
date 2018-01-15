@@ -6,9 +6,9 @@ from flatten_dict import flatten
 import json
 
 
-input_path = '/pipeline/pipeline_results'
+input_path = '/pipeline/files_listed_Jan_12'
 hdfs_client = Client('http://172.18.20.109:50070')
-solr_collection = pysolr.Solr('http://b1184.byod.hpi.de:8983/solr/allthemails')
+solr_collection = pysolr.Solr('http://b1184.byod.hpi.de:8983/solr/emails_test')
 
 
 def write_to_solr():
@@ -28,26 +28,27 @@ def write_to_solr():
         document = json.loads(document)
         document['parts'] = dict(enumerate(document['parts']))
 
-        return json.dumps(flatten(document, reducer=dot_reducer), ensure_ascii=False)
+        return flatten(document, reducer=dot_reducer)
 
     for partition in hdfs_client.list(input_path):
         with hdfs_client.read(input_path + '/' + partition, encoding='utf-8', delimiter='\n') as reader:
             docs_to_push = []
-            count = 0
+            count = 1
             for document in reader:
-                docs_to_push.append(flatten_document(document))
-                count += 1
+                if (len(document) != 0):
+                    docs_to_push.append(flatten_document(document))
+                    count += 1
                 if (count % 300 == 0):
                     try:
                         solr_collection.add(docs_to_push)
                     except Exception:
-                        print('Failure')
+                        print(document)
                     docs_to_push = []
             if (len(docs_to_push)):
                 try:
                     solr_collection.add(docs_to_push)
                 except Exception:
-                    print('Failure')
+                    print(len(docs_to_push))
                 docs_to_push = []
 
 
