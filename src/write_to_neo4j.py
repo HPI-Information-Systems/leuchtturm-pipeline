@@ -25,17 +25,11 @@ def write_to_neo4j():
     file = open("neo4j_log.txt", "w")
     file.write("Start-Time: " + starttime)
     file.close()
-    document_count = 0
-    end_test = False
     with driver.session() as session:
         for partition in hdfs_client.list(input_path):
             with hdfs_client.read(input_path + '/' + partition, encoding='utf-8', delimiter='\n') as reader:
                 for document in reader:
-                    if (document_count == 100000): # TODO: remove testing-limit
-                        end_test = True
-                        break
                     if (len(document) != 0):
-                        document_count += 1
                         sender = {"name": "", "email": ""}
                         recipients = []
                         mail_id = ""
@@ -71,8 +65,6 @@ def write_to_neo4j():
                                         name_recipient=recipient['name'],
                                         email_recipient=recipient['email'],
                                         mail_id=mail_id)
-            if (end_test):
-                break
 
     endtime = str(datetime.now())
     print("Upload ended at: " + endtime)
