@@ -31,7 +31,7 @@ def write_to_neo4j():
         for partition in hdfs_client.list(input_path):
             with hdfs_client.read(input_path + '/' + partition, encoding='utf-8', delimiter='\n') as reader:
                 for document in reader:
-                    if (document_count = 100000): # TODO: remove testing-limit
+                    if (document_count == 100000): # TODO: remove testing-limit
                         end_test = True
                         break
                     if (len(document) != 0):
