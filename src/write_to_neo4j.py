@@ -22,7 +22,7 @@ def write_to_neo4j():
     """
     starttime = str(datetime.now())
     print("Upload started at: " + starttime)
-    file = open("neo4j_log_" + starttime +".txt", "w")
+    file = open("neo4j_log.txt", "w")
     file.write("Start-Time: " + starttime)
     file.close()
     document_count = 0
@@ -47,7 +47,6 @@ def write_to_neo4j():
                         if 'doc_id' in mail.keys():
                             mail_id = mail['doc_id']
 
-                        print("Document to be sent")
                         for recipient in recipients:
                             session.run("MERGE (sender:Person {email: $email_sender}) "
                                         "ON CREATE SET sender.name = [$name_sender] "
@@ -72,13 +71,12 @@ def write_to_neo4j():
                                         name_recipient=recipient['name'],
                                         email_recipient=recipient['email'],
                                         mail_id=mail_id)
-                        print("Document sent")
             if (end_test):
                 break
 
     endtime = str(datetime.now())
     print("Upload ended at: " + endtime)
-    file = open("neo4j_log_" + starttime +".txt", "w")
+    file = open("neo4j_log.txt", "w")
     file.write("End-Time: " + endtime)
     file.close()
 
