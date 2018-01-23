@@ -26,8 +26,8 @@ def run_email_pipeline():
     data = sc.textFile(input_path, minPartitions=54)
 
     data = split_emails(data)
-    # data = extract_metadata(data)
-    # data = deduplicate_emails(data)
+    data = extract_metadata(data)
+    data = deduplicate_emails(data)
     data = clean_bodies(data)
     data = detect_languages(data)
     data = extract_entities(data)

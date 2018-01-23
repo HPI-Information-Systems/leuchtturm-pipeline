@@ -230,7 +230,7 @@ def extract_entities(rdd):
                         entities['person'].append(entity.text)
                     elif (entity.label_ == 'LOC'):
                         entities['location'].append(entity.text)
-                    elif (entity.label_ == 'LOC'):
+                    elif (entity.label_ == 'ORG'):
                         entities['organization'].append(entity.text)
                     else:
                         entities['miscellaneous'].append(entity.text)
