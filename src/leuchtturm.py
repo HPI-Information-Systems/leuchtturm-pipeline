@@ -8,7 +8,7 @@ import time
 from dateutil import parser
 import email
 from langdetect import detect
-import xx_ent_wiki_sm as spacy
+import en_core_web_sm as spacy
 
 
 def split_emails(rdd):
@@ -226,13 +226,13 @@ def extract_entities(rdd):
             lines = document['body'].replace('\\n', '\n').splitlines()
             for line in lines:
                 for entity in nlp(line).ents:
-                    if (entity.label_ == 'PER'):
+                    if (entity.label_ == 'PERSON'):
                         entities['person'].append(entity.text)
-                    elif (entity.label_ == 'LOC'):
+                    elif (entity.label_ == 'LOC' or entity.label_ == 'GPE' or entity.label_ == 'FAC'):
                         entities['location'].append(entity.text)
-                    elif (entity.label_ == 'ORG'):
+                    elif (entity.label_ == 'ORG' or entity.label_ == 'NORP'):
                         entities['organization'].append(entity.text)
-                    else:
+                    elif (entity.label_ == 'PRODUCT' or entity.label_ == 'EVENT' or entity.label_ == 'WORK_OF_ART'):
                         entities['miscellaneous'].append(entity.text)
             document['entities'] = entities
             return json.dumps(document, ensure_ascii=False)
