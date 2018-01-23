@@ -3,9 +3,9 @@
 
 import json
 import re
-import time
-from dateutil import parser
 import email
+from email.utils import getaddresses, parsedate, parseaddr, unquote
+from time import mktime
 from langdetect import detect
 import en_core_web_sm as spacy
 
@@ -54,141 +54,20 @@ def extract_metadata(rdd):
     Returns: rdd with header field for each doc in json format
     """
     def add_metadata(data):
-        def clean_subject_line(subject_line):
-            return re.sub(r'(fw:|re:|aw:|fwd:) *', '', subject_line.lower())
-
-        def unify_date(date_string):
-            return time.mktime(parser.parse(date_string).timetuple())
-
-        def clean_person(person):
-            # regex for finding emails
-            mailreg = re.compile(r'\b[\w.-]+?@\w+?\.\w+?\b')
-            mail = "".join((mailreg.findall(person))[:1])
-
-            # regex for finding names that are clearly written
-            namereg = re.compile(r'[A-Z][a-zA-Z ]+')
-            name = re.sub(r' [a-z]+', "", "".join((namereg.findall(person))[:1]))
-
-            # regex for names that are seperated by a comma and a newline
-            anothernamereg = re.compile(r'[a-z]+,\n *[a-zA-Z]+')
-            another_name = "".join(anothernamereg.findall(person)[:1]) \
-                             .replace("\n", "").replace(" ", "").replace(",", ", ").strip().title()
-
-            return {"email": mail,
-                    "name": another_name if another_name else name}
-
-        def clean_recipients(recipients_string, type):
-            recipients = []
-
-            def split_recipients(string):
-                recipients = []
-                if ">," in string:
-                    recipients = string.split(">,\n")
-                else:
-                    recipients = string.split(",\n")
-                return recipients
-
-            sep_rec_strings = split_recipients(recipients_string)
-
-            for rec_string in sep_rec_strings:
-                cleaned_person = clean_person(rec_string)
-                cleaned_person["type"] = type
-                recipients.append(cleaned_person)
-
-            return recipients
-
         document = json.loads(data)
-        document["header"] = {}
-        message = email.message_from_string(document["body"])
-        for metainfo in message.keys():
-            header_piece = ""
-            if metainfo == "Subject":
-                header_piece = clean_subject_line(message[metainfo])
-                document["header"][metainfo] = header_piece
+        msg = email.message_from_string(document['body'])
 
-            elif metainfo == "From":
-                header_piece = clean_person(message[metainfo])
-                document["header"]["sender"] = header_piece
-            elif metainfo == "Date":
-                header_piece = unify_date(message[metainfo])
-                document["header"][metainfo] = header_piece
-            elif metainfo == "To" or metainfo == "Cc":
-                header_piece = clean_recipients(message[metainfo], metainfo)
-                document["header"]["recipients"] = header_piece
+        header = {}
+        header['sender'] = {'name': unquote(parseaddr(msg.get('from', ''))[0]),
+                            'email': unquote(parseaddr(msg.get('from', ''))[1].lower())}
+        header['recipients'] = []
+        for recipient in getaddresses(msg.get_all('to', []) + msg.get_all('cc', []) + msg.get_all('bcc', [])):
+            header['recipients'].append({'name': unquote(recipient[0]),
+                                         'email': unquote(recipient[1].lower())})
+        header['date'] = mktime(parsedate(msg.get('date', '') + msg.get('sent', '')))
+        header['subject'] = msg.get('subject', '')
 
-        return json.dumps(document, ensure_ascii=False)
-
-    return rdd.map(lambda x: add_metadata(x))
-
-
-def extract_metadata_new(rdd):
-    """Extract meta data of each email.
-
-    Arguments: rdd with body field for each doc in json format
-    Returns: rdd with header field for each doc in json format
-    """
-    def add_metadata(data):
-        def clean_subject_line(subject_line):
-            return re.sub(r'(fw:|re:|aw:|fwd:) *', '', subject_line.lower())
-
-        def unify_date(date_string):
-            return time.mktime(parser.parse(date_string).timetuple())
-
-        def clean_person(person):
-            # regex for finding emails
-            mailreg = re.compile(r'\b[\w.-]+?@\w+?\.\w+?\b')
-            mail = "".join((mailreg.findall(person))[:1])
-
-            # regex for finding names that are clearly written
-            namereg = re.compile(r'[A-Z][a-zA-Z ]+')
-            name = re.sub(r' [a-z]+', "", "".join((namereg.findall(person))[:1]))
-
-            # regex for names that are seperated by a comma and a newline
-            anothernamereg = re.compile(r'[a-z]+,\n *[a-zA-Z]+')
-            another_name = "".join(anothernamereg.findall(person)[:1]) \
-                             .replace("\n", "").replace(" ", "").replace(",", ", ").strip().title()
-
-            return {"email": mail,
-                    "name": another_name if another_name else name}
-
-        def clean_recipients(recipients_string, type):
-            recipients = []
-
-            def split_recipients(string):
-                recipients = []
-                if ">," in string:
-                    recipients = string.split(">,\n")
-                else:
-                    recipients = string.split(",\n")
-                return recipients
-
-            sep_rec_strings = split_recipients(recipients_string)
-
-            for rec_string in sep_rec_strings:
-                cleaned_person = clean_person(rec_string)
-                cleaned_person["type"] = type
-                recipients.append(cleaned_person)
-
-            return recipients
-
-        document = json.loads(data)
-        document["header"] = {}
-        message = email.message_from_string(document["body"])
-        for metainfo in message.keys():
-            header_piece = ""
-            if metainfo == "Subject":
-                header_piece = clean_subject_line(message[metainfo])
-                document["header"][metainfo] = header_piece
-
-            elif metainfo == "From":
-                header_piece = clean_person(message[metainfo])
-                document["header"]["sender"] = header_piece
-            elif metainfo == "Date":
-                header_piece = unify_date(message[metainfo])
-                document["header"][metainfo] = header_piece
-            elif metainfo == "To" or metainfo == "Cc":
-                header_piece = clean_recipients(message[metainfo], metainfo)
-                document["header"]["recipients"] = header_piece
+        document['header'] = header
 
         return json.dumps(document, ensure_ascii=False)
 
@@ -204,8 +83,8 @@ def deduplicate_emails(rdd):
     def convert_to_tupel(data):
         data_norm = json.loads(data)
         splitting_keys = json.dumps([data_norm['header']['sender']['email'],
-                                     data_norm['header']['Date'],
-                                     data_norm['header']['Subject']],
+                                     data_norm['header']['date'],
+                                     data_norm['header']['subject']],
                                     ensure_ascii=False)
 
         return (splitting_keys, data)
