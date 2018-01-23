@@ -9,8 +9,8 @@ from leuchtturm import extract_entities
 from pyspark import SparkContext
 
 
-input_path = 'hdfs://172.18.20.109/pipeline/files_listed_Jan_12'
-output_path = 'hdfs://172.18.20.109/pipeline/pipeline_results'
+input_path = 'hdfs://172.18.20.109/LEUCHTTURM/files_listed_nuix'
+output_path = 'hdfs://172.18.20.109/LEUCHTTURM/pipeline_results_nuix'
 
 
 def run_email_pipeline():

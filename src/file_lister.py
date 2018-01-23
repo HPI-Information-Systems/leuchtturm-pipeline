@@ -4,8 +4,8 @@ import json
 from pyspark import SparkContext
 
 
-input_path = 'hdfs://172.18.20.109/enron_text/*/*/*'
-output_path = 'hdfs://172.18.20.109/pipeline/files_listed'
+input_path = 'hdfs://172.18.20.109/LEUCHTTURM/enron_nuix_complete/*/*/*'
+output_path = 'hdfs://172.18.20.109/LEUCHTTURM/files_listed_nuix'
 
 
 def collect_files():
@@ -15,7 +15,7 @@ def collect_files():
     Returns: void.
     """
     def filter_emails(data):
-        return data[1].startswith('Subject:')
+        return data[1].startswith('Subject: ')
 
     def create_document(data):
         return json.dumps({'doc_id': data[0].replace('.txt', ''),
