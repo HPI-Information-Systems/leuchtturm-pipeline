@@ -2,15 +2,22 @@
 flake8
 flake8_docstrings
 
-#testing
+# testing
 pytest
 pytest-gitignore # excludes gitignored files from pytest scope
-luigi
+
+# leuchtturm pipeline
 pyspark
-findspark
 langdetect
-git+https://www.github.com/farizrahman4u/keras-contrib.git
-keras
 numpy
-sklearn
+#talon
+python-dateutil
+spacy
+#git+https://www.github.com/farizrahman4u/keras-contrib.git
+#keras
+#tensorflow
+#sklearn
+
+# db tasks
+pysolr
 neo4j-driver
