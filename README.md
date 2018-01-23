@@ -9,14 +9,14 @@ Requirements:
 - python3 and pip3
 - spark2.2.0
 
-Run on every cluster node:
+On every cluster node, run once:
 
 ```bash
 pip3 install -r requirements.txt
 spacy download en_core_web_sm
 ```
 
-To execute a task, run:
+To execute a task, run on one cluster node:
 ```bash
 export SPARK_HOME={path-to-your-spark2-home}
 export PYSPARK_PYTHON=python3
