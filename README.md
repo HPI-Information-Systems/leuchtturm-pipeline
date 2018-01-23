@@ -30,6 +30,8 @@ spark-submit --master yarn \
              {.py file you want to run (e.g. run_leuchtturm.py)}
 ```
 
+Track your application's progress here: http://b7689.byod.hpi.de:8088/cluster
+
 
 ## Pipeline
 
