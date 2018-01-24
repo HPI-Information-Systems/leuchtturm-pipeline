@@ -64,7 +64,8 @@ def extract_metadata(rdd):
         for recipient in getaddresses(msg.get_all('to', []) + msg.get_all('cc', []) + msg.get_all('bcc', [])):
             header['recipients'].append({'name': unquote(recipient[0]),
                                          'email': unquote(recipient[1].lower())})
-        header['date'] = mktime(parsedate(msg.get('date', '') + msg.get('sent', '')))
+        date = parsedate(msg.get('date', '') + msg.get('sent', ''))
+        header['date'] = mktime(date) if (len(date) == 9) else 0.0
         header['subject'] = msg.get('subject', '')
 
         document['header'] = header
