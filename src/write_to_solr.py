@@ -6,9 +6,9 @@ from flatten_dict import flatten
 import json
 
 
-input_path = '/pipeline/files_listed_Jan_12'
+input_path = '/LEUCHTTURM/pipeline_results_nuix'
 hdfs_client = Client('http://172.18.20.109:50070')
-solr_collection = pysolr.Solr('http://b1184.byod.hpi.de:8983/solr/emails_test')
+solr_collection = pysolr.Solr('http://b1184.byod.hpi.de:8983/solr/enron_complete_nuix')
 
 
 def write_to_solr():

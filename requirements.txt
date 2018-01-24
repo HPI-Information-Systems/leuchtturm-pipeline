@@ -19,5 +19,6 @@ spacy
 #sklearn
 
 # db tasks
+hdfs
 pysolr
 neo4j-driver

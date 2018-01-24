@@ -6,7 +6,7 @@ from neo4j.v1 import DirectDriver
 # from neo4j.v1 import GraphDatabase
 from hdfs import Client
 
-input_path = '/pipeline/pipeline_results_wo_spacy'
+input_path = '/LEUCHTTURM/pipeline_results_nuix'
 hdfs_client = Client('http://172.18.20.109:50070')
 uri = "bolt://b3986.byod.hpi.de:7687"
 driver = DirectDriver(uri)
