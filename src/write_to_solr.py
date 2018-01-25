@@ -24,10 +24,7 @@ def write_to_solr():
             return str(k1) + '.' + str(k2)
 
     def flatten_document(document):
-        document = json.loads(document)
-        document['parts'] = dict(enumerate(document['parts']))
-
-        return flatten(document, reducer=dot_reducer)
+        return flatten(json.loads(document), reducer=dot_reducer)
 
     for partition in hdfs_client.list(pipeline_result_path_hdfs_client):
         with hdfs_client.read(pipeline_result_path_hdfs_client + '/' + partition,
