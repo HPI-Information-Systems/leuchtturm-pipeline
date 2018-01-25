@@ -27,6 +27,8 @@ t1 = BashOperator(
     bash_command="""cd ~
                     export SPARK_HOME=/usr/hdp/2.6.3.0-235/spark2/
                     export PYSPARK_PYTHON=python3
+                    rm -r ~/pipeline
+                    git clone https://cluster:jayjayjay@hpi.de/naumann/leuchtturm/gitlab/leuchtturm/pipeline.git
                     /opt/lucidworks-hdpsearch/solr/bin/solr delete -c {0}
                     /opt/lucidworks-hdpsearch/solr/bin/solr create -c {0} -d data_driven_schema_configs -s 2 -rf 2
                     if [hdfs dfs -test -e {1}]; then hdfs dfs -rmr {1} fi
@@ -48,6 +50,8 @@ t2 = BashOperator(
                   ~/pipeline_new/src/file_lister.py',
     dag=dag
 )
+
+t2.set_upstream(t1)
 
 
 t3 = BashOperator(
