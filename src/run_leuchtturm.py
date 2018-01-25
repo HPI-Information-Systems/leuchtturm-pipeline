@@ -1,5 +1,6 @@
 """This module runs pipeline tasks in correct order."""
 
+from settings import file_lister_path_spark, pipeline_result_path_spark, cluster_parallelization
 from leuchtturm import split_emails
 from leuchtturm import extract_metadata
 from leuchtturm import deduplicate_emails
@@ -7,10 +8,6 @@ from leuchtturm import clean_bodies
 from leuchtturm import detect_languages
 from leuchtturm import extract_entities
 from pyspark import SparkContext
-
-
-input_path = 'hdfs://172.18.20.109/LEUCHTTURM/files_listed_nuix'
-output_path = 'hdfs://172.18.20.109/LEUCHTTURM/pipeline_results_nuix'
 
 
 def run_email_pipeline():
@@ -22,8 +19,7 @@ def run_email_pipeline():
     """
     sc = SparkContext()
 
-    # set minPartitions to executors * cores per executor * 3
-    data = sc.textFile(input_path, minPartitions=54)
+    data = sc.textFile(file_lister_path_spark, minPartitions=cluster_parallelization)
 
     data = split_emails(data)
     data = extract_metadata(data)
@@ -32,7 +28,7 @@ def run_email_pipeline():
     data = detect_languages(data)
     data = extract_entities(data)
 
-    data.saveAsTextFile(output_path)
+    data.saveAsTextFile(pipeline_result_path_spark)
 
     sc.stop()
 
