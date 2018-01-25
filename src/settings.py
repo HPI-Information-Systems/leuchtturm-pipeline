@@ -23,6 +23,7 @@ _NUM_CORES_PER_WORKER = 3
 
 
 # exports:
+raw_data_path_spark = 'hdfs://' + _HDFS_NAMENODE + '/' + _LEUCHTTURM_DIR + '/' + _RAW_DOC_DIR
 file_lister_path_spark = 'hdfs://' + _HDFS_NAMENODE + '/' + _LEUCHTTURM_DIR + '/' + _FILELISTER_RESULT
 pipeline_result_path_spark = 'hdfs://' + _HDFS_NAMENODE + '/' + _LEUCHTTURM_DIR + '/' + _PIPELINE_RESULT
 hdfs_client_url = 'http://' + _HDFS_NAMENODE + ':' + _HDFS_PORT
