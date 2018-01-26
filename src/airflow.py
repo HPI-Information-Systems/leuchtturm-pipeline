@@ -5,7 +5,7 @@ from airflow import DAG
 from airflow.operators.bash_operator import BashOperator
 from datetime import datetime, timedelta
 from json import dumps
-from safygiphy import Giphy
+import safygiphy
 
 
 default_args = {
@@ -111,7 +111,7 @@ json_success_message = dumps(
                                    "url": "http://b1184.byod.hpi.de:8983"}]},
                      {"text": "This is just an awesome gif reated:",
                       "color": "#228B22",
-                      "image_url": "{}"}]}).format(Giphy.random(tag="success"))
+                      "image_url": "{}"}]}).format(safygiphy.Giphy().random(tag="success"))
 
 notify_success = BashOperator(
     task_id='NotifySuccess',
@@ -142,7 +142,7 @@ json_failure_message = dumps(
                                    "url": "https://hpi.de/naumann/leuchtturm/gitlab/leuchtturm/meta/wikis/home"}]},
                      {"text": "This is just an awesome gif reated:",
                       "color": "#228B22",
-                      "image_url": "{}"}]}).format(Giphy.random(tag="fail"))
+                      "image_url": "{}"}]}).format(safygiphy.Giphy().random(tag="fail"))
 
 notify_failure = BashOperator(
     task_id='NotifyFailure',
