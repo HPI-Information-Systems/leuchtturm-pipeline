@@ -25,11 +25,9 @@ dag = DAG('leuchtturm_pipeline', default_args=default_args)
 t1 = BashOperator(
     task_id='clean_and_prepare',
     bash_command="""cd ~
-                    /opt/lucidworks-hdpsearch/solr/bin/solr delete -c {0}
-                    /opt/lucidworks-hdpsearch/solr/bin/solr create -c {0} -d data_driven_schema_configs -s 2 -rf 2
+                    hdfs dfs -rmr {0}
                     hdfs dfs -rmr {1}
-                    hdfs dfs -rmr {2}
-                    """.format(build_name, pipeline_result_path_hdfs_client, file_lister_path_hdfs_client),
+                    """.format(pipeline_result_path_hdfs_client, file_lister_path_hdfs_client),
     dag=dag
 )
 
@@ -73,7 +71,9 @@ t3.set_upstream(t2)
 
 t4 = BashOperator(
     task_id='write2solr',
-    bash_command='python3 ~/pipeline/src/write_to_solr.py',
+    bash_command="""/opt/lucidworks-hdpsearch/solr/bin/solr delete -c {0}
+                    /opt/lucidworks-hdpsearch/solr/bin/solr create -c {0} -d leuchtturm_conf -s 2 -rf 2
+                    python3 ~/pipeline/src/write_to_solr.py""".format(build_name),
     dag=dag
 )
 
