@@ -27,13 +27,9 @@ dag = DAG('leuchtturm_pipeline', default_args=default_args)
 t1 = BashOperator(
     task_id='clean_and_prepare',
     bash_command="""cd ~
-<<<<<<< HEAD
-                    """,
-=======
                     hdfs dfs -rmr {0}
                     hdfs dfs -rmr {1}
                     """.format(pipeline_result_path_hdfs_client, file_lister_path_hdfs_client),
->>>>>>> 3bad6550b40814f1a2e4759337f03d75a4582a70
     dag=dag
 )
 
