@@ -111,7 +111,7 @@ json_success_message = dumps(
                                    "url": "http://b1184.byod.hpi.de:8983"}]},
                      {"text": "This is just an awesome gif reated:",
                       "color": "#228B22",
-                      "image_url": "{}"}]}).format(safygiphy.Giphy().random(tag="success"))
+                      "image_url": "{}"}]}).format(safygiphy.Giphy().random(tag="success").fixed_height_downsampled_url)
 
 notify_success = BashOperator(
     task_id='NotifySuccess',
@@ -142,7 +142,7 @@ json_failure_message = dumps(
                                    "url": "https://hpi.de/naumann/leuchtturm/gitlab/leuchtturm/meta/wikis/home"}]},
                      {"text": "This is just an awesome gif reated:",
                       "color": "#228B22",
-                      "image_url": "{}"}]}).format(safygiphy.Giphy().random(tag="fail"))
+                      "image_url": "{}"}]}).format(safygiphy.Giphy().random(tag="fail").fixed_height_downsampled_url)
 
 notify_failure = BashOperator(
     task_id='NotifyFailure',
