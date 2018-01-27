@@ -94,9 +94,9 @@ t4.set_upstream(t3)
 
 # t5.set_upstream(t3)
 
-success_gif = safygiphy.Giphy().random(tag="success")['data']['fixed_height_downsampled_url']
+success_gif = safygiphy.Giphy().random(tag="success")['data']['fixed_height_small_url']
 json_success_message = dumps(
-    {"text": "The last pipeline run for succeded. Congrats! :rocket:",
+    {"text": "**The last pipeline run for succeded. Congrats!** :rocket:",
      "attachments": [{"fallback": "View airflow stats at http://b1184.byod.hpi.de:8080.",
                       "color": "#228B22",
                       "text": "You may want to check out this:",
@@ -109,7 +109,7 @@ json_success_message = dumps(
                                   {"type": "button",
                                    "text": "Check Solr :card_file_box:",
                                    "url": "http://b1184.byod.hpi.de:8983"}]},
-                     {"text": "This is just an awesome gif reated:",
+                     {"text": "",
                       "color": "#228B22",
                       "image_url": success_gif}]})
 
@@ -125,9 +125,9 @@ notify_success = BashOperator(
 
 notify_success.set_upstream([t1, t2, t3, t4])
 
-fail_gif = safygiphy.Giphy().random(tag="fail")['data']['fixed_height_downsampled_url']
+fail_gif = safygiphy.Giphy().random(tag="fail")['data']['fixed_height_small_url']
 json_failure_message = dumps(
-    {"text": "Unfortunately, the last pipeline run failed. Keep going! :rotating_light:",
+    {"text": "**Unfortunately, the last pipeline run failed. Keep going!** :rotating_light:",
      "attachments": [{"fallback": "View airflow stats at http://b1184.byod.hpi.de:8080.",
                       "color": "#ff0000",
                       "text": "You may want to look into this:",
@@ -140,7 +140,7 @@ json_failure_message = dumps(
                                   {"type": "button",
                                    "text": "Learn how to access logs :memo:",
                                    "url": "https://hpi.de/naumann/leuchtturm/gitlab/leuchtturm/meta/wikis/home"}]},
-                     {"text": "This is just an awesome gif reated:",
+                     {"text": "",
                       "color": "#ff0000",
                       "image_url": fail_gif}]})
 
