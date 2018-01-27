@@ -94,7 +94,7 @@ t4.set_upstream(t3)
 
 # t5.set_upstream(t3)
 
-
+success_gif = safygiphy.Giphy().random(tag="success")['data']['fixed_height_downsampled_url']
 json_success_message = dumps(
     {"text": "The last pipeline run for succeded. Congrats! :rocket:",
      "attachments": [{"fallback": "View airflow stats at http://b1184.byod.hpi.de:8080.",
@@ -111,7 +111,7 @@ json_success_message = dumps(
                                    "url": "http://b1184.byod.hpi.de:8983"}]},
                      {"text": "This is just an awesome gif reated:",
                       "color": "#228B22",
-                      "image_url": "{}"}]}).format(safygiphy.Giphy().random(tag="success"))
+                      "image_url": success_gif}]})
 
 notify_success = BashOperator(
     task_id='NotifySuccess',
@@ -125,7 +125,7 @@ notify_success = BashOperator(
 
 notify_success.set_upstream([t1, t2, t3, t4])
 
-
+fail_gif = safygiphy.Giphy().random(tag="fail")['data']['fixed_height_downsampled_url']
 json_failure_message = dumps(
     {"text": "Unfortunately, the last pipeline run failed. Keep going! :rotating_light:",
      "attachments": [{"fallback": "View airflow stats at http://b1184.byod.hpi.de:8080.",
@@ -141,8 +141,8 @@ json_failure_message = dumps(
                                    "text": "Learn how to access logs :memo:",
                                    "url": "https://hpi.de/naumann/leuchtturm/gitlab/leuchtturm/meta/wikis/home"}]},
                      {"text": "This is just an awesome gif reated:",
-                      "color": "#228B22",
-                      "image_url": "{}"}]}).format(safygiphy.Giphy().random(tag="fail"))
+                      "color": "#ff0000",
+                      "image_url": fail_gif}]})
 
 notify_failure = BashOperator(
     task_id='NotifyFailure',
