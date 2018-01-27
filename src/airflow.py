@@ -16,7 +16,7 @@ default_args = {
     'email': ['leuchtturm@example.com'],
     'email_on_failure': False,
     'email_on_success': False,
-    'retries': 0,
+    'retries': 1,
     'retry_delay': timedelta(minutes=5),
 }
 
@@ -27,9 +27,7 @@ dag = DAG('leuchtturm_pipeline', default_args=default_args)
 t1 = BashOperator(
     task_id='clean_and_prepare',
     bash_command="""cd ~
-                    hdfs dfs -rmr {0}
-                    hdfs dfs -rmr {1}
-                    """.format(pipeline_result_path_hdfs_client, file_lister_path_hdfs_client),
+                    """,
     dag=dag
 )
 
@@ -94,12 +92,13 @@ t4.set_upstream(t3)
 
 # t5.set_upstream(t3)
 
-success_gif = safygiphy.Giphy().random(tag="success")['data']['fixed_height_small_url']
+success_gif = safygiphy.Giphy().random(tag="excited")['data']['fixed_height_small_url']
 json_success_message = dumps(
-    {"text": "**The last pipeline run for succeded. Congrats!** :rocket:",
-     "attachments": [{"fallback": "View airflow stats at http://b1184.byod.hpi.de:8080.",
+    {"text": "*The last pipeline run for succeded. Congrats!* :rocket:",
+     "attachments": [{"fallback": "View airflow stats at http://b1184.byod.hpi.de:8080",
                       "color": "#228B22",
-                      "text": "You may want to check out this:",
+                      "text": "",
+                      "image_url": success_gif,
                       "actions": [{"type": "button",
                                    "text": "View Airflow :airplane_departure:",
                                    "url": "http://b1184.byod.hpi.de:8080"},
@@ -108,10 +107,7 @@ json_success_message = dumps(
                                    "url": "http://b7689.byod.hpi.de:8088/cluster"},
                                   {"type": "button",
                                    "text": "Check Solr :card_file_box:",
-                                   "url": "http://b1184.byod.hpi.de:8983"}]},
-                     {"text": "",
-                      "color": "#228B22",
-                      "image_url": success_gif}]})
+                                   "url": "http://b1184.byod.hpi.de:8983"}]}]})
 
 notify_success = BashOperator(
     task_id='NotifySuccess',
@@ -125,12 +121,13 @@ notify_success = BashOperator(
 
 notify_success.set_upstream([t1, t2, t3, t4])
 
-fail_gif = safygiphy.Giphy().random(tag="fail")['data']['fixed_height_small_url']
+fail_gif = safygiphy.Giphy().random(tag="sorry")['data']['fixed_height_small_url']
 json_failure_message = dumps(
-    {"text": "**Unfortunately, the last pipeline run failed. Keep going!** :rotating_light:",
-     "attachments": [{"fallback": "View airflow stats at http://b1184.byod.hpi.de:8080.",
+    {"text": "*Unfortunately, the last pipeline run failed. Keep going!* :rotating_light:",
+     "attachments": [{"fallback": "View airflow stats at http://b1184.byod.hpi.de:8080",
                       "color": "#ff0000",
-                      "text": "You may want to look into this:",
+                      "text": "",
+                      "image_url": fail_gif,
                       "actions": [{"type": "button",
                                    "text": "View Airflow :wind_blowing_face:",
                                    "url": "http://b1184.byod.hpi.de:8080"},
@@ -139,10 +136,7 @@ json_failure_message = dumps(
                                    "url": "http://b7689.byod.hpi.de:8088/cluster"},
                                   {"type": "button",
                                    "text": "Learn how to access logs :memo:",
-                                   "url": "https://hpi.de/naumann/leuchtturm/gitlab/leuchtturm/meta/wikis/home"}]},
-                     {"text": "",
-                      "color": "#ff0000",
-                      "image_url": fail_gif}]})
+                                   "url": "https://hpi.de/naumann/leuchtturm/gitlab/leuchtturm/meta/wikis/home"}]}]})
 
 notify_failure = BashOperator(
     task_id='NotifyFailure',
