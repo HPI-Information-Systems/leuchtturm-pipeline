@@ -94,7 +94,7 @@ t4.set_upstream(t3)
 
 success_gif = safygiphy.Giphy().random(tag="excited")['data']['fixed_height_small_url']
 json_success_message = dumps(
-    {"text": "*The last pipeline run succeded. Congrats!* :rocket:",
+    {"text": "*The last pipeline run succeeded. Congrats!* :rocket:",
      "attachments": [{"fallback": "View airflow stats at http://b1184.byod.hpi.de:8080",
                       "color": "#228B22",
                       "text": "",
