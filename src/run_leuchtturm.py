@@ -10,8 +10,8 @@ from leuchtturm import extract_topics
 from pyspark import SparkContext
 
 
-input_path = 'hdfs://172.18.20.109/LEUCHTTURM/files_listed_nuix'
-output_path = 'hdfs://172.18.20.109/LEUCHTTURM/pipeline_results_nuix'
+input_path = 'hdfs://172.18.20.109/LEUCHTTURM/files_listed_enron_test'
+output_path = 'hdfs://172.18.20.109/LEUCHTTURM/test_run_for_tm'
 
 
 def run_email_pipeline():
@@ -31,10 +31,12 @@ def run_email_pipeline():
     data = deduplicate_emails(data)
     data = clean_bodies(data)
     data = extract_topics(data)
-    data = detect_languages(data)
-    data = extract_entities(data)
 
-    data.saveAsTextFile(output_path)
+
+    # data = detect_languages(data)
+    # data = extract_entities(data)
+
+    # data.saveAsTextFile(output_path)
 
     sc.stop()
 
