@@ -8,15 +8,8 @@ from email.utils import getaddresses, parsedate, parseaddr, unquote
 from time import mktime
 from langdetect import detect
 import en_core_web_sm as spacy
-from gensim import corpora
-from gensim import models
-from nltk.corpus import stopwords 
-from nltk.stem.wordnet import WordNetLemmatizer
-from nltk.corpus import wordnet
-from string import punctuation
 from hdfs import Client
 import pickle
-
 
 
 def split_emails(rdd):
@@ -154,85 +147,25 @@ def extract_topics(rdd):
     hdfs_client = Client('http://172.18.20.109:50070')
 
     def process_partition(items):
-        
-        with hdfs_client.read_file("models/pickled_lda_model.p") as pfile:
-            lda = pickle.loads(pfile)
+        with hdfs_client.read("/models/pickled_lda_model.p", encoding='utf-8') as pfile:
+            lda = pickle.loads(pfile.data)
     
-        with hdfs_client.read_file("models/pickled_lda_dictionary.p") as pfile:
-            dictionary = pickle.loads(pfile)        
+        with hdfs_client.read("/models/pickled_lda_dictionary.p", encoding='utf-8') as pfile:
+            dictionary = pickle.loads(pfile.data)        
 
         def process_document(data):
             document = json.loads(data)
 
-            # CLEAN DOCUMENTS
-            def split_into_tokens(doc_string):
-                return [token for token in doc_string.lower().split()]
-
-            def strip_punctuation(doc):
-                return [token.strip(punctuation) for token in doc]
-
-            def rm_empty_tokens(doc):
-                # removes all tokens == ''
-                return [token for token in doc if token]
-
-            def rm_stopwords(doc):
-                return [token for token in doc if token not in stopwords]
-
-            def rm_numeric_tokens(doc):
-                result_doc = []
-                for token in doc:
-                    if [char for char in token if not (char.isdigit() or char in punctuation)]:
-                        result_doc.append(token)
-                    else:
-                        result_doc.append('lt_number')
-                        numeric_tokens.add(token)
-                return result_doc
-
-            def rm_short_tokens(doc, min_len=3):
-                result_doc = []
-                for token in doc:
-                    if len(token) >= min_len:
-                        result_doc.append(token)
-                    else:
-                        short_tokens.add(token)
-                return result_doc
-
-            def lemmatize_tokens(doc):
-                result_doc = []
-                for token in doc:
-                    lemmatizations = []
-                    for part_of_speech in [wordnet.NOUN, wordnet.VERB, wordnet.ADJ, wordnet.ADV]:
-                        lemmatization = lemma.lemmatize(token, part_of_speech)
-                        if lemmatization != token:
-                            lemmatizations.append(lemmatization)
-                    if lemmatizations:
-                        shortest_lemmatization = min(lemmatizations, key=len)
-                        result_doc.append(shortest_lemmatization)
-                    else:
-                        result_doc.append(token)
-                return result_doc
-
-            def clean(doc):
-                result_doc = split_into_tokens(doc)
-                result_doc = strip_punctuation(result_doc)
-                result_doc = rm_empty_tokens(result_doc)
-                result_doc = rm_stopwords(result_doc)
-                result_doc = rm_numeric_tokens(result_doc)
-                result_doc = rm_short_tokens(result_doc)
-                result_doc = lemmatize_tokens(result_doc)
-                if verbose_log_enabled:
-                    print('before:', doc)
-                    print('after: ', result_doc, '\n')
-                return result_doc
-
-            document = clean(document)
-
-            # TRANSFORM THEM TO BOW
             bow = dictionary.doc2bow(document)
 
-            get_document_topics(bow, minimum_probability=None, minimum_phi_value=None, per_word_topics=False)¶
+            topic_terms = []
 
-            document['topics'] = topics
+            topics = lda.get_document_topics(bow, minimum_probability=None, minimum_phi_value=None, per_word_topics=False)
+            for topic in topics:
+                topic_terms.append(str((map(lambda xy: (dictionary[xy[0]], xy[1]), lda.get_topic_terms(topic[0], topn=10)))))
+                print((map(lambda xy: (dictionary[xy[0]], xy[1]), lda.get_topic_terms(topic[0], topn=10))))
+
+            document['topics'] = str(topic_terms)
             return json.dumps(document, ensure_ascii=False)
 
         for item in items:
