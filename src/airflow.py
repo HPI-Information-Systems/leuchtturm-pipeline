@@ -94,7 +94,7 @@ t4.set_upstream(t3)
 
 success_gif = safygiphy.Giphy().random(tag="excited")['data']['fixed_height_small_url']
 json_success_message = dumps(
-    {"text": "*The last pipeline run for succeded. Congrats!* :rocket:",
+    {"text": "*The last pipeline run succeded. Congrats!* :rocket:",
      "attachments": [{"fallback": "View airflow stats at http://b1184.byod.hpi.de:8080",
                       "color": "#228B22",
                       "text": "",
@@ -113,7 +113,7 @@ notify_success = BashOperator(
     task_id='NotifySuccess',
     bash_command="curl -X POST -H \
                   'Content-type: application/json' --data '{}' \
-                  https://hooks.slack.com/services/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"
+                  https://hooks.slack.com/services/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"
                  .format(json_success_message),
     trigger_rule='all_success',
     dag=dag
@@ -142,7 +142,7 @@ notify_failure = BashOperator(
     task_id='NotifyFailure',
     bash_command="curl -X POST -H \
                   'Content-type: application/json' --data '{}' \
-                  https://hooks.slack.com/services/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"
+                  https://hooks.slack.com/services/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"
                  .format(json_failure_message),
     trigger_rule='one_failed',
     dag=dag
