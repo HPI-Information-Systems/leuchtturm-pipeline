@@ -1,6 +1,6 @@
 """This module contains the scheduling of the leuchtturm pipeline."""
 
-from settings import build_name, pipeline_result_path_hdfs_client, file_lister_path_hdfs_client
+from settings import solr_collection, path_files_listed_short, path_pipeline_results_short
 from airflow import DAG
 from airflow.operators.bash_operator import BashOperator
 from datetime import datetime, timedelta
@@ -45,7 +45,7 @@ t2 = BashOperator(
                         --num-executors 6 \
                         --executor-cores 3 \
                         --py-files ~/pipeline/src/settings.py \
-                        ~/pipeline/src/file_lister.py""".format(file_lister_path_hdfs_client),
+                        ~/pipeline/src/file_lister.py""".format(path_files_listed_short),
     dag=dag
 )
 
@@ -66,7 +66,7 @@ t3 = BashOperator(
                         --num-executors 6 \
                         --executor-cores 3 \
                         --py-files /root/pipeline/src/settings.py,/root/pipeline/src/leuchtturm.py \
-                        ~/pipeline/src/run_leuchtturm.py""".format(pipeline_result_path_hdfs_client),
+                        ~/pipeline/src/run_leuchtturm.py""".format(path_pipeline_results_short),
     dag=dag
 )
 
@@ -77,7 +77,7 @@ t4 = BashOperator(
     task_id='write2solr',
     bash_command="""/opt/lucidworks-hdpsearch/solr/bin/solr delete -c {0}
                     /opt/lucidworks-hdpsearch/solr/bin/solr create -c {0} -d leuchtturm_conf -s 2 -rf 2
-                    python3 ~/pipeline/src/write_to_solr.py""".format(build_name),
+                    python3 ~/pipeline/src/write_to_solr.py""".format(solr_collection),
     dag=dag
 )
 
