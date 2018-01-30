@@ -1,14 +1,10 @@
 """This module writes pipeline results to a solr database."""
 
+from settings import solr_client_url, hdfs_client_url, path_pipeline_results_short
 import pysolr
 from hdfs import Client
 from flatten_dict import flatten
 import json
-
-
-input_path = '/LEUCHTTURM/pipeline_results_nuix'
-hdfs_client = Client('http://172.18.20.109:50070')
-solr_collection = pysolr.Solr('http://b1184.byod.hpi.de:8983/solr/enron_complete_nuix')
 
 
 def write_to_solr():
@@ -18,6 +14,9 @@ def write_to_solr():
     Arguments: none.
     Returns: void.
     """
+    hdfs_client = Client(hdfs_client_url)
+    solr_client = pysolr.Solr(solr_client_url)
+
     def dot_reducer(k1, k2):
         if k1 is None:
             return k2
@@ -25,30 +24,21 @@ def write_to_solr():
             return str(k1) + '.' + str(k2)
 
     def flatten_document(document):
-        document = json.loads(document)
-        document['parts'] = dict(enumerate(document['parts']))
+        return flatten(json.loads(document), reducer=dot_reducer)
 
-        return flatten(document, reducer=dot_reducer)
-
-    for partition in hdfs_client.list(input_path):
-        with hdfs_client.read(input_path + '/' + partition, encoding='utf-8', delimiter='\n') as reader:
+    for partition in hdfs_client.list(path_pipeline_results_short):
+        with hdfs_client.read(path_pipeline_results_short + '/' + partition,
+                              encoding='utf-8',
+                              delimiter='\n') as reader:
             docs_to_push = []
-            count = 1
             for document in reader:
                 if (len(document) != 0):
                     docs_to_push.append(flatten_document(document))
-                    count += 1
-                if (count % 300 == 0):
-                    try:
-                        solr_collection.add(docs_to_push)
-                    except Exception:
-                        print(document)
+                if (len(docs_to_push) % 1000 == 0):
+                    solr_client.add(docs_to_push)
                     docs_to_push = []
             if (len(docs_to_push)):
-                try:
-                    solr_collection.add(docs_to_push)
-                except Exception:
-                    print(len(docs_to_push))
+                solr_client.add(docs_to_push)
                 docs_to_push = []
 
 

@@ -1,6 +1,5 @@
 """This module provides methods to processes emails and text."""
 
-
 import json
 import re
 import email
@@ -17,11 +16,11 @@ def split_emails(rdd):
     Returns: rdd with body field for each doc in json format splitted by parts of conversation
     """
     def split_document(data):
-        header = r'^((subject: .*\n)|(from: .*\n)|(sent: .*\n)|(date: .*\n)|(to: .*\n)|(cc: .*\n)){4,}\n$\n'
+        header = r'^((subject:\s.*\n)|(from:\s.*\n)|(sent:\s.*\n)|(date:\s.*\n)|(to:\s.*\n)|(cc:\s.*\n)){4,}\n$\n'
 
         def detect_parts(email):
             """Split email into parts and return list of parts."""
-            found_headers = re.finditer(header, email, re.MULTILINE | re.IGNORECASE)
+            found_headers = re.finditer(header, email, re.MULTILINE | re.IGNORECASE | re.UNICODE)
             parts = [email]
             for found_header in found_headers:
                 current_header = found_header.group()
@@ -65,7 +64,7 @@ def extract_metadata(rdd):
             header['recipients'].append({'name': unquote(recipient[0]),
                                          'email': unquote(recipient[1].lower())})
         date = parsedate(msg.get('date', '') + msg.get('sent', ''))
-        header['date'] = mktime(date) if (len(date) == 9) else 0.0
+        header['date'] = mktime(date) if (date is not None) else -1.0
         header['subject'] = msg.get('subject', '')
 
         document['header'] = header

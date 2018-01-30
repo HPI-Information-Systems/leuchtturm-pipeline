@@ -1,16 +1,9 @@
 """This module writes pipeline results to a neo4j database."""
 
+from settings import hdfs_client_url, neo4j_client_url, path_pipeline_results_short
 import json
-from datetime import datetime
 from neo4j.v1 import DirectDriver
-# from neo4j.v1 import GraphDatabase
 from hdfs import Client
-
-input_path = '/LEUCHTTURM/pipeline_results_nuix'
-hdfs_client = Client('http://172.18.20.109:50070')
-uri = "bolt://b3986.byod.hpi.de:7687"
-driver = DirectDriver(uri)
-# driver = GraphDatabase.driver(uri)
 
 
 def write_to_neo4j():
@@ -20,14 +13,14 @@ def write_to_neo4j():
     Arguments: none.
     Returns: void.
     """
-    starttime = str(datetime.now())
-    print("Upload started at: " + starttime)
-    file = open("neo4j_log.txt", "w")
-    file.write("Start-Time: " + starttime)
-    file.close()
+    hdfs_client = Client(hdfs_client_url)
+    driver = DirectDriver(neo4j_client_url)
+
     with driver.session() as session:
-        for partition in hdfs_client.list(input_path):
-            with hdfs_client.read(input_path + '/' + partition, encoding='utf-8', delimiter='\n') as reader:
+        for partition in hdfs_client.list(path_pipeline_results_short):
+            with hdfs_client.read(path_pipeline_results_short + '/' + partition,
+                                  encoding='utf-8',
+                                  delimiter='\n') as reader:
                 for document in reader:
                     if (len(document) != 0):
                         sender = {"name": "", "email": ""}
@@ -65,12 +58,6 @@ def write_to_neo4j():
                                         name_recipient=recipient['name'],
                                         email_recipient=recipient['email'],
                                         mail_id=mail_id)
-
-    endtime = str(datetime.now())
-    print("Upload ended at: " + endtime)
-    file = open("neo4j_log.txt", "w")
-    file.write("End-Time: " + endtime)
-    file.close()
 
 
 if __name__ == '__main__':
