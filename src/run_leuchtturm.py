@@ -31,12 +31,9 @@ def run_email_pipeline():
     data = deduplicate_emails(data)
     data = clean_bodies(data)
     data = extract_topics(data)
-
-
-    # data = detect_languages(data)
-    # data = extract_entities(data)
-
-    # data.saveAsTextFile(output_path)
+    data = detect_languages(data)
+    data = extract_entities(data)
+    data.saveAsTextFile(output_path)
 
     sc.stop()
 
