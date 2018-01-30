@@ -14,4 +14,4 @@ hdfs_client_url = 'http://172.18.20.109:50070'
 solr_client_url = 'http://b1184.byod.hpi.de:8983/solr' + '/' + solr_collection
 neo4j_client_url = 'bolt://b3986.byod.hpi.de:7687'
 
-cluster_parallelization = 6 * 3 * 3
+cluster_parallelization = 6 * 3 * 3  # num executors * num cores * 3-4
