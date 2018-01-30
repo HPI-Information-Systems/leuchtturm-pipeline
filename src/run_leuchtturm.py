@@ -6,6 +6,7 @@ from leuchtturm import deduplicate_emails
 from leuchtturm import clean_bodies
 from leuchtturm import detect_languages
 from leuchtturm import extract_entities
+from leuchtturm import extract_topics
 from pyspark import SparkContext
 
 
@@ -29,6 +30,7 @@ def run_email_pipeline():
     data = extract_metadata(data)
     data = deduplicate_emails(data)
     data = clean_bodies(data)
+    data = extract_topics(data)
     data = detect_languages(data)
     data = extract_entities(data)
 
