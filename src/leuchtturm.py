@@ -183,6 +183,7 @@ def extract_entities(rdd):
                         'location': [],
                         'organization': [],
                         'miscellaneous': []}
+
             lines = [document['text_clean'][i: i + 1000] for i in range(0, len(document['text_clean']), 1000)]
             for line in lines:
                 for entity in filter(lambda x: x.text != ' ', nlp(line).ents):
@@ -194,7 +195,12 @@ def extract_entities(rdd):
                         entities['organization'].append(entity.text)
                     elif (entity.label_ == 'PRODUCT' or entity.label_ == 'EVENT' or entity.label_ == 'WORK_OF_ART'):
                         entities['miscellaneous'].append(entity.text)
-            document['entities'] = entities
+
+            document['entities'] = {'person': list(set(entities['person'])),
+                                    'location': list(set(entities['location'])),
+                                    'organization': list(set(entities['organization'])),
+                                    'miscellaneous': list(set(entities['miscellaneous']))}
+
             return json.dumps(document)
 
         for item in items:
