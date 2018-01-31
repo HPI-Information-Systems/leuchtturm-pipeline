@@ -60,8 +60,9 @@ def extract_metadata(rdd):
                             'email': unquote(parseaddr(msg.get('from', ''))[1].lower())}
         header['recipients'] = []
         for recipient in getaddresses(msg.get_all('to', []) + msg.get_all('cc', []) + msg.get_all('bcc', [])):
-            header['recipients'].append({'name': unquote(recipient[0]),
-                                         'email': unquote(recipient[1].lower())})
+            if recipient[0] and recipient[1]:
+                header['recipients'].append({'name': unquote(recipient[0]),
+                                             'email': unquote(recipient[1].lower())})
         date = parsedate(msg.get('date', '') + msg.get('sent', ''))
         header['date'] = mktime(date) if (date is not None) else -1.0
         header['subject'] = msg.get('subject', '')
