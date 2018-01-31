@@ -124,15 +124,17 @@ def clean_bodies(rdd):
              r'-----\s?original message\s?-----',
              r'(\*|=|-){40,}\s(.|\n)+(\*|=|-){40,}\s']
 
-    edrm_footer = ('***********\nEDRM Enron Email Data Set has been produced in EML, PST and NSF format by ZL '
+    edrm_footer = ('***********\r\nEDRM Enron Email Data Set has been produced in EML, PST and NSF format by ZL '
                    'Technologies, Inc. This Data Set is licensed under a Creative Commons Attribution 3.0 United '
                    'States License <http://creativecommons.org/licenses/by/3.0/us/> . To provide attribution, '
-                   'please cite to \"ZL Technologies, Inc. (http://www.zlti.com).\"\n***********\n')
+                   'please cite to \"ZL Technologies, Inc. (http://www.zlti.com).\"\r\n***********')
 
-    def process_document(data):
+    def clean_document(data):
         document = json.loads(data)
 
-        text_clean = document['body']
+        text_clean = document['header']['subject'] + '. ' + document['body']
+        text_clean = text_clean.replace(edrm_footer, '')
+        document['body'] = document['body'].replace(edrm_footer, '')
         for rule in rules:
             text_clean = re.sub(rule, ' ', text_clean, re.MULTILINE | re.IGNORECASE | re.UNICODE)
 
@@ -140,14 +142,13 @@ def clean_bodies(rdd):
         text_clean = ''.join([char if ord(char) < 128 else ' ' for char in text_clean])
         for sc in special_chars:
             text_clean = text_clean.replace(sc, ' ')
-        text_clean = text_clean.replace(edrm_footer, '')
         # clean whitespace
-        text_clean = re.sub(r'(\s){2,}\1', ' ', text_clean, re.MULTILINE | re.IGNORECASE | re.UNICODE)
+        text_clean = re.sub(r'^\s+|\s+$|\s+(?=\s)', '', text_clean, re.MULTILINE | re.IGNORECASE | re.UNICODE)
         document['text_clean'] = text_clean
 
         return json.dumps(document)
 
-    return rdd.map(lambda x: process_document(x))
+    return rdd.map(lambda x: clean_document(x))
 
 
 def detect_languages(rdd):
@@ -159,7 +160,7 @@ def detect_languages(rdd):
     def detect_email_lang(data):
         document = json.loads(data)
         try:
-            document['lang'] = detect(document['body'])
+            document['lang'] = detect(document['text_clean'])
         except Exception:
             document['lang'] = 'xx'
         return json.dumps(document)
@@ -182,7 +183,7 @@ def extract_entities(rdd):
                         'location': [],
                         'organization': [],
                         'miscellaneous': []}
-            lines = document['body'].replace('\\n', '\n').splitlines()
+            lines = [document['text_clean'][i: i + 1000] for i in range(0, len(document['text_clean']), 1000)]
             for line in lines:
                 for entity in nlp(line).ents:
                     if (entity.label_ == 'PERSON'):
