@@ -1,12 +1,8 @@
 """This module runs pipeline tasks in correct order."""
 
 from settings import path_files_listed, path_pipeline_results, cluster_parallelization
-from leuchtturm import split_emails
-from leuchtturm import extract_metadata
-from leuchtturm import deduplicate_emails
-from leuchtturm import clean_bodies
-from leuchtturm import detect_languages
-from leuchtturm import extract_entities
+from leuchtturm import (split_emails, extract_metadata, deduplicate_emails,
+                        clean_bodies, detect_languages, extract_entities)
 from pyspark import SparkContext
 
 
