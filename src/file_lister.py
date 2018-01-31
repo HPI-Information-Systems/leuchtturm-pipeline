@@ -15,15 +15,14 @@ def collect_files():
         return data[1].startswith('Subject: ')
 
     def create_document(data):
-        return json.dumps({'doc_id': data[0].replace('.txt', ''),
-                           'raw': data[1]},
-                          ensure_ascii=False)
+        return json.dumps({'doc_id': data[0].split('/')[-1].split('.')[0],
+                           'path': data[0],
+                           'raw': data[1]})
 
     sc = SparkContext()
 
-    rdd = sc.wholeTextFiles(path_emails_raw,
-                            minPartitions=cluster_parallelization,
-                            use_unicode=True)
+    rdd = sc.wholeTextFiles(path_emails_raw, minPartitions=cluster_parallelization)
+
     rdd.filter(lambda x: filter_emails(x)) \
        .map(lambda x: create_document(x)) \
        .saveAsTextFile(path_files_listed)
