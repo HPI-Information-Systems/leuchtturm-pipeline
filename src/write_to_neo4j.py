@@ -1,6 +1,6 @@
 """This module writes pipeline results to a neo4j database."""
 
-from settings import hdfs_client_url, neo4j_client_url, path_pipeline_results_short
+from settings import HDFS_CLIENT_URL, NEO4J_CLIENT_URL, PATH_PIPELINE_RESULTS_SHORT
 import json
 from neo4j.v1 import DirectDriver
 from hdfs import Client
@@ -13,12 +13,12 @@ def write_to_neo4j():
     Arguments: none.
     Returns: void.
     """
-    hdfs_client = Client(hdfs_client_url)
-    driver = DirectDriver(neo4j_client_url)
+    hdfs_client = Client(HDFS_CLIENT_URL)
+    driver = DirectDriver(NEO4J_CLIENT_URL)
 
     with driver.session() as session:
-        for partition in hdfs_client.list(path_pipeline_results_short):
-            with hdfs_client.read(path_pipeline_results_short + '/' + partition,
+        for partition in hdfs_client.list(PATH_PIPELINE_RESULTS_SHORT):
+            with hdfs_client.read(PATH_PIPELINE_RESULTS_SHORT + '/' + partition,
                                   encoding='utf-8',
                                   delimiter='\n') as reader:
                 for document in reader:

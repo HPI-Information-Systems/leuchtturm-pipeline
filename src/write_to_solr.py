@@ -1,6 +1,6 @@
 """This module writes pipeline results to a solr database."""
 
-from settings import solr_client_url, hdfs_client_url, path_pipeline_results_short
+from settings import SOLR_CLIENT_URL, HDFS_CLIENT_URL, PATH_PIPELINE_RESULTS_SHORT
 import pysolr
 from hdfs import Client
 from flatten_dict import flatten
@@ -14,8 +14,8 @@ def write_to_solr():
     Arguments: none.
     Returns: void.
     """
-    hdfs_client = Client(hdfs_client_url)
-    solr_client = pysolr.Solr(solr_client_url)
+    hdfs_client = Client(HDFS_CLIENT_URL)
+    solr_client = pysolr.Solr(SOLR_CLIENT_URL)
 
     def dot_reducer(k1, k2):
         if k1 is None:
@@ -26,8 +26,8 @@ def write_to_solr():
     def flatten_document(document):
         return flatten(json.loads(document), reducer=dot_reducer)
 
-    for partition in hdfs_client.list(path_pipeline_results_short):
-        with hdfs_client.read(path_pipeline_results_short + '/' + partition,
+    for partition in hdfs_client.list(PATH_PIPELINE_RESULTS_SHORT):
+        with hdfs_client.read(PATH_PIPELINE_RESULTS_SHORT + '/' + partition,
                               encoding='utf-8',
                               delimiter='\n') as reader:
             docs_to_push = []
