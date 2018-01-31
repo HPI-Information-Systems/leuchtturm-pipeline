@@ -185,7 +185,7 @@ def extract_entities(rdd):
                         'miscellaneous': []}
             lines = [document['text_clean'][i: i + 1000] for i in range(0, len(document['text_clean']), 1000)]
             for line in lines:
-                for entity in nlp(line).ents:
+                for entity in filter(lambda x: x.text != ' ', nlp(line).ents):
                     if (entity.label_ == 'PERSON'):
                         entities['person'].append(entity.text)
                     elif (entity.label_ == 'LOC' or entity.label_ == 'GPE' or entity.label_ == 'FAC'):
