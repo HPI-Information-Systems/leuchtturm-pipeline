@@ -16,7 +16,7 @@ def split_emails(rdd):
     Returns: rdd with body field for each doc in json format splitted by parts of conversation
     """
     def split_document(data):
-        header = r'^((subject:\s.*\n)|(from:\s.*\n)|(sent:\s.*\n)|(date:\s.*\n)|(to:\s.*\n)|(cc:\s.*\n)){4,}\n$\n'
+        header = r'^(((subject:)|(from:)|(sent:)|(date:)|(to:)|(cc:))(\s.*\n)){4,}\s+'
 
         def detect_parts(email):
             """Split email into parts and return list of parts."""
@@ -39,7 +39,7 @@ def split_emails(rdd):
             obj = {'doc_id': document['doc_id'],
                    'raw': document['raw'],
                    'body': part}
-            splitted_emails.append(json.dumps(obj, ensure_ascii=False))
+            splitted_emails.append(json.dumps(obj))
 
         return splitted_emails
 
@@ -69,7 +69,7 @@ def extract_metadata(rdd):
 
         document['header'] = header
 
-        return json.dumps(document, ensure_ascii=False)
+        return json.dumps(document)
 
     return rdd.map(lambda x: add_metadata(x))
 
@@ -129,7 +129,7 @@ def clean_bodies(rdd):
             mail_text = mail_text.replace(sc, ' ')
 
         document['body'] = re.sub(r'(\n|\t| ){2,}', ' ', mail_text)
-        return json.dumps(document, ensure_ascii=False)
+        return json.dumps(document)
 
     return rdd.map(lambda x: process_document(x))
 
@@ -146,7 +146,7 @@ def detect_languages(rdd):
             document['lang'] = detect(document['body'])
         except Exception:
             document['lang'] = 'xx'
-        return json.dumps(document, ensure_ascii=False)
+        return json.dumps(document)
 
     return rdd.map(lambda x: detect_email_lang(x))
 
@@ -178,7 +178,7 @@ def extract_entities(rdd):
                     elif (entity.label_ == 'PRODUCT' or entity.label_ == 'EVENT' or entity.label_ == 'WORK_OF_ART'):
                         entities['miscellaneous'].append(entity.text)
             document['entities'] = entities
-            return json.dumps(document, ensure_ascii=False)
+            return json.dumps(document)
 
         for item in items:
             yield process_document(item)
