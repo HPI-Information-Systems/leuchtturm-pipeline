@@ -113,26 +113,37 @@ def clean_bodies(rdd):
     Arguments: rdd with body field for each doc in json format
     Returns: rdd with a cleaned body field for each doc in json format
     """
+    special_chars = ['"', "!", "#", "$", "%", "&", "'", "§", "(", ")", "*", ",",
+                     "-", "/", ":", ";", "<", "=", ">", "?", "\x97", "+", "\n", "\t", "\r",
+                     "@", "[", "\\", "]", "^", "_", "`", "{", "|", "}", "~", "\u000b", "\f"]
+
+    rules = [r'<[^>].+>',
+             r'^(((subject:)|(from:)|(sent:)|(date:)|(to:)|(cc:))(\s.*\n)){3,}\s+',
+             r'----- forwarded.*((from:.*)|fubject:(.)*|to:(.)*|sent:(.)*|cc:(.)*|\n)*\n',
+             r'-----\s?original message\s?-----',
+             r'(\*|=|-){40,}\s(.|\n)+(\*|=|-){40,}\s']
+
+    edrm_footer = ('***********\nEDRM Enron Email Data Set has been produced in EML, PST and NSF format by ZL '
+                   'Technologies, Inc. This Data Set is licensed under a Creative Commons Attribution 3.0 United '
+                   'States License <http://creativecommons.org/licenses/by/3.0/us/> . To provide attribution, '
+                   'please cite to \"ZL Technologies, Inc. (http://www.zlti.com).\"\n***********\n')
+
     def process_document(data):
-        special_chars = ['"', "!", "#", "$", "%", "&", "'", "§", "(", ")", "*",
-                         "-", "/", ":", ";", "<", "=", ">", "?", "\x97", "+",
-                         "@", "[", "\\", "]", "^", "_", "`", "{", "|", "}", "~", "\u000b", "\f"]
-
-        rules = [r'\*\*\*\*\*\*\*\*\*\*\*(\n)?EDRM Enron Email(.)*(\n)?\*\*\*\*\*\*\*\*\*\*\*',
-                 r'----- Forwarded(.)*(From:(.)*|Subject:(.)*|To:(.)*|Sent:(.)*|Cc:(.)*|\n)*\n',
-                 r'-----Original Message-----(From:(.)*|Subject:(.)*|To:(.)*|Sent:(.)*|Cc:(.)*|\n)*\n',
-                 r'((From:)(.)*(\n)*)?To:(.)*(\n)*cc:(.)*(\n)*Subject:(.)*(\n)*',
-                 r'={60,}(.|\n)*={60,}']
-
         document = json.loads(data)
-        mail_text = document['body']
+
+        text_clean = document['body']
         for rule in rules:
-            mail_text = re.sub(rule, ' ', mail_text)
+            text_clean = re.sub(rule, ' ', text_clean, re.MULTILINE | re.IGNORECASE | re.UNICODE)
 
+        # remove non ascii chars and special chars
+        text_clean = ''.join([char if ord(char) < 128 else ' ' for char in text_clean])
         for sc in special_chars:
-            mail_text = mail_text.replace(sc, ' ')
+            text_clean = text_clean.replace(sc, ' ')
+        text_clean = text_clean.replace(edrm_footer, '')
+        # clean whitespace
+        text_clean = re.sub(r'(\s){2,}\1', ' ', text_clean, re.MULTILINE | re.IGNORECASE | re.UNICODE)
+        document['text_clean'] = text_clean
 
-        document['body'] = re.sub(r'(\n|\t| ){2,}', ' ', mail_text)
         return json.dumps(document)
 
     return rdd.map(lambda x: process_document(x))
