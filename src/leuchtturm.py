@@ -36,9 +36,8 @@ def split_emails(rdd):
 
         splitted_emails = []
         for part in parts:
-            obj = {'doc_id': document['doc_id'],
-                   'raw': document['raw'],
-                   'body': part}
+            obj = document
+            obj['raw'] = part
             splitted_emails.append(json.dumps(obj))
 
         return splitted_emails
@@ -54,7 +53,7 @@ def extract_metadata(rdd):
     """
     def add_metadata(data):
         document = json.loads(data)
-        msg = email.message_from_string(document['body'])
+        msg = email.message_from_string(document['raw'])
 
         header = {}
         header['sender'] = {'name': unquote(parseaddr(msg.get('from', ''))[0]),
@@ -66,8 +65,14 @@ def extract_metadata(rdd):
         date = parsedate(msg.get('date', '') + msg.get('sent', ''))
         header['date'] = mktime(date) if (date is not None) else -1.0
         header['subject'] = msg.get('subject', '')
-
         document['header'] = header
+
+        document['body'] = ''
+        if msg.is_multipart():
+            for payload in msg.get_payload():
+                document['body'] += payload.get_payload()
+        else:
+            document['body'] = msg.get_payload()
 
         return json.dumps(document)
 
@@ -84,8 +89,7 @@ def deduplicate_emails(rdd):
         data_norm = json.loads(data)
         splitting_keys = json.dumps([data_norm['header']['sender']['email'],
                                      data_norm['header']['date'],
-                                     data_norm['header']['subject']],
-                                    ensure_ascii=False)
+                                     data_norm['header']['subject']])
 
         return (splitting_keys, data)
 
