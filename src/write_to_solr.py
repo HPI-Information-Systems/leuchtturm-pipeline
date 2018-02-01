@@ -1,5 +1,9 @@
 """This module writes pipeline results to a solr database."""
 
+import sys
+import os
+if os.path.exists('./libs.zip'):
+    sys.path.insert(0, './libs.zip')
 from settings import solr_client_url, hdfs_client_url, path_pipeline_results_short
 import pysolr
 from hdfs import Client

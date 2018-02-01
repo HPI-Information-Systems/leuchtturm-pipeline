@@ -1,5 +1,9 @@
 """This job collects and dumps text documents to a spark rdd."""
 
+import sys
+import os
+if os.path.exists('./libs.zip'):
+    sys.path.insert(0, './libs.zip')
 from settings import path_files_listed, path_emails_raw, cluster_parallelization
 import json
 from pyspark import SparkContext

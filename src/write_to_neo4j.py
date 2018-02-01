@@ -1,5 +1,9 @@
 """This module writes pipeline results to a neo4j database."""
 
+import sys
+import os
+if os.path.exists('./libs.zip'):
+    sys.path.insert(0, './libs.zip')
 from settings import hdfs_client_url, neo4j_client_url, path_pipeline_results_short
 import json
 from neo4j.v1 import DirectDriver

@@ -1,5 +1,9 @@
 """This module runs pipeline tasks in correct order."""
 
+import sys
+import os
+if os.path.exists('./libs.zip'):
+    sys.path.insert(0, './libs.zip')
 from settings import path_files_listed, path_pipeline_results, cluster_parallelization
 from leuchtturm import (split_emails, extract_metadata, deduplicate_emails,
                         clean_bodies, detect_languages, extract_entities)

@@ -123,7 +123,7 @@ notify_success = BashOperator(
 
 notify_success.set_upstream([t1, t2, t3, t4])
 
-fail_gif = safygiphy.Giphy().random(tag="dislike")['data']['fixed_height_small_url']
+fail_gif = safygiphy.Giphy().random(tag="no")['data']['fixed_height_small_url']
 json_failure_message = dumps(
     {"text": "*Unfortunately, the last pipeline run failed. Keep going!* :rotating_light:",
      "attachments": [{"fallback": "View airflow stats at http://b1184.byod.hpi.de:8080",
