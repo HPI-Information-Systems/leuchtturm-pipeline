@@ -5,6 +5,7 @@ import re
 import email
 from email.utils import getaddresses, parsedate, parseaddr, unquote
 from time import mktime
+from string import whitespace
 from langdetect import detect
 import en_core_web_sm as spacy
 
@@ -122,7 +123,8 @@ def clean_bodies(rdd):
              r'^(((subject:)|(from:)|(sent:)|(date:)|(to:)|(cc:))(\s.*\n)){3,}\s+',
              r'----- forwarded.*((from:.*)|fubject:(.)*|to:(.)*|sent:(.)*|cc:(.)*|\n)*\n',
              r'-----\s?original message\s?-----',
-             r'(\*|=|-){40,}\s(.|\n)+(\*|=|-){40,}\s']
+             r'(\*|=|-){40,}\s(.|\n)+(\*|=|-){40,}\s',
+             r'\b\w{1,2}\b']
 
     edrm_footer = ('***********\r\nEDRM Enron Email Data Set has been produced in EML, PST and NSF format by ZL '
                    'Technologies, Inc. This Data Set is licensed under a Creative Commons Attribution 3.0 United '
@@ -188,13 +190,13 @@ def extract_entities(rdd):
             for line in lines:
                 for entity in filter(lambda x: x.text != ' ', nlp(line).ents):
                     if (entity.label_ == 'PERSON'):
-                        entities['person'].append(entity.text)
+                        entities['person'].append(entity.text.strip(whitespace))
                     elif (entity.label_ == 'LOC' or entity.label_ == 'GPE' or entity.label_ == 'FAC'):
-                        entities['location'].append(entity.text)
+                        entities['location'].append(entity.text.strip(whitespace))
                     elif (entity.label_ == 'ORG' or entity.label_ == 'NORP'):
-                        entities['organization'].append(entity.text)
+                        entities['organization'].append(entity.text.strip(whitespace))
                     elif (entity.label_ == 'PRODUCT' or entity.label_ == 'EVENT' or entity.label_ == 'WORK_OF_ART'):
-                        entities['miscellaneous'].append(entity.text)
+                        entities['miscellaneous'].append(entity.text.strip(whitespace))
 
             document['entities'] = {'person': list(set(entities['person'])),
                                     'location': list(set(entities['location'])),
