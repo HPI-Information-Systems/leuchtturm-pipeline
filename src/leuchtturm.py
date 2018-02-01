@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 """This module provides methods to processes emails and text."""
 
 
@@ -156,16 +158,18 @@ def extract_topics(rdd):
         def process_document(data):
             document = json.loads(data)
 
-            bow = dictionary.doc2bow(document)
+            bow = dictionary.doc2bow(document["body"].split())
 
             topic_terms = []
 
-            topics = lda.get_document_topics(bow, minimum_probability=None, minimum_phi_value=None, per_word_topics=False)
-            for topic in topics:
-                topic_terms.append(str((map(lambda xy: (dictionary[xy[0]], xy[1]), lda.get_topic_terms(topic[0], topn=10)))))
-                print((map(lambda xy: (dictionary[xy[0]], xy[1]), lda.get_topic_terms(topic[0], topn=10))))
+            topics = lda.get_document_topics(bow)
 
-            document['topics'] = str(topic_terms)
+            for topic in topics:
+                terms = map(lambda xy: (dictionary[xy[0]], xy[1]), lda.get_topic_terms(topic[0], topn=10))
+                topic_terms.append(str((str(topic[1]), (list(terms)))))
+            
+            document["topics"] = str(topic_terms)
+
             return json.dumps(document, ensure_ascii=False)
 
         for item in items:
