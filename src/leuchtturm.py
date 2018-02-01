@@ -159,8 +159,8 @@ def clean_bodies(rdd):
 def extract_topics(rdd):
     """Extract topics from cleaned email bodies.
 
-    Arguments: rdd with body field for each doc in json format
-    Returns: rdd with a cleaned body field for each doc in json format
+    Arguments: rdd with text_clean field for each doc in json format
+    Returns: rdd with a topics field for each doc in json format
     """
     hdfs_client = Client(hdfs_client_url)
 
