@@ -12,7 +12,7 @@ default_args = {
     'owner': 'airflow',
     'depends_on_past': False,
     'schedule_interval': '@once',
-    'start_date': datetime(2018, 1, 24),
+    'start_date': datetime(2018, 2, 1),
     'email': ['leuchtturm@example.com'],
     'email_on_failure': False,
     'email_on_success': False,
@@ -25,27 +25,26 @@ dag = DAG('leuchtturm_pipeline', default_args=default_args)
 
 
 t1 = BashOperator(
-    task_id='clean_and_prepare',
-    bash_command="""cd ~
+    task_id='fetch_and_prepare',
+    bash_command="""cd /root/airflow/pipeline && rm -r * && git checkout -f dev && git reset --hard HEAD && git pull
                     """,
     dag=dag
 )
 
 t2 = BashOperator(
-    task_id='filelister',
+    task_id='file_lister',
     bash_command="""export SPARK_HOME=/usr/hdp/2.6.3.0-235/spark2/
                     export PYSPARK_PYTHON=python3
-                    cd ~
                     hdfs dfs -rmr {}
-                    spark-submit \
-                        --master yarn \
-                        --deploy-mode cluster \
-                        --driver-memory 4g \
-                        --executor-memory 4g \
-                        --num-executors 6 \
-                        --executor-cores 3 \
-                        --py-files ~/pipeline/src/settings.py \
-                        ~/pipeline/src/file_lister.py""".format(PATH_FILES_LISTED_SHORT),
+                    cd /root/airflow/pipeline/src && spark-submit \
+                                                        --master yarn \
+                                                        --deploy-mode cluster \
+                                                        --driver-memory 4g \
+                                                        --executor-memory 4g \
+                                                        --num-executors 6 \
+                                                        --executor-cores 3 \
+                                                        --py-files settings.py \
+                                                        file_lister.py""".format(PATH_FILES_LISTED_SHORT),
     dag=dag
 )
 
@@ -53,20 +52,19 @@ t2.set_upstream(t1)
 
 
 t3 = BashOperator(
-    task_id='run_leuchtturm_pipeline',
+    task_id='run_leuchtturm',
     bash_command="""export SPARK_HOME=/usr/hdp/2.6.3.0-235/spark2/
                     export PYSPARK_PYTHON=python3
-                    cd ~
                     hdfs dfs -rmr {}
-                    spark-submit \
-                        --master yarn \
-                        --deploy-mode cluster \
-                        --driver-memory 4g \
-                        --executor-memory 4g \
-                        --num-executors 6 \
-                        --executor-cores 3 \
-                        --py-files /root/pipeline/src/settings.py,/root/pipeline/src/leuchtturm.py \
-                        ~/pipeline/src/run_leuchtturm.py""".format(PATH_PIPELINE_RESULTS_SHORT),
+                    cd /root/airflow/pipeline/src && spark-submit \
+                                                        --master yarn \
+                                                        --deploy-mode cluster \
+                                                        --driver-memory 4g \
+                                                        --executor-memory 4g \
+                                                        --num-executors 6 \
+                                                        --executor-cores 3 \
+                                                        --py-files settings.py,leuchtturm.py \
+                                                        run_leuchtturm.py""".format(PATH_PIPELINE_RESULTS_SHORT),
     dag=dag
 )
 
@@ -77,7 +75,7 @@ t4 = BashOperator(
     task_id='write2solr',
     bash_command="""/opt/lucidworks-hdpsearch/solr/bin/solr delete -c {0}
                     /opt/lucidworks-hdpsearch/solr/bin/solr create -c {0} -d leuchtturm_conf -s 2 -rf 2
-                    python3 ~/pipeline/src/write_to_solr.py""".format(SOLR_COLLECTION),
+                    cd /root/airflow/pipeline/src && python3 write_to_solr.py""".format(SOLR_COLLECTION),
     dag=dag
 )
 
@@ -110,7 +108,7 @@ json_success_message = dumps(
                                    "url": "http://b1184.byod.hpi.de:8983"}]}]})
 
 notify_success = BashOperator(
-    task_id='NotifySuccess',
+    task_id='notify_success',
     bash_command="curl -X POST -H \
                   'Content-type: application/json' --data '{}' \
                   https://hooks.slack.com/services/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"
@@ -121,7 +119,7 @@ notify_success = BashOperator(
 
 notify_success.set_upstream([t1, t2, t3, t4])
 
-fail_gif = safygiphy.Giphy().random(tag="sorry")['data']['fixed_height_small_url']
+fail_gif = safygiphy.Giphy().random(tag="no")['data']['fixed_height_small_url']
 json_failure_message = dumps(
     {"text": "*Unfortunately, the last pipeline run failed. Keep going!* :rotating_light:",
      "attachments": [{"fallback": "View airflow stats at http://b1184.byod.hpi.de:8080",
@@ -139,7 +137,7 @@ json_failure_message = dumps(
                                    "url": "https://hpi.de/naumann/leuchtturm/gitlab/leuchtturm/meta/wikis/home"}]}]})
 
 notify_failure = BashOperator(
-    task_id='NotifyFailure',
+    task_id='notify_failure',
     bash_command="curl -X POST -H \
                   'Content-type: application/json' --data '{}' \
                   https://hooks.slack.com/services/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"

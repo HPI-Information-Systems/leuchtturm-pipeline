@@ -12,7 +12,7 @@ def collect_files():
     Returns: void.
     """
     def filter_emails(data):
-        return data[1].startswith('Subject: ')
+        return data[1].startswith('Subject: ') or data[1].startswith('Message-ID: ')
 
     def create_document(data):
         return json.dumps({'doc_id': data[0].split('/')[-1].split('.')[0],

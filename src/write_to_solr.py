@@ -3,7 +3,6 @@
 from settings import SOLR_CLIENT_URL, HDFS_CLIENT_URL, PATH_PIPELINE_RESULTS_SHORT
 import pysolr
 from hdfs import Client
-from flatten_dict import flatten
 import json
 
 
@@ -17,14 +16,17 @@ def write_to_solr():
     hdfs_client = Client(HDFS_CLIENT_URL)
     solr_client = pysolr.Solr(SOLR_CLIENT_URL)
 
-    def dot_reducer(k1, k2):
-        if k1 is None:
-            return k2
-        else:
-            return str(k1) + '.' + str(k2)
-
     def flatten_document(document):
-        return flatten(json.loads(document), reducer=dot_reducer)
+        def flatten_dict(current, key='', result={}):
+            if isinstance(current, type(dict)):
+                for k in current:
+                    new_key = "{0}.{1}".format(key, k) if len(key) > 0 else k
+                    flatten_dict(current[k], new_key, result)
+                else:
+                    result[key] = current
+            return result
+
+        return flatten_dict(json.loads(document))
 
     for partition in hdfs_client.list(PATH_PIPELINE_RESULTS_SHORT):
         with hdfs_client.read(PATH_PIPELINE_RESULTS_SHORT + '/' + partition,
