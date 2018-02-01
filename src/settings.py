@@ -9,6 +9,8 @@ path_files_listed_short = re.sub(r'^hdfs://(\d{1,3}\.){3}\d{1,3}', '', path_file
 path_pipeline_results = 'hdfs://172.18.20.109/LEUCHTTURM/tmp/pipeline_results'
 path_pipeline_results_short = re.sub(r'^hdfs://(\d{1,3}\.){3}\d{1,3}', '', path_pipeline_results)
 solr_collection = 'enron_nuix_complete'
+path_lda_model = '/models/pickled_lda_model.p'
+path_lda_dict = '/models/pickled_lda_dictionary.p'
 
 hdfs_client_url = 'http://172.18.20.109:50070'
 solr_client_url = 'http://b1184.byod.hpi.de:8983/solr' + '/' + solr_collection

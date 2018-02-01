@@ -11,6 +11,7 @@ from langdetect import detect
 import en_core_web_sm as spacy
 from hdfs import Client
 import pickle
+from settings import hdfs_client_url, path_lda_model, path_lda_dict
 
 
 def split_emails(rdd):
@@ -162,19 +163,19 @@ def extract_topics(rdd):
     Returns: rdd with a cleaned body field for each doc in json format
     """
 
-    hdfs_client = Client('http://172.18.20.109:50070')
+    hdfs_client = Client(hdfs_client_url)
 
     def process_partition(items):
-        with hdfs_client.read("/models/pickled_lda_model.p", encoding='utf-8') as pfile:
+        with hdfs_client.read(path_lda_model, encoding='utf-8') as pfile:
             lda = pickle.loads(pfile.data)
-    
-        with hdfs_client.read("/models/pickled_lda_dictionary.p", encoding='utf-8') as pfile:
-            dictionary = pickle.loads(pfile.data)        
+
+        with hdfs_client.read(path_lda_dict, encoding='utf-8') as pfile:
+            dictionary = pickle.loads(pfile.data)
 
         def process_document(data):
             document = json.loads(data)
 
-            bow = dictionary.doc2bow(document["body"].split())
+            bow = dictionary.doc2bow(document['body'].split())
 
             topic_terms = []
 
@@ -183,8 +184,8 @@ def extract_topics(rdd):
             for topic in topics:
                 terms = map(lambda xy: (dictionary[xy[0]], xy[1]), lda.get_topic_terms(topic[0], topn=10))
                 topic_terms.append(str((str(topic[1]), (list(terms)))))
-            
-            document["topics"] = str(topic_terms)
+
+            document['topics'] = str(topic_terms)
 
             return json.dumps(document, ensure_ascii=False)
 
