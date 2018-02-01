@@ -30,7 +30,7 @@ t1 = BashOperator(
                     cd /root/airflow/pipeline && mkdir dist && mkdir libs
                     cd /root/airflow/pipeline && pip3 install -r requirements.txt -t ./libs
                     cd /root/airflow/pipeline/src && cp *.py /root/airflow/pipeline/dist
-                    cd /root/airflow/pipeline/src/libs && zip -r /root/airflow/pipeline/dist/libs.zip .
+                    cd /root/airflow/pipeline/libs && zip -r /root/airflow/pipeline/dist/libs.zip .
                     """,
     dag=dag
 )
@@ -40,14 +40,14 @@ t2 = BashOperator(
     bash_command="""export SPARK_HOME=/usr/hdp/2.6.3.0-235/spark2/
                     export PYSPARK_PYTHON=python3
                     hdfs dfs -rmr {}
-                    cd /root/airflow/pipeline/src/ && spark-submit \
+                    cd /root/airflow/pipeline/dist && spark-submit \
                                                         --master yarn \
                                                         --deploy-mode cluster \
                                                         --driver-memory 4g \
                                                         --executor-memory 4g \
                                                         --num-executors 6 \
                                                         --executor-cores 3 \
-                                                        --py-files settings.py \
+                                                        --py-files libs.zip,settings.py \
                                                         file_lister.py""".format(path_files_listed_short),
     dag=dag
 )
@@ -60,14 +60,14 @@ t3 = BashOperator(
     bash_command="""export SPARK_HOME=/usr/hdp/2.6.3.0-235/spark2/
                     export PYSPARK_PYTHON=python3
                     hdfs dfs -rmr {}
-                    cd /root/airflow/pipeline/src/ && spark-submit \
+                    cd /root/airflow/pipeline/dist && spark-submit \
                                                         --master yarn \
                                                         --deploy-mode cluster \
                                                         --driver-memory 4g \
                                                         --executor-memory 4g \
                                                         --num-executors 6 \
                                                         --executor-cores 3 \
-                                                        --py-files settings.py,leuchtturm.py \
+                                                        --py-files libs.zip,settings.py,leuchtturm.py \
                                                         run_leuchtturm.py""".format(path_pipeline_results_short),
     dag=dag
 )
@@ -79,7 +79,7 @@ t4 = BashOperator(
     task_id='write2solr',
     bash_command="""/opt/lucidworks-hdpsearch/solr/bin/solr delete -c {0}
                     /opt/lucidworks-hdpsearch/solr/bin/solr create -c {0} -d leuchtturm_conf -s 2 -rf 2
-                    cd /root/airflow/pipeline/src/ && python3 write_to_solr.py""".format(solr_collection),
+                    cd /root/airflow/pipeline/dist && python3 write_to_solr.py""".format(solr_collection),
     dag=dag
 )
 
