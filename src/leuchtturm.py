@@ -174,7 +174,7 @@ def extract_topics(rdd):
         def process_document(data):
             document = json.loads(data)
 
-            bow = dictionary.doc2bow(document['body'].split())
+            bow = dictionary.doc2bow(document['text_clean'].split())
 
             topic_terms = []
 
