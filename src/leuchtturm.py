@@ -1,9 +1,5 @@
 """This module provides methods to processes emails and text."""
 
-import sys
-import os
-if os.path.exists('./libs.zip'):
-    sys.path.insert(0, './libs.zip')
 import json
 import re
 import email

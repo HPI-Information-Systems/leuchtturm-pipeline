@@ -1,9 +1,5 @@
 """This module exports all settings required by pipeline tasks."""
 
-import sys
-import os
-if os.path.exists('./libs.zip'):
-    sys.path.insert(0, './libs.zip')
 import re
 
 
