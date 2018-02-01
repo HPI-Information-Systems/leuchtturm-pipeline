@@ -162,7 +162,6 @@ def extract_topics(rdd):
     Arguments: rdd with body field for each doc in json format
     Returns: rdd with a cleaned body field for each doc in json format
     """
-
     hdfs_client = Client(hdfs_client_url)
 
     def process_partition(items):
