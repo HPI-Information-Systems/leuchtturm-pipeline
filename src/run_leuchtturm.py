@@ -2,7 +2,7 @@
 
 from settings import path_files_listed, path_pipeline_results, cluster_parallelization
 from leuchtturm import (split_emails, extract_metadata, deduplicate_emails,
-                        clean_bodies, detect_languages, extract_entities)
+                        clean_bodies, detect_languages, extract_entities, extract_topics)
 from pyspark import SparkContext
 
 
@@ -21,6 +21,7 @@ def run_email_pipeline():
     data = extract_metadata(data)
     data = deduplicate_emails(data)
     data = clean_bodies(data)
+    data = extract_topics(data)
     data = detect_languages(data)
     data = extract_entities(data)
 

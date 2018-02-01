@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 """This module provides methods to processes emails and text."""
 
 import json
@@ -7,6 +9,9 @@ from email.utils import getaddresses, parsedate, parseaddr, unquote
 from time import mktime
 from langdetect import detect
 import en_core_web_sm as spacy
+from hdfs import Client
+import pickle
+from settings import hdfs_client_url, path_lda_model, path_lda_dict
 
 
 def split_emails(rdd):
@@ -149,6 +154,44 @@ def clean_bodies(rdd):
         return json.dumps(document)
 
     return rdd.map(lambda x: clean_document(x))
+
+
+def extract_topics(rdd):
+    """Extract topics from cleaned email bodies.
+
+    Arguments: rdd with text_clean field for each doc in json format
+    Returns: rdd with a topics field for each doc in json format
+    """
+    hdfs_client = Client(hdfs_client_url)
+
+    def process_partition(items):
+        with hdfs_client.read(path_lda_model, encoding='utf-8') as pfile:
+            lda = pickle.loads(pfile.data)
+
+        with hdfs_client.read(path_lda_dict, encoding='utf-8') as pfile:
+            dictionary = pickle.loads(pfile.data)
+
+        def process_document(data):
+            document = json.loads(data)
+
+            bow = dictionary.doc2bow(document['text_clean'].split())
+
+            topic_terms = []
+
+            topics = lda.get_document_topics(bow)
+
+            for topic in topics:
+                terms = map(lambda xy: (dictionary[xy[0]], xy[1]), lda.get_topic_terms(topic[0], topn=10))
+                topic_terms.append(str((str(topic[1]), (list(terms)))))
+
+            document['topics'] = str(topic_terms)
+
+            return json.dumps(document, ensure_ascii=False)
+
+        for item in items:
+            yield process_document(item)
+
+    return rdd.mapPartitions(lambda x: process_partition(x))
 
 
 def detect_languages(rdd):
