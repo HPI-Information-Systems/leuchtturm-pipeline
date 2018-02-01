@@ -10,13 +10,8 @@ pytest-gitignore # excludes gitignored files from pytest scope
 pyspark
 langdetect
 numpy
-#talon
-python-dateutil
 spacy
-#git+https://www.github.com/farizrahman4u/keras-contrib.git
-#keras
-#tensorflow
-#sklearn
+https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-1.2.0/en_core_web_sm-1.2.0.tar.gz
 
 # db tasks
 hdfs

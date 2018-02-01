@@ -26,7 +26,7 @@ dag = DAG('leuchtturm_pipeline', default_args=default_args)
 
 t1 = BashOperator(
     task_id='fetch_and_prepare',
-    bash_command="""cd /root/airflow/pipeline/src && git stash && git clean -df && git checkout -f dev && git pull
+    bash_command="""cd /root/airflow/pipeline && rm -r * && git checkout -f hotfix-protect-airflow && git reset --hard HEAD && git pull
                     cd /root/airflow/pipeline && mkdir dist && mkdir libs
                     cd /root/airflow/pipeline && pip3 install -r requirements.txt -t ./libs
                     cd /root/airflow/pipeline/src && cp *.py /root/airflow/pipeline/dist
