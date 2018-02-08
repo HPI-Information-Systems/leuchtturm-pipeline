@@ -26,25 +26,30 @@ dag = DAG('leuchtturm_pipeline', default_args=default_args)
 
 t1 = BashOperator(
     task_id='fetch_and_prepare',
-    bash_command="""cd /root/airflow/pipeline && rm -r * && git checkout -f dev && git reset --hard HEAD && git pull
-                    """,
+    bash_command="""cd /root/airflow/pipeline && \
+                        rm -r * && \
+                        git checkout -f dev && \
+                        git reset --hard HEAD && \
+                        git pull
+                    cd /root/miniconda3/envs && \
+                        zip -r leuchtturm_env.zip leuchtturm_env && \
+                        mv leuchtturm_env.zip /root/airflow/pipline/src""",
     dag=dag
 )
 
 t2 = BashOperator(
     task_id='file_lister',
     bash_command="""export SPARK_HOME=/usr/hdp/2.6.3.0-235/spark2/
-                    export PYSPARK_PYTHON=python3
                     hdfs dfs -rmr {}
-                    cd /root/airflow/pipeline/src && spark-submit \
-                                                        --master yarn \
-                                                        --deploy-mode cluster \
-                                                        --driver-memory 4g \
-                                                        --executor-memory 4g \
-                                                        --num-executors 6 \
-                                                        --executor-cores 3 \
-                                                        --py-files settings.py \
-                                                        file_lister.py""".format(PATH_FILES_LISTED_SHORT),
+                    cd /root/airflow/pipline/src
+                    PYSPARK_PYTHON=./LEUCHTTURM_ENV/leuchtturm_env/bin/python \
+                    /usr/hdp/2.6.3.0-235/spark2/bin/spark-submit \
+                        --master yarn --deploy-mode cluster \
+                        --driver-memory 4g --executor-memory 4g \
+                        --num-executors 6 --executor-cores 3 \
+                        --archives leuchtturm_env.zip#LEUCHTTURM_ENV \
+                        --py-files settings.py \
+                        file_lister.py""".format(PATH_FILES_LISTED_SHORT),
     dag=dag
 )
 
@@ -54,17 +59,16 @@ t2.set_upstream(t1)
 t3 = BashOperator(
     task_id='run_leuchtturm',
     bash_command="""export SPARK_HOME=/usr/hdp/2.6.3.0-235/spark2/
-                    export PYSPARK_PYTHON=python3
                     hdfs dfs -rmr {}
-                    cd /root/airflow/pipeline/src && spark-submit \
-                                                        --master yarn \
-                                                        --deploy-mode cluster \
-                                                        --driver-memory 4g \
-                                                        --executor-memory 4g \
-                                                        --num-executors 6 \
-                                                        --executor-cores 3 \
-                                                        --py-files settings.py,leuchtturm.py \
-                                                        run_leuchtturm.py""".format(PATH_PIPELINE_RESULTS_SHORT),
+                    cd /root/airflow/pipline/src
+                    PYSPARK_PYTHON=./LEUCHTTURM_ENV/leuchtturm_env/bin/python \
+                    /usr/hdp/2.6.3.0-235/spark2/bin/spark-submit \
+                        --master yarn --deploy-mode cluster \
+                        --driver-memory 4g --executor-memory 4g \
+                        --num-executors 6 --executor-cores 3 \
+                        --archives leuchtturm_env.zip#LEUCHTTURM_ENV \
+                        --py-files settings.py,leuchtturm.py \
+                        run_leuchtturm.py""".format(PATH_PIPELINE_RESULTS_SHORT),
     dag=dag
 )
 
@@ -73,7 +77,8 @@ t3.set_upstream(t2)
 
 t4 = BashOperator(
     task_id='write2solr',
-    bash_command="""/opt/lucidworks-hdpsearch/solr/bin/solr delete -c {0}
+    bash_command="""source activate leuchtturm_env
+                    /opt/lucidworks-hdpsearch/solr/bin/solr delete -c {0}
                     sleep 10
                     /opt/lucidworks-hdpsearch/solr/bin/solr create -c {0} -d leuchtturm_conf -s 2 -rf 2 -n leuchtturm4
                     sleep 10
