@@ -74,7 +74,9 @@ t3.set_upstream(t2)
 t4 = BashOperator(
     task_id='write2solr',
     bash_command="""/opt/lucidworks-hdpsearch/solr/bin/solr delete -c {0}
-                    /opt/lucidworks-hdpsearch/solr/bin/solr create -c {0} -d leuchtturm_conf -s 2 -rf 2
+                    sleep 10
+                    /opt/lucidworks-hdpsearch/solr/bin/solr create -c {0} -d leuchtturm_conf -s 2 -rf 2 -n leuchtturm4
+                    sleep 10
                     cd /root/airflow/pipeline/src && python3 write_to_solr.py""".format(SOLR_COLLECTION),
     dag=dag
 )

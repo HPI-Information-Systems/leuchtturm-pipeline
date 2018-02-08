@@ -3,15 +3,15 @@
 import re
 
 
-PATH_EMAILS_RAW = 'hdfs://172.18.20.109/LEUCHTTURM/enron_nuix_complete/*/*/*'
-PATH_FILES_LISTED = 'hdfs://172.18.20.109/LEUCHTTURM/tmp/files_listed'
+PATH_EMAILS_RAW = 'hdfs://172.18.20.109/LEUCHTTURM/enron_calo_flat/*/*'
+PATH_FILES_LISTED = 'hdfs://172.18.20.109/LEUCHTTURM/tmp/files_listed_dev_daily'
 PATH_FILES_LISTED_SHORT = re.sub(r'^hdfs://(\d{1,3}\.){3}\d{1,3}', '', PATH_FILES_LISTED)  # don't touch!
-PATH_PIPELINE_RESULTS = 'hdfs://172.18.20.109/LEUCHTTURM/tmp/pipeline_results'
+PATH_PIPELINE_RESULTS = 'hdfs://172.18.20.109/LEUCHTTURM/tmp/pipeline_results_dev_daily'
 PATH_PIPELINE_RESULTS_SHORT = re.sub(r'^hdfs://(\d{1,3}\.){3}\d{1,3}', '', PATH_PIPELINE_RESULTS)  # don't touch!
 PATH_LDA_MODEL = '/models/pickled_lda_model.p'
 PATH_LDA_DICT = '/models/pickled_lda_dictionary.p'
 
-SOLR_COLLECTION = 'enron_nuix_complete'
+SOLR_COLLECTION = 'enron_calo_dev'
 
 HDFS_CLIENT_URL = 'http://172.18.20.109:50070'
 SOLR_CLIENT_URL = 'http://b1184.byod.hpi.de:8983/solr' + '/' + SOLR_COLLECTION

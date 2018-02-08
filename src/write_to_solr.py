@@ -16,17 +16,10 @@ def write_to_solr():
     hdfs_client = Client(HDFS_CLIENT_URL)
     solr_client = pysolr.Solr(SOLR_CLIENT_URL)
 
-    def flatten_document(document):
-        def flatten_dict(current, key='', result={}):
-            if isinstance(current, type(dict)):
-                for k in current:
-                    new_key = "{0}.{1}".format(key, k) if len(key) > 0 else k
-                    flatten_dict(current[k], new_key, result)
-                else:
-                    result[key] = current
-            return result
-
-        return flatten_dict(json.loads(document))
+    def flatten_document(dd, separator='.', prefix=''):
+        return {prefix + separator + k if prefix else k: v
+                for kk, vv in dd.items()
+                for k, v in flatten_document(vv, separator, kk).items()} if isinstance(dd, dict) else {prefix: dd}
 
     for partition in hdfs_client.list(PATH_PIPELINE_RESULTS_SHORT):
         with hdfs_client.read(PATH_PIPELINE_RESULTS_SHORT + '/' + partition,
@@ -35,7 +28,7 @@ def write_to_solr():
             docs_to_push = []
             for document in reader:
                 if (len(document) != 0):
-                    docs_to_push.append(flatten_document(document))
+                    docs_to_push.append(flatten_document(json.loads(document)))
                 if (len(docs_to_push) % 1000 == 0):
                     solr_client.add(docs_to_push)
                     docs_to_push = []
