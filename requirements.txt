@@ -6,10 +6,13 @@ flake8_docstrings
 pytest
 pytest-gitignore # excludes gitignored files from pytest scope
 
+# cd
+apache-airflow
+safygiphy
+
 # leuchtturm pipeline
 pyspark
 langdetect
-numpy
 spacy
 https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-1.2.0/en_core_web_sm-1.2.0.tar.gz
 

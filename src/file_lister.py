@@ -1,6 +1,6 @@
 """This job collects and dumps text documents to a spark rdd."""
 
-from settings import path_files_listed, path_emails_raw, cluster_parallelization
+from settings import PATH_FILES_LISTED, PATH_EMAILS_RAW, CLUSTER_PARALLELIZATION
 import json
 from pyspark import SparkContext
 
@@ -21,11 +21,11 @@ def collect_files():
 
     sc = SparkContext()
 
-    rdd = sc.wholeTextFiles(path_emails_raw, minPartitions=cluster_parallelization)
+    rdd = sc.wholeTextFiles(PATH_EMAILS_RAW, minPartitions=CLUSTER_PARALLELIZATION)
 
     rdd.filter(lambda x: filter_emails(x)) \
        .map(lambda x: create_document(x)) \
-       .saveAsTextFile(path_files_listed)
+       .saveAsTextFile(PATH_FILES_LISTED)
 
     sc.stop()
 
