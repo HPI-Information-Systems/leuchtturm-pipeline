@@ -1,10 +1,8 @@
-# -*- coding: utf-8 -*-
-
 """This module provides methods to processes emails and text."""
 
 import json
 import re
-import email
+from email import message_from_string, policy, errors
 from email.utils import getaddresses, parsedate, parseaddr, unquote
 from time import mktime
 from string import whitespace
@@ -12,7 +10,7 @@ from langdetect import detect
 import en_core_web_sm as spacy
 from hdfs import Client
 import pickle
-from settings import hdfs_client_url, path_lda_model, path_lda_dict
+from settings import HDFS_CLIENT_URL, PATH_LDA_MODEL, PATH_LDA_DICT
 
 
 def split_emails(rdd):
@@ -59,31 +57,35 @@ def extract_metadata(rdd):
     """
     def add_metadata(data):
         document = json.loads(data)
-        msg = email.message_from_string(document['raw'])
+        try:
+            msg = message_from_string(document['raw'], policy=policy.strict)
 
-        header = {}
-        header['sender'] = {'name': unquote(parseaddr(msg.get('from', ''))[0]),
-                            'email': unquote(parseaddr(msg.get('from', ''))[1].lower())}
-        header['recipients'] = []
-        for recipient in getaddresses(msg.get_all('to', []) + msg.get_all('cc', []) + msg.get_all('bcc', [])):
-            if recipient[0] or recipient[1]:
-                header['recipients'].append({'name': unquote(recipient[0]),
-                                             'email': unquote(recipient[1].lower())})
-        date = parsedate(msg.get('date', '') + msg.get('sent', ''))
-        header['date'] = mktime(date) if (date is not None) else -1.0
-        header['subject'] = msg.get('subject', '')
-        document['header'] = header
+            header = {}
+            header['sender'] = {'name': unquote(parseaddr(msg.get('from', ''))[0]),
+                                'email': unquote(parseaddr(msg.get('from', ''))[1].lower())}
+            header['recipients'] = []
+            for recipient in getaddresses(msg.get_all('to', []) + msg.get_all('cc', []) + msg.get_all('bcc', [])):
+                if recipient[0] or recipient[1]:
+                    header['recipients'].append({'name': unquote(recipient[0]),
+                                                 'email': unquote(recipient[1].lower())})
+            date = parsedate(msg.get('date', '') + msg.get('sent', ''))
+            header['date'] = mktime(date) if (date is not None) else -1.0
+            header['subject'] = msg.get('subject', '')
+            document['header'] = header
 
-        document['body'] = ''
-        if msg.is_multipart():
-            for payload in msg.get_payload():
-                document['body'] += payload.get_payload()
-        else:
-            document['body'] = msg.get_payload()
+            document['body'] = ''
+            for part in msg.walk():
+                if part.get_content_type() == 'text/plain':
+                    document['body'] += part.get_payload()
+                elif part.get_content_type() == 'text/html':
+                    document['body'] += part.get_payload()
+        except (errors.MessageParseError, errors.MessageDefect, IndexError):
+            return ''
 
         return json.dumps(document)
 
-    return rdd.map(lambda x: add_metadata(x))
+    return rdd.map(lambda x: add_metadata(x)) \
+              .filter(lambda x: x != '')
 
 
 def deduplicate_emails(rdd):
@@ -164,13 +166,13 @@ def extract_topics(rdd):
     Arguments: rdd with text_clean field for each doc in json format
     Returns: rdd with a topics field for each doc in json format
     """
-    hdfs_client = Client(hdfs_client_url)
+    hdfs_client = Client(HDFS_CLIENT_URL)
 
     def process_partition(items):
-        with hdfs_client.read(path_lda_model, encoding='utf-8') as pfile:
+        with hdfs_client.read(PATH_LDA_MODEL, encoding='utf-8') as pfile:
             lda = pickle.loads(pfile.data)
 
-        with hdfs_client.read(path_lda_dict, encoding='utf-8') as pfile:
+        with hdfs_client.read(PATH_LDA_DICT, encoding='utf-8') as pfile:
             dictionary = pickle.loads(pfile.data)
 
         def process_document(data):
