@@ -3,7 +3,7 @@
 from settings import PATH_FILES_LISTED, PATH_EMAILS_RAW, CLUSTER_PARALLELIZATION
 import json
 import email
-from pyspark import SparkContext
+from pyspark import SparkContext, SparkConf
 
 
 def collect_files():
@@ -20,7 +20,9 @@ def collect_files():
                            'path': data[0],
                            'raw': data[1]})
 
-    sc = SparkContext()
+    config = SparkConf().set('spark.hive.mapred.supports.subdirectories', 'true') \
+                        .set('spark.hadoop.mapreduce.input.fileinputformat.input.dir.recursive', 'true')
+    sc = SparkContext(conf=config)
 
     rdd = sc.wholeTextFiles(PATH_EMAILS_RAW, minPartitions=CLUSTER_PARALLELIZATION)
 
