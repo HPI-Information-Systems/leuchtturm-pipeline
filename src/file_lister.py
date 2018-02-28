@@ -2,6 +2,7 @@
 
 from settings import PATH_FILES_LISTED, PATH_EMAILS_RAW, CLUSTER_PARALLELIZATION
 import json
+import email
 from pyspark import SparkContext
 
 
@@ -12,7 +13,7 @@ def collect_files():
     Returns: void.
     """
     def filter_emails(data):
-        return data[1].startswith('Subject: ') or data[1].startswith('Message-ID: ')
+        return len(email.message_from_string(data[1]).defects) == 0
 
     def create_document(data):
         return json.dumps({'doc_id': data[0].split('/')[-1].split('.')[0],
