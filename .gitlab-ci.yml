@@ -4,11 +4,6 @@ cache:
   paths:
     - .pip
 
-before_script:
-  - mkdir -p .pip
-  - pip install -U pip
-  - pip --cache-dir=.pip install -r requirements.txt
-
 stages:
   - test_and_lint
   - codequality
@@ -16,11 +11,17 @@ stages:
 test:
   stage: test_and_lint
   script:
+    - mkdir -p .pip
+    - pip install -U pip
+    - pip --cache-dir=.pip install -r requirements.txt
     - flake8 .
 
 lint:
   stage: test_and_lint
   script:
+    - mkdir -p .pip
+    - pip install -U pip
+    - pip --cache-dir=.pip install -r requirements.txt
     - pytest
 
 codequality:
