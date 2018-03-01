@@ -1,0 +1,31 @@
+image: python:3.6
+
+cache:
+  paths:
+    - .pip
+
+stages:
+  - test_and_lint
+  - codequality
+
+test:
+  stage: test_and_lint
+  script:
+    - mkdir -p .pip
+    - pip install -U pip
+    - pip --cache-dir=.pip install -r requirements.txt
+    - flake8 .
+
+lint:
+  stage: test_and_lint
+  script:
+    - mkdir -p .pip
+    - pip install -U pip
+    - pip --cache-dir=.pip install -r requirements.txt
+    - pytest
+
+codequality:
+  image: coala/base
+  stage: codequality
+  script:
+    - coala --ci --files=\*.py --bears=RadonBear
