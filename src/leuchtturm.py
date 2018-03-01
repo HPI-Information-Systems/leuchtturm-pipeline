@@ -166,19 +166,19 @@ def extract_topics(rdd):
     Arguments: rdd with text_clean field for each doc in json format
     Returns: rdd with a topics field for each doc in json format
     """
-    hdfs_client = Client(HDFS_CLIENT_URL)
+    hdfs_client = HDFileSystem()
 
     def process_partition(items):
-        with hdfs_client.read(PATH_LDA_MODEL, encoding='utf-8') as pfile:
-            lda = pickle.loads(pfile.data)
+        with hdfs_client.open(PATH_LDA_MODEL) as pfile:
+            lda = pickle.loads(pfile.read())
 
-        with hdfs_client.read(PATH_LDA_DICT, encoding='utf-8') as pfile:
-            dictionary = pickle.loads(pfile.data)
+        with hdfs_client.open(PATH_LDA_DICT) as pfile:
+            dictionary = pickle.loads(pfile.read())
 
         def process_document(data):
             document = json.loads(data)
 
-            bow = dictionary.doc2bow(document['text_clean'].split())
+            bow = dictionary.doc2bow(document['text_clean'].split()[:500])
 
             topic_terms = []
 
