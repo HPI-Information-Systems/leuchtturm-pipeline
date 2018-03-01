@@ -3,8 +3,6 @@ image: python
 stages:
   - test
   - codequality
-  - build
-  - deploy
 
 lint_python:
   stage: test
@@ -19,6 +17,7 @@ test_python:
     - pytest
 
 codequality:
+  stage: codequality
   image: docker:dind
   script:
     - docker run --env CODECLIMATE_CODE="$PWD" --volume "$PWD":/code \
