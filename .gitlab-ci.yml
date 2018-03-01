@@ -1,8 +1,8 @@
 image: python
 
 stages:
-  - codequality
   - test_and_lint
+  - codequality
 
 test_and_lint:
   stage: test_and_lint
@@ -22,6 +22,4 @@ codeclimate_analysis:
     - pwd
     - ls -alt
     - docker pull codeclimate/codeclimate
-    - docker run --env CODECLIMATE_CODE="$PWD" --volume "$PWD":/code --volume /var/run/docker.sock:/var/run/docker.sock --volume /tmp/cc:/tmp/cc codeclimate/codeclimate:latest analyze structure
-  tags:
-    - dind
+    - docker run --env CODECLIMATE_CODE="$PWD" --volume "$PWD":/code --volume /var/run/docker.sock:/var/run/docker.sock --volume /tmp/cc:/tmp/cc codeclimate/codeclimate:latest analyze structure duplication fixme
