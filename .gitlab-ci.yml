@@ -1,8 +1,8 @@
 image: python
 
 stages:
-  # - test
   - codequality
+  - test
 
 lint_python:
   stage: test
