@@ -1,22 +1,21 @@
-image: continuumio/conda_builder_linux
+image: continuumio/miniconda3:latest
 
-variables:
-  PIP_CACHE_DIR: "$CI_PROJECT_DIR/pip-cache"
-
-cache:
-  paths:
-    - "$CI_PROJECT_DIR/pip-cache"
-  key: "$CI_PROJECT_ID"
+before_script:
+  - conda env create -f environment.yml
+  - source activate pipeline
 
 stages:
   - test_and_lint
   - codequality
 
-test_and_lint:
+test:
   stage: test_and_lint
   script:
-    - pip install -r requirements.txt
-    - flake8 . # this also runs pydocstyle linting as a plugin of flake8 (see requirements.txt)
+    - flake8 .
+
+lint:
+  stage: test_and_lint
+  script:
     - pytest
 
 codequality:
