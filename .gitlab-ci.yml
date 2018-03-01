@@ -11,7 +11,8 @@ test_and_lint:
     - flake8 . # this also runs pydocstyle linting as a plugin of flake8 (see requirements.txt)
     - pytest
 
-codequality:
+codeclimate_analysis:
+  stage: codequality
   image: docker:latest
   variables:
     DOCKER_DRIVER: overlay
