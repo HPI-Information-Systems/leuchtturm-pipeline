@@ -1,4 +1,12 @@
-image: python
+image: continuumio/anaconda3
+
+variables:
+  PIP_CACHE_DIR: "$CI_PROJECT_DIR/pip-cache"
+
+cache:
+  paths:
+    - "$CI_PROJECT_DIR/pip-cache"
+  key: "$CI_PROJECT_ID"
 
 stages:
   - test_and_lint
