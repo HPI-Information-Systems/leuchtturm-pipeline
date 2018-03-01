@@ -28,4 +28,19 @@ codequality:
   image: coala/base
   stage: codequality
   script:
-    - coala -l python -p python --ci --files=**/\*.py --bears=RadonBear,CPDBear,PyCommentedCodeBear,PyImportSortBear,PySafetyBear,PyUnusedCodeBear,VultureBear,FilenameBear,KeywordBear
+    - echo "Find complex methods..."
+    - coala -I --ci --files=\*\*/\*.py --bears=RadonBear
+    - echo "Find duplicated code..."
+    - coala -I --ci --files=\*\*/\*.py --bears=CPDBear
+    - echo "Find commented code..."
+    - coala -I --ci --files=\*\*/\*.py --bears=PyCommentedCodeBear
+    - echo "Validate order od imports..."
+    - coala -I --ci --files=\*\*/\*.py --bears=PyImportSortBear
+    - echo "Check vulnarable packages in requirements..."
+    - coala -I --ci --files=\*\*/\*.py --bears=PySafetyBear
+    - echo "Validate file naming..."
+    - coala -I --ci --files=\*\*/\*.py --bears=PyUnusedCodeBear
+    - echo "Detect unused variables..."
+    - coala -I --ci --files=\*\*/\*.py --bears=VultureBear
+    - echo "Validate file naming..."
+    - coala -I --ci --files=\*\*/\*.py --bears=FilenameBear
