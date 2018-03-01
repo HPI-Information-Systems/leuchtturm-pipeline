@@ -19,8 +19,8 @@ test_python:
     - pytest
 
 codequality:
-  image: codeclimate/codeclimate
+  image: docker:dind
   script:
-    - codeclimate analyze -e duplication fixme git-legal radon markdownlint shellcheck structure -f json > codeclimate.json || true
+    - docker run --env CODECLIMATE_CODE="$PWD" --volume "$PWD":/code --volume /var/run/docker.sock:/var/run/docker.sock --volume /tmp/cc:/tmp/cc codeclimate/codeclimate:latest analyze -e structure duplication fixme git-legal radon markdownlint shellcheck structure -f json > codeclimate.json || true
   artifacts:
     paths: [codeclimate.json]
