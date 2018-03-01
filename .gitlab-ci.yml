@@ -1,8 +1,10 @@
 image: continuumio/miniconda3:latest
 
 before_script:
-  - conda env create -f environment.yml
+  - export PIP_CACHE_DIR="/opt/cache/pip"
+  - conda env create -n pipeline -y -python=3.6
   - source activate pipeline
+  - pip install -r requirements.txt
 
 stages:
   - test_and_lint
