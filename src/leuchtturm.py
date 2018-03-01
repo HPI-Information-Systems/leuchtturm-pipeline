@@ -74,11 +74,11 @@ def extract_metadata(rdd):
             document['header'] = header
 
             document['body'] = ''
-            for part in msg.walk():
+            for part in msg.get_body().walk() if (msg.get_body() is not None) else []:
                 if part.get_content_type() == 'text/plain':
-                    document['body'] += part.get_payload()
+                    document['body'] += part.get_content()
                 elif part.get_content_type() == 'text/html':
-                    document['body'] += part.get_payload()
+                    document['body'] += part.get_content()
         except (errors.MessageParseError, errors.MessageDefect, IndexError):
             return ''
 
