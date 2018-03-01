@@ -15,5 +15,4 @@ codequality:
   image: coala/base
   stage: codequality
   script:
-    - pip install -r requirements.txt
     - coala --ci
