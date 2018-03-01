@@ -1,10 +1,13 @@
-image: continuumio/miniconda3:latest
+image: python:3.6
+
+cache:
+  paths:
+    - .pip
 
 before_script:
-  - export PIP_CACHE_DIR="/opt/cache/pip"
-  - conda env create -n pipeline python=3.6
-  - source activate pipeline
-  - pip install -r requirements.txt
+  - mkdir -p .pip
+  - pip install -U pip
+  - pip --cache-dir=.pip install -r requirements.txt
 
 stages:
   - test_and_lint
