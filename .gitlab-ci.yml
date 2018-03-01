@@ -29,6 +29,6 @@ codequality:
   stage: codequality
   script:
     - echo "Find code smells..."
-    - coala -I --ci --files=\*\*/\*.py --bears=RadonBear,PyCommentedCodeBear,PyImportSortBear,PySafetyBear,PyUnusedCodeBear,VultureBear,FilenameBear
+    - coala -I --ci --files=\*\*/\*.py --ignore=src/emailbody\*\*/\*.py --bears=RadonBear,PyCommentedCodeBear,PyImportSortBear,PySafetyBear,PyUnusedCodeBear,VultureBear,FilenameBear
     - echo "Find duplicated code..."
-    - coala -I --ci --files=\*\*/\*.py -p python --bears=CPDBear
+    - coala -I --ci --files=\*\*/\*.py --ignore=src/emailbody\*\*/\*.py -p python --bears=CPDBear
