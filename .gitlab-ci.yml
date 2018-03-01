@@ -2,6 +2,7 @@ image: python
 
 stages:
   - test
+  - codequality
   - build
   - deploy
 
@@ -16,3 +17,10 @@ test_python:
   script:
     - pip install -r requirements.txt
     - pytest
+
+codequality:
+  image: codeclimate/codeclimate
+  script:
+    - docker run codeclimate/codeclimate analyze -e duplication fixme git-legal radon markdownlint shellcheck structure -f json > codeclimate.json || true
+  artifacts:
+    paths: [codeclimate.json]
