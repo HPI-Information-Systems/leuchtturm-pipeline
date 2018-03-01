@@ -2,7 +2,7 @@ image: continuumio/miniconda3:latest
 
 before_script:
   - export PIP_CACHE_DIR="/opt/cache/pip"
-  - conda env create -n pipeline -y -python=3.6
+  - conda env create -n pipeline -y python=3.6 anaconda
   - source activate pipeline
   - pip install -r requirements.txt
 
