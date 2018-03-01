@@ -16,5 +16,5 @@ codequality:
   image: docker:dind
   script:
     - docker pull codeclimate/codeclimate
-    - export 
-    - docker run --env CODECLIMATE_CODE="$PWD" --volume "$PWD":/code --volume /var/run/docker.sock:/var/run/docker.sock --volume /tmp/cc:/tmp/cc codeclimate/codeclimate:latest CODECLIMATE_DEBUG=1 analyze -e structure
+    - export CODECLIMATE_DEBUG=1
+    - docker run --env CODECLIMATE_CODE="$PWD" --volume "$PWD":/code --volume /var/run/docker.sock:/var/run/docker.sock --volume /tmp/cc:/tmp/cc codeclimate/codeclimate:latest analyze -e structure
