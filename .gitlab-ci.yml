@@ -12,9 +12,13 @@ test_and_lint:
     - pytest
 
 codequality:
-  stage: codequality
-  image: docker:dind
+  image: docker:latest
+  variables:
+    DOCKER_DRIVER: overlay
+  services:
+    - docker:dind
   script:
     - docker pull codeclimate/codeclimate
-    - export CODECLIMATE_DEBUG=1
-    - docker run --env CODECLIMATE_CODE="$PWD" --volume "$PWD":/code --volume /var/run/docker.sock:/var/run/docker.sock --volume /tmp/cc:/tmp/cc codeclimate/codeclimate:latest analyze -e structure
+    - docker run --env CODECLIMATE_CODE="$PWD" --volume "$PWD":/code --volume /var/run/docker.sock:/var/run/docker.sock --volume /tmp/cc:/tmp/cc codeclimate/codeclimate:latest analyze structure
+  artifacts:
+    paths: [codeclimate.json]
