@@ -28,4 +28,4 @@ codequality:
   image: coala/base
   stage: codequality
   script:
-    - coala --ci
+    - coala --ci --files=\*.py --bears=PyCommentedCodeBear,PyDocStyleBear,PyUnusedCodeBear,VultureBear,RadonBear,FilenameBear,KeywordBear
