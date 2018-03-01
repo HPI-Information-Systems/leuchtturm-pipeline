@@ -1,4 +1,4 @@
-image: continuumio/anaconda3
+image: continuumio/conda_builder_linux
 
 variables:
   PIP_CACHE_DIR: "$CI_PROJECT_DIR/pip-cache"
