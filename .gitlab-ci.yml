@@ -10,3 +10,10 @@ test_and_lint:
     - pip install -r requirements.txt
     - flake8 . # this also runs pydocstyle linting as a plugin of flake8 (see requirements.txt)
     - pytest
+
+codequality:
+  image: coala/base
+  stage: codequality
+  script:
+    - pip install -r requirements.txt
+    - coala --ci
