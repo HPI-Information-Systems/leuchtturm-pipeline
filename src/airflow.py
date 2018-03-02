@@ -1,6 +1,6 @@
 """This module contains the scheduling of the leuchtturm pipeline."""
 
-from settings import SOLR_COLLECTION, PATH_FILES_LISTED_SHORT, PATH_PIPELINE_RESULTS_SHORT
+from settings import SOLR_COLLECTION, PATH_FILES_LISTED, PATH_PIPELINE_RESULTS
 from airflow import DAG
 from airflow.operators.bash_operator import BashOperator
 from datetime import datetime, timedelta
@@ -12,7 +12,7 @@ default_args = {
     'owner': 'airflow',
     'depends_on_past': False,
     'schedule_interval': '@once',
-    'start_date': datetime(2018, 2, 1),
+    'start_date': datetime(2018, 3, 1),
     'email': ['leuchtturm@example.com'],
     'email_on_failure': False,
     'email_on_success': False,
@@ -49,7 +49,7 @@ t2 = BashOperator(
                         --num-executors 6 --executor-cores 3 \
                         --archives leuchtturm_env.zip#LEUCHTTURM_ENV \
                         --py-files settings.py \
-                        file_lister.py""".format(PATH_FILES_LISTED_SHORT),
+                        file_lister.py""".format(PATH_FILES_LISTED),
     dag=dag
 )
 
@@ -68,34 +68,12 @@ t3 = BashOperator(
                         --num-executors 6 --executor-cores 3 \
                         --archives leuchtturm_env.zip#LEUCHTTURM_ENV \
                         --py-files settings.py,leuchtturm.py \
-                        run_leuchtturm.py""".format(PATH_PIPELINE_RESULTS_SHORT),
+                        run_leuchtturm.py""".format(PATH_PIPELINE_RESULTS),
     dag=dag
 )
 
 t3.set_upstream(t2)
 
-
-t4 = BashOperator(
-    task_id='write2solr',
-    bash_command="""source activate leuchtturm_env
-                    /opt/lucidworks-hdpsearch/solr/bin/solr delete -c {0}
-                    sleep 10
-                    /opt/lucidworks-hdpsearch/solr/bin/solr create -c {0} -d leuchtturm_conf -s 2 -rf 2 -n leuchtturm4
-                    sleep 10
-                    cd /root/airflow/pipeline/src && python3 write_to_solr.py""".format(SOLR_COLLECTION),
-    dag=dag
-)
-
-t4.set_upstream(t3)
-
-
-# t5 = BashOperator(
-#     task_id='write2neo4j',
-#     bash_command='',
-#     dag=dag
-# )
-
-# t5.set_upstream(t3)
 
 success_gif = safygiphy.Giphy().random(tag="excited")['data']['fixed_height_small_url']
 json_success_message = dumps(
@@ -124,7 +102,7 @@ notify_success = BashOperator(
     dag=dag
 )
 
-notify_success.set_upstream([t1, t2, t3, t4])
+notify_success.set_upstream([t1, t2, t3])
 
 fail_gif = safygiphy.Giphy().random(tag="no")['data']['fixed_height_small_url']
 json_failure_message = dumps(
@@ -153,4 +131,4 @@ notify_failure = BashOperator(
     dag=dag
 )
 
-notify_failure.set_upstream([t1, t2, t3, t4])
+notify_failure.set_upstream([t1, t2, t3])
