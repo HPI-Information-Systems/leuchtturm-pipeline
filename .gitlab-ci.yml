@@ -41,5 +41,5 @@ deploy-leuchtturm-cluster:
     - conda create -n leuchtturm_env python=3.6 -y --copy || true
     - source activate leuchtturm_env
     - pip install -r requirements.txt
-    - cp -r /home/gitlab-runner/anaconda2/leuchtturm_env .
+    - cp -r /home/gitlab-runner/anaconda2/envs/leuchtturm_env .
     - zip -r leuchtturm_env.zip leuchtturm_env
