@@ -4,3 +4,5 @@
 def test_dummy():
     """Be a dummy test. Must be replaced."""
     assert 1 == 1
+    # print('Hello world')
+    # print('This is awesome')

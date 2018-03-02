@@ -1,18 +1,34 @@
-image: python
+image: python:3.6
+
+cache:
+  paths:
+    - .pip
 
 stages:
-  - test
-  - build
-  - deploy
+  - test_and_lint
+  - codequality
 
-lint_python:
-  stage: test
+test:
+  stage: test_and_lint
   script:
-    - pip install -r requirements.txt
-    - flake8 . # this also runs pydocstyle linting as a plugin of flake8 (see requirements.txt)
+    - mkdir -p .pip
+    - pip install -U pip
+    - pip --cache-dir=.pip install -r requirements.txt
+    - flake8 .
 
-test_python:
-  stage: test
+lint:
+  stage: test_and_lint
   script:
-    - pip install -r requirements.txt
+    - mkdir -p .pip
+    - pip install -U pip
+    - pip --cache-dir=.pip install -r requirements.txt
     - pytest
+
+codequality:
+  image: coala/base
+  stage: codequality
+  script:
+    - echo "Find code smells..."
+    - coala -I --ci --files=\*\*/\*.py --ignore=src/emailbody\*\*/\*.py --bears=RadonBear,PyCommentedCodeBear,PySafetyBear,PyUnusedCodeBear,VultureBear
+    - echo "Find duplicated code..."
+    - coala -I --ci --files=\*\*/\*.py --ignore=src/emailbody\*\*/\*.py -p python --bears=CPDBear
