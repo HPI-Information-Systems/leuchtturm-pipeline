@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 echo 'Building conda environment for pipeline ...'
 conda create -n leuchtturm_env python=3.6 -y --copy || true
