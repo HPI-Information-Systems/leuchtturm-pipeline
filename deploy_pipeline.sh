@@ -11,13 +11,13 @@ zip -r --quiet leuchtturm_env.zip leuchtturm_env
 source deactivate
 echo 'Deleting files_listed_dev on hdfs ...'
 hdfs dfs -rm -r tmp/files_listed_dev || true
-echo 'Running file lister'
+echo 'Running file lister ...'
 export SPARK_HOME=/usr/hdp/2.6.2.0-205/spark2/
-PYSPARK_PYTHON=./LEUCHTTURM_ENV/leuchtturm_env/bin/python spark-submit --master yarn --deploy-mode cluster --driver-memory 4g --executor-memory 4g --num-executors 6 --executor-cores 3 --archives leuchtturm_env.zip#LEUCHTTURM_ENV --py-files settings.py file_lister.py | grep 'final status: SUCCEEDED'
+PYSPARK_PYTHON=./LEUCHTTURM_ENV/leuchtturm_env/bin/python spark-submit --master yarn --deploy-mode cluster --driver-memory 20g --executor-memory 20g --num-executors 8 --executor-cores 10 --archives leuchtturm_env.zip#LEUCHTTURM_ENV --py-files settings.py file_lister.py | grep 'final status: SUCCEEDED'
 echo 'Deleting pipeline_results_dev on hdfs ...'
 hdfs dfs -rm -r tmp/pipeline_results_dev || true
 echo 'Running leuchtturm pipeline...'
-PYSPARK_PYTHON=./LEUCHTTURM_ENV/leuchtturm_env/bin/python spark-submit --master yarn --deploy-mode cluster --driver-memory 4g --executor-memory 4g --num-executors 6 --executor-cores 3 --archives leuchtturm_env.zip#LEUCHTTURM_ENV --py-files settings.py,leuchtturm.py run_leuchtturm.py | grep 'final status: SUCCEEDED'
+PYSPARK_PYTHON=./LEUCHTTURM_ENV/leuchtturm_env/bin/python spark-submit --master yarn --deploy-mode cluster --driver-memory 20g --executor-memory 20g --num-executors 8 --executor-cores 10 --archives leuchtturm_env.zip#LEUCHTTURM_ENV --py-files settings.py,leuchtturm.py run_leuchtturm.py | grep 'final status: SUCCEEDED'
 echo 'Running db uploads...'
 # source activate leuchtturm_env
 # python write_to_solr.py &

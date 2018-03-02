@@ -12,4 +12,4 @@ SOLR_COLLECTION = 'enron_dev'
 SOLR_CLIENT_URL = 'http:/0.0.0.0:8983/solr' + '/' + SOLR_COLLECTION
 NEO4J_CLIENT_URL = 'bolt://0.0.0.0:7687'
 
-CLUSTER_PARALLELIZATION = 6 * 3 * 3  # num executors * num cores * 3-4
+CLUSTER_PARALLELIZATION = 8 * 10 * 3  # num executors * num cores * 3-4
