@@ -45,7 +45,7 @@ deploy-leuchtturm-cluster:
     - cp -rf ~/anaconda2/envs/leuchtturm_env .
     - zip -rq leuchtturm_env.zip leuchtturm_env
     - source deactivate
-    - hdfs dfs -rm -r /LEUCHTTURM/tmp/files_listed_dev
+    - hdfs dfs -rm -r /LEUCHTTURM/tmp/files_listed_dev || true
     - PYSPARK_PYTHON=./LEUCHTTURM_ENV/leuchtturm_env/bin/python spark-submit --master yarn --deploy-mode cluster --driver-memory 4g --executor-memory 4g --num-executors 6 --executor-cores 3 --archives leuchtturm_env.zip#LEUCHTTURM_ENV --py-files settings.py file_lister.py 2>/dev/null
-    - hdfs dfs -rm -r /LEUCHTTURM/tmp/pipeline_results_dev
+    - hdfs dfs -rm -r /LEUCHTTURM/tmp/pipeline_results_dev || true
     - PYSPARK_PYTHON=./LEUCHTTURM_ENV/leuchtturm_env/bin/python spark-submit --master yarn --deploy-mode cluster --driver-memory 4g --executor-memory 4g --num-executors 6 --executor-cores 3 --archives leuchtturm_env.zip#LEUCHTTURM_ENV --py-files settings.py,leuchtturm.py run_leuchtturm.py 2>/dev/null
