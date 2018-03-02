@@ -3,11 +3,11 @@
 echo 'Building conda environment for pipeline ...'
 conda create -n leuchtturm_env python=3.6 -y --copy || true
 source activate leuchtturm_env
-pip install -r requirements.txt
-conda install hdfs3 -c conda-forge
+pip install --quiet -r requirements.txt
+conda install --quiet hdfs3 -c conda-forge
 cd src || return
 cp -r ~/anaconda2/envs/leuchtturm_env .
-zip -r leuchtturm_env.zip leuchtturm_env
+zip -r --quiet leuchtturm_env.zip leuchtturm_env
 source deactivate
 echo 'Deleting files_listed_dev on hdfs ...'
 hdfs dfs -rm -r tmp/files_listed_dev || true
