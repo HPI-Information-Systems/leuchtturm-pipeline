@@ -5,7 +5,7 @@ conda create -n leuchtturm_env python=3.6 -y --copy || true
 source activate leuchtturm_env
 pip install -r requirements.txt
 conda install hdfs3 -c conda-forge
-cd src
+cd src || return
 cp -r ~/anaconda2/envs/leuchtturm_env .
 zip -r leuchtturm_env.zip leuchtturm_env
 source deactivate
@@ -17,7 +17,7 @@ PYSPARK_PYTHON=./LEUCHTTURM_ENV/leuchtturm_env/bin/python spark-submit --master 
 echo 'Deleting pipeline_results_dev on hdfs ...'
 hdfs dfs -rm -r tmp/pipeline_results_dev || true
 echo 'Running leuchtturm pipeline...'
-PYSPARK_PYTHON=./LEUCHTTURM_ENV/leuchtturm_env/bin/python spark-submit --master yarn --deploy-mode cluster --driver-memory 4g --executor-memory 4g --num-executors 6 --executor-cores 3 --archives leuchtturm_env.zip#LEUCHTTURM_ENV --py-files settings.py,leuchtturm.py run_leuchtturm.py | ' final status: SUCCEEDED'
+PYSPARK_PYTHON=./LEUCHTTURM_ENV/leuchtturm_env/bin/python spark-submit --master yarn --deploy-mode cluster --driver-memory 4g --executor-memory 4g --num-executors 6 --executor-cores 3 --archives leuchtturm_env.zip#LEUCHTTURM_ENV --py-files settings.py,leuchtturm.py run_leuchtturm.py | grep 'final status: SUCCEEDED'
 echo 'Running db uploads...'
 # source activate leuchtturm_env
 # python write_to_solr.py &
