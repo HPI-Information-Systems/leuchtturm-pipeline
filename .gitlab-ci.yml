@@ -45,5 +45,6 @@ deploy-sopedu-cluster:
   tags:
     - deploy-sopedu-cluster
   script:
+    - pwd
     - ls -alt
     - whoami
