@@ -165,10 +165,10 @@ def extract_topics(rdd):
     hdfs_client = HDFileSystem()
 
     def process_partition(items):
-        with hdfs_client.open(PATH_LDA_MODEL) as pfile:
+        with hdfs_client.open(PATH_LDA_MODEL, user='leuchtturm') as pfile:
             lda = pickle.loads(pfile.read())
 
-        with hdfs_client.open(PATH_LDA_DICT) as pfile:
+        with hdfs_client.open(PATH_LDA_DICT, user='leuchtturm') as pfile:
             dictionary = pickle.loads(pfile.read())
 
         def process_document(data):
