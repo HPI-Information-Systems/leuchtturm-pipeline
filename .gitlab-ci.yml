@@ -37,7 +37,7 @@ deploy-leuchtturm-cluster:
   tags:
     - deploy-leuchtturm-cluster
   script:
-    - source ~/.bashrc
+    - cat ~/.bashrc
     - conda create -n leuchtturm_env python=3.6 -y || true
     - source activate leuchtturm_env
     - pip install -r requirements.txt -y
