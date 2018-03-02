@@ -21,7 +21,7 @@ def run_email_pipeline():
     data = extract_metadata(data)
     data = deduplicate_emails(data)
     data = clean_bodies(data)
-    data = extract_topics(data)
+    # data = extract_topics(data)
     data = detect_languages(data)
     data = extract_entities(data)
 
