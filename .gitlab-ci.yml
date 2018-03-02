@@ -37,9 +37,15 @@ deploy-leuchtturm-cluster:
   tags:
     - deploy-leuchtturm-cluster
   script:
-    - export PATH=/home/gitlab-runner/anaconda2/bin:$PATH
+    - export PATH=~/anaconda2/bin:$PATH
     - conda create -n leuchtturm_env python=3.6 -y --copy || true
     - source activate leuchtturm_env
     - pip install -r requirements.txt
-    - cp -rf /home/gitlab-runner/anaconda2/envs/leuchtturm_env .
+    - cd src
+    - cp -rf ~/anaconda2/envs/leuchtturm_env .
     - zip -rq leuchtturm_env.zip leuchtturm_env
+    - source deactivate
+    - hdfs dfs -rm -r /LEUCHTTURM/tmp/files_listed_dev && hdfs dfs -rm -r /LEUCHTTURM/tmp/pipeline_results_dev
+    - PYSPARK_PYTHON=./LEUCHTTURM_ENV/leuchtturm_env/bin/python spark-submit --master yarn --deploy-mode cluster --driver-memory 4g --executor-memory 4g --num-executors 6 --executor-cores 3 --archives leuchtturm_env.zip#LEUCHTTURM_ENV --py-files settings.py file_lister.py &
+    - PYSPARK_PYTHON=./LEUCHTTURM_ENV/leuchtturm_env/bin/python spark-submit --master yarn --deploy-mode cluster --driver-memory 4g --executor-memory 4g --num-executors 6 --executor-cores 3 --archives leuchtturm_env.zip#LEUCHTTURM_ENV --py-files settings.py,leuchtturm.py run_leuchtturm.py &
+    
