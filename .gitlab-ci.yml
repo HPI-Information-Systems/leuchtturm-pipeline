@@ -7,6 +7,7 @@ cache:
 stages:
   - test_and_lint
   - codequality
+  - deploy
 
 test:
   stage: test_and_lint
@@ -30,5 +31,10 @@ codequality:
   script:
     - echo "Find code smells..."
     - coala -I --ci --files=\*\*/\*.py --ignore=src/emailbody\*\*/\*.py --bears=RadonBear,PyCommentedCodeBear,PySafetyBear,PyUnusedCodeBear,VultureBear
-    - echo "Find duplicated code..."
-    - coala -I --ci --files=\*\*/\*.py --ignore=src/emailbody\*\*/\*.py -p python --bears=CPDBear
+    
+deploy-leuchtturm-cluster:
+  stage: deploy
+  tags:
+    - deploy-leuchtturm-cluster
+  script:
+    - ls -alt
