@@ -1,6 +1,6 @@
 """This module contains the scheduling of the leuchtturm pipeline."""
 
-from settings import SOLR_COLLECTION, PATH_FILES_LISTED, PATH_PIPELINE_RESULTS
+from settings import PATH_FILES_LISTED, PATH_PIPELINE_RESULTS
 from airflow import DAG
 from airflow.operators.bash_operator import BashOperator
 from datetime import datetime, timedelta
