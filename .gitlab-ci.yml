@@ -9,7 +9,7 @@ stages:
   - test_and_lint
   - codequality
 
-test:
+lint:
   stage: test_and_lint
   script:
     - mkdir -p .pip
@@ -17,7 +17,7 @@ test:
     - pip --cache-dir=.pip install -r requirements.txt
     - flake8 .
 
-lint:
+test:
   stage: test_and_lint
   script:
     - mkdir -p .pip
@@ -37,7 +37,6 @@ deploy-leuchtturm-cluster:
   tags:
     - deploy-leuchtturm-cluster
   script:
-    - ls -alt
-    - whoami
-    - which python
-    - which conda
+    - conda create -n leuchtturm_env python=3.6 || true
+    - source activate leuchtturm_env
+    - pip install -r requirements.txt
