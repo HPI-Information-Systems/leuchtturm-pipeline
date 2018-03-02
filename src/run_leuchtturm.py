@@ -17,7 +17,7 @@ def run_email_pipeline():
 
     data = sc.textFile(PATH_FILES_LISTED, minPartitions=CLUSTER_PARALLELIZATION)
 
-    data = split_emails(data)
+    # data = split_emails(data)
     data = extract_metadata(data)
     data = deduplicate_emails(data)
     data = clean_bodies(data)

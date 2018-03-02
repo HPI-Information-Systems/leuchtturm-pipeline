@@ -39,12 +39,12 @@ deploy-leuchtturm-cluster:
   script:
     - export PATH=~/anaconda2/bin:$PATH
     # - ./deploy_pipeline.sh 2>/dev/null
+    - echo "skipped..."
     
 deploy-sopedu-cluster:
   stage: deploy
   tags:
     - deploy-sopedu-cluster
   script:
-    - pwd
-    - ls -alt
-    - whoami
+    - export PATH=~/anaconda2/bin:$PATH
+    - ./deploy_pipeline.sh
