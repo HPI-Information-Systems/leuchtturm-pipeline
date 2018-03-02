@@ -38,14 +38,12 @@ deploy-leuchtturm-cluster:
     - deploy-leuchtturm-cluster
   script:
     - export PATH=~/anaconda2/bin:$PATH
-    - conda create -n leuchtturm_env python=3.6 -y --copy || true
-    - source activate leuchtturm_env
-    - pip install -r requirements.txt
-    - cd src
-    - cp -rf ~/anaconda2/envs/leuchtturm_env .
-    - zip -rq leuchtturm_env.zip leuchtturm_env
-    - source deactivate
-    - hdfs dfs -rm -r /LEUCHTTURM/tmp/files_listed_dev || true
-    - PYSPARK_PYTHON=./LEUCHTTURM_ENV/leuchtturm_env/bin/python spark-submit --master yarn --deploy-mode cluster --driver-memory 4g --executor-memory 4g --num-executors 6 --executor-cores 3 --archives leuchtturm_env.zip#LEUCHTTURM_ENV --py-files settings.py file_lister.py 2>/dev/null
-    - hdfs dfs -rm -r /LEUCHTTURM/tmp/pipeline_results_dev || true
-    - PYSPARK_PYTHON=./LEUCHTTURM_ENV/leuchtturm_env/bin/python spark-submit --master yarn --deploy-mode cluster --driver-memory 4g --executor-memory 4g --num-executors 6 --executor-cores 3 --archives leuchtturm_env.zip#LEUCHTTURM_ENV --py-files settings.py,leuchtturm.py run_leuchtturm.py 2>/dev/null
+    # - ./deploy_pipeline.sh 2>/dev/null
+    
+deploy-sopedu-cluster:
+  stage: deploy
+  tags:
+    - deploy-sopedu-cluster
+  script:
+    - ls -alt
+    - whoami
