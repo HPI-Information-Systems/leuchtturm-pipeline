@@ -58,7 +58,8 @@ def extract_metadata(rdd):
     def add_metadata(data):
         document = json.loads(data)
         try:
-            msg = message_from_string(document['raw'], policy=policy.strict)
+            # msg = message_from_string(document['raw'], policy=policy.strict)
+            msg = message_from_string(document['raw'])
 
             header = {}
             header['sender'] = {'name': unquote(parseaddr(msg.get('from', ''))[0]),

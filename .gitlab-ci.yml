@@ -47,4 +47,4 @@ deploy-sopedu-cluster:
     - deploy-sopedu-cluster
   script:
     - export PATH=~/anaconda2/bin:$PATH
-    - ./deploy_pipeline.sh
+    - ./deploy_pipeline.sh 2> /dev/null
