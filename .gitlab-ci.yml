@@ -5,9 +5,9 @@ cache:
     - .pip
 
 stages:
+  - deploy
   - test_and_lint
   - codequality
-  - deploy
 
 test:
   stage: test_and_lint
@@ -38,3 +38,6 @@ deploy-leuchtturm-cluster:
     - deploy-leuchtturm-cluster
   script:
     - ls -alt
+    - whoami
+    - which python
+    - which conda
