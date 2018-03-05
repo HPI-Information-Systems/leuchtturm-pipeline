@@ -4,7 +4,7 @@ from settings import PATH_FILES_LISTED, PATH_PIPELINE_RESULTS
 from leuchtturm import (split_emails, extract_metadata, deduplicate_emails,
                         clean_bodies, detect_languages, extract_entities, extract_topics)
 import sys
-from pyspark import SparkContext
+from pyspark import SparkContext, SparkConf
 
 
 def run_email_pipeline(input_path=PATH_FILES_LISTED, output_path=PATH_PIPELINE_RESULTS):
@@ -14,7 +14,12 @@ def run_email_pipeline(input_path=PATH_FILES_LISTED, output_path=PATH_PIPELINE_R
     Arguments: none.
     Returns: void.
     """
-    sc = SparkContext()
+    config = SparkConf().set('spark.default.parallelism', 128) \
+                        .set('spark.logConf', True) \
+                        .set('spark.logLevel', 'ERROR') \
+                        .set('spark.yarn.maxAppAttempts', 1)
+
+    sc = SparkContext(config)
 
     data = sc.textFile(input_path)
 
