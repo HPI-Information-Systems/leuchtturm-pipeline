@@ -14,10 +14,10 @@ def run_email_pipeline(input_path=PATH_FILES_LISTED, output_path=PATH_PIPELINE_R
     Arguments: none.
     Returns: void.
     """
-    config = SparkConf().set('spark.default.parallelism', 128) \
-                        .set('spark.logConf', True) \
-                        .set('spark.logLevel', 'ERROR') \
-                        .set('spark.yarn.maxAppAttempts', 1)
+    config = SparkConf().set('spark.default.parallelism', 128)
+                        # .set('spark.logConf', True) \
+                        # .set('spark.logLevel', 'WARN') \
+                        # .set('spark.yarn.maxAppAttempts', 1)
 
     sc = SparkContext(config)
 
