@@ -25,7 +25,7 @@ def run_email_pipeline(input_path=PATH_FILES_LISTED, output_path=PATH_PIPELINE_R
 
     data = sc.textFile(input_path)
 
-    data = split_emails(data)
+    # data = split_emails(data)
     data = extract_metadata(data)
     data = deduplicate_emails(data)
     data = clean_bodies(data)
