@@ -22,15 +22,15 @@ def collect_files(input_path=PATH_EMAILS_RAW, output_path=PATH_FILES_LISTED):
                            'raw': data[1]})
 
     config = SparkConf().set('spark.hive.mapred.supports.subdirectories', 'true') \
-                        .set('spark.hadoop.mapreduce.input.fileinputformat.input.dir.recursive', 'true') \
-                        .set('spark.default.parallelism', 128)
+                        .set('spark.hadoop.mapreduce.input.fileinputformat.input.dir.recursive', 'true')
+                        # .set('spark.default.parallelism', 128)
                         # .set('spark.logConf', True) \
                         # .set('spark.logLevel', 'ERROR') \
                         # .set('spark.yarn.maxAppAttempts', 1)
 
     sc = SparkContext(conf=config)
 
-    rdd = sc.wholeTextFiles(input_path)
+    rdd = sc.wholeTextFiles(input_path, minPartitions=128)
 
     rdd.filter(lambda x: filter_emails(x)) \
        .map(lambda x: create_document(x)) \
