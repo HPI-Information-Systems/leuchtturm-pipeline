@@ -17,6 +17,7 @@ test:
     - pip install -U pip
     - pip --cache-dir=.pip install -r requirements.txt
     - pytest --cov=src/ tests/
+  coverage: /\d+\%\s*$/
 
 lint:
   stage: codequality
@@ -41,8 +42,8 @@ pipeline-10-emails:
   image: fokkodriesprong/docker-pyspark-2
   script:
     - mkdir -p .pip
-    - pip install -U pip
-    - pip --cache-dir=.pip install -r requirements.txt
+    - pip3 install -U pip3
+    - pip3 --cache-dir=.pip install -r requirements.txt
     - ./test_integration_pipeline.sh
     
 deploy-sopedu-master:
