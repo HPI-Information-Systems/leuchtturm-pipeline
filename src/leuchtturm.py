@@ -9,7 +9,6 @@ from time import mktime
 from string import whitespace
 from langdetect import detect
 import en_core_web_sm as spacy
-from hdfs3 import HDFileSystem
 import pickle
 from settings import PATH_LDA_MODEL, PATH_LDA_DICT
 
