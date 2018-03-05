@@ -164,10 +164,10 @@ def extract_topics(rdd):
     """
     def process_partition(items):
         with open(os.path.abspath(os.path.dirname(__file__) + './../models/pickled_lda_model.p'), mode='rb') as pfile:
-            lda = pickle.load(pfile)
+            lda = pickle.loads(pfile.read())
 
         with open(os.path.abspath(os.path.dirname(__file__) + './../models/pickled_lda_dictionary.p'), mode='rb') as pfile:
-            dictionary = pickle.load(pfile)
+            dictionary = pickle.loads(pfile.read())
 
         def process_document(data):
             document = json.loads(data)
