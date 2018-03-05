@@ -39,12 +39,16 @@ stages:
 
 pipeline-10-emails:
   stage: test_integration
-  image: gettyimages/spark
+  tags:
+    - deploy-leuchtturm-cluster
   script:
-    - mkdir -p .pip
-    - pip install -U pip
-    - pip --cache-dir=.pip install -r requirements.txt
+    - export PATH=~/anaconda2/bin:$PATH
+    - export SPARK_HOME=/usr/hdp/2.6.2.0-205/spark2/
+    - conda create -n leuchtturm_env python=3.6 -y --copy || true
+    - source activate leuchtturm_env
+    - pip install --quiet -r requirements.txt
     - ./test_integration_pipeline.sh
+    - source deactivate
     
 deploy-sopedu-master:
   stage: deploy
