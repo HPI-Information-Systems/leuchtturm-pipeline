@@ -6,7 +6,7 @@ PRESULT=temp/pipeline_results
 
 set -e # exit script on first failure
 
-echo '[stage 1 of 3] Getting data ...'
+echo '[stage 1 of 3] Fetching data ...'
 pip install --quiet -r requirements.txt
 
 # get requirements that are not stored in git

@@ -21,7 +21,7 @@ def run_email_pipeline(input_path=PATH_FILES_LISTED, output_path=PATH_PIPELINE_R
                         # .set('spark.logLevel', 'ERROR') \
                         # .set('spark.yarn.maxAppAttempts', 1)
 
-    sc = SparkContext(config)
+    sc = SparkContext(conf=config)
 
     data = sc.textFile(input_path)
 
