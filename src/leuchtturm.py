@@ -9,7 +9,7 @@ from time import mktime
 from string import whitespace
 from langdetect import detect
 import en_core_web_sm as spacy
-import dill
+import pickle
 from settings import PATH_LDA_MODEL, PATH_LDA_DICT
 
 
@@ -164,10 +164,10 @@ def extract_topics(rdd):
     """
     def process_partition(items):
         with open(os.path.abspath(os.path.dirname(__file__) + './../models/pickled_lda_model.p'), mode='rb') as pfile:
-            lda = dill.load(pfile)
+            lda = pickle.load(pfile)
 
         with open(os.path.abspath(os.path.dirname(__file__) + './../models/pickled_lda_dictionary.p'), mode='rb') as pfile:
-            dictionary = dill.load(pfile)
+            dictionary = pickle.load(pfile)
 
         def process_document(data):
             document = json.loads(data)
