@@ -21,6 +21,6 @@ echo '[stage 3 of 3] Running leuchtturm pipeline ...'
 python src/run_leuchtturm.py $FLISTER $PRESULT
 ls $PRESULT/_SUCCESS
 
-echo -e '\n[Done]\n\Head of pipeline results:\n'
-head -n 1 $PRESULT/part-00000 | python -m json.tool --sort-keys
-cat $PRESULT/part-00000 > result.txt
+# echo -e '\n[Done]\n\Head of pipeline results:\n'
+# head -n 1 $PRESULT/part-00000 | python -m json.tool --sort-keys
+# cat $PRESULT/part-00000 > result.txt
