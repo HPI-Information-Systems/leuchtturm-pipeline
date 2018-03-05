@@ -66,7 +66,6 @@ def extract_metadata(rdd):
                             'email': unquote(parseaddr(msg.get('from', ''))[1].lower())}
         header['recipients'] = []
         for recipient in getaddresses(msg.get_all('to', []) + msg.get_all('cc', []) + msg.get_all('bcc', [])):
-            if recipient[0] or recipient[1]:
                 header['recipients'].append({'name': unquote(recipient[0]),
                                              'email': unquote(recipient[1].lower())})
         date = parsedate(msg.get('date', '') + msg.get('sent', ''))
@@ -156,6 +155,21 @@ def clean_bodies(rdd):
         return json.dumps(document)
 
     return rdd.map(lambda x: clean_document(x))
+
+
+def train_topic_model(rdd):
+    """Train topic model on cleaned bodies.
+
+    Arguments: rdd with text_clean field for each doc in json format
+    Returns: rdd with no further fields and stores a trained topic model
+    """
+    # save rdd to training data text file // alternatively collect rdd
+
+    # assemble trainign corpus from said text file
+
+    # clean data as necessary for training
+
+    # train model
 
 
 def extract_topics(rdd):
