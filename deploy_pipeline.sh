@@ -10,8 +10,8 @@ echo '[stage 1 of 4] Building conda environment ...'
 conda create -n leuchtturm_env python=3.6 -y --copy || true
 source activate leuchtturm_env
 pip install --quiet -r requirements.txt
-cp -r ~/anaconda2/envs/leuchtturm_env . && cd leuchtturm_env && zip -r --quiet leuchtturm_env.zip * && cd .. || return
-cp ~/gitlab-runner/models/* models/ && cd models && zip --quiet models.zip * && cd .. || return
+cp -r ~/anaconda2/envs/leuchtturm_env . && cd leuchtturm_env && zip -r --quiet leuchtturm_env.zip * && mv leuchtturm_env.zip .. && cd .. || return
+cp ~/gitlab-runner/models/* models/ && cd models && zip --quiet models.zip * && mv models.zip .. && cd .. || return
 source deactivate
 
 echo '[stage 2 of 4] Running file lister ...'
