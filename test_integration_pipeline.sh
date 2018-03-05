@@ -8,10 +8,10 @@ set -e # exit script on first failure
 
 # export SPARK_HOME=/usr/hdp/2.6.2.0-205/spark2/
 echo '[stage 1 of 2] Running file lister ...'
-python3 src/file_lister.py $EMAILS $FLISTER
+python src/file_lister.py $EMAILS $FLISTER
 ls $FLISTER/_SUCCESS
 echo '[stage 2 of 2] Running leuchtturm pipeline ...'
-python3 src/run_leuchtturm.py $FLISTER $PRESULT
+python src/run_leuchtturm.py $FLISTER $PRESULT
 ls $PRESULT/_SUCCESS
 
 echo -e '\n[Done]\n\Head of pipeline results:\n'

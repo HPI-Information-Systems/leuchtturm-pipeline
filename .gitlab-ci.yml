@@ -10,40 +10,40 @@ stages:
   - test_integration
   - deploy
 
-test:
-  stage: test_unit
-  script:
-    - mkdir -p .pip
-    - pip install -U pip
-    - pip --cache-dir=.pip install -r requirements.txt
-    - pytest --cov=src/ tests/
-  coverage: /\d+\%\s*$/
+# test:
+#   stage: test_unit
+#   script:
+#     - mkdir -p .pip
+#     - pip install -U pip
+#     - pip --cache-dir=.pip install -r requirements.txt
+#     - pytest --cov=src/ tests/
+#   coverage: /\d+\%\s*$/
 
-lint:
-  stage: codequality
-  allow_failure: true
-  script:
-    - mkdir -p .pip
-    - pip install -U pip
-    - pip --cache-dir=.pip install -r requirements.txt
-    - flake8 .
+# lint:
+#   stage: codequality
+#   allow_failure: true
+#   script:
+#     - mkdir -p .pip
+#     - pip install -U pip
+#     - pip --cache-dir=.pip install -r requirements.txt
+#     - flake8 .
 
-lint_strict:
-  stage: codequality
-  allow_failure: true
-  script:
-    - mkdir -p .pip
-    - pip install -U pip
-    - pip --cache-dir=.pip install flake8 mccabe flake8-print flake8-requirements flake8-bandit flake8-deprecated flake8-single-quotes flake8-todo
-    - flake8 . --max-complexity 10
+# lint_strict:
+#   stage: codequality
+#   allow_failure: true
+#   script:
+#     - mkdir -p .pip
+#     - pip install -U pip
+#     - pip --cache-dir=.pip install flake8 mccabe flake8-print flake8-requirements flake8-bandit flake8-deprecated flake8-single-quotes flake8-todo
+#     - flake8 . --max-complexity 10
 
 pipeline-10-emails:
   stage: test_integration
-  image: fokkodriesprong/docker-pyspark-2
+  image: gettyimages/spark
   script:
     - mkdir -p .pip
-    - pip3 install -U pip3
-    - pip3 --cache-dir=.pip install -r requirements.txt
+    - pip install -U pip
+    - pip --cache-dir=.pip install -r requirements.txt
     - ./test_integration_pipeline.sh
     
 deploy-sopedu-master:
