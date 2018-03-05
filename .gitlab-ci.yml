@@ -17,7 +17,7 @@ test:
     - pip install -U pip
     - pip --cache-dir=.pip install -r requirements.txt
     - pytest --cov=src/ tests/
-  coverage: \d+\%\s*$
+  coverage: /\d+\%\s*$/
 
 lint:
   stage: codequality
@@ -48,7 +48,8 @@ pipeline-10-emails:
     
 deploy-sopedu-master:
   stage: deploy
-  only: master
+  only:
+    - master
   tags:
     - deploy-sopedu-cluster
   script:
@@ -57,11 +58,12 @@ deploy-sopedu-master:
     - ./deploy_pipeline.sh 2>/dev/null
   environment:
     name: sopedu_master
-    url: http://sopedu.hpi.uni-potsdam.de:8983/solr/dnc_master
+    url: http://sopedu.hpi.uni-potsdam.de:8983/solr/
 
 deploy-sopedu-dev:
   stage: deploy
-  only: dev
+  only:
+    - dev
   tags:
     - deploy-sopedu-cluster
   script:
@@ -70,11 +72,12 @@ deploy-sopedu-dev:
     - ./deploy_pipeline.sh 2>/dev/null
   environment:
     name: sopedu_master
-    url: http://sopedu.hpi.uni-potsdam.de:8983/solr/dnc_dev
+    url: http://sopedu.hpi.uni-potsdam.de:8983/solr/
 
 deploy-sopedu-mr:
   stage: deploy
-  only: /^[deploy_sopedu_mr] /
+  only:
+    - /^[deploy_sopedu_mr] /
   except:
     - branches
   tags:
@@ -85,4 +88,4 @@ deploy-sopedu-mr:
     - ./deploy_pipeline.sh 2>/dev/null
   environment:
     name: sopedu_master
-    url: http://sopedu.hpi.uni-potsdam.de:8983/solr/dnc_master
+    url: http://sopedu.hpi.uni-potsdam.de:8983/solr/
