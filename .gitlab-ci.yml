@@ -5,46 +5,84 @@ cache:
     - .pip
 
 stages:
-  - deploy
-  - test_and_lint
+  - test_unit
   - codequality
+  - test_integration
+  - deploy
+
+test:
+  stage: test_unit
+  script:
+    - mkdir -p .pip
+    - pip install -U pip
+    - pip --cache-dir=.pip install -r requirements.txt
+    - pytest --cov=src/ tests/
+  coverage: \d+\%\s*$
 
 lint:
-  stage: test_and_lint
+  stage: codequality
+  allow_failure: true
   script:
     - mkdir -p .pip
     - pip install -U pip
     - pip --cache-dir=.pip install -r requirements.txt
     - flake8 .
 
-test:
-  stage: test_and_lint
+lint_strict:
+  stage: codequality
+  allow_failure: true
+  script:
+    - mkdir -p .pip
+    - pip install -U pip
+    - pip --cache-dir=.pip install flake8 mccabe flake8-print flake8-requirements flake8-bandit flake8-deprecated flake8-single-quotes flake8-todo
+    - flake8 . --max-complexity 10
+
+pipeline-10-emails:
+  stage: test_integration
+  image: fokkodriesprong/docker-pyspark-2
   script:
     - mkdir -p .pip
     - pip install -U pip
     - pip --cache-dir=.pip install -r requirements.txt
-    - pytest
-
-codequality:
-  image: coala/base
-  stage: codequality
-  script:
-    - echo "Find code smells..."
-    - coala -I --ci --files=\*\*/\*.py --ignore=src/emailbody\*\*/\*.py --bears=RadonBear,PyCommentedCodeBear,PySafetyBear,PyUnusedCodeBear,VultureBear
+    - ./test_integration_pipeline.sh
     
-deploy-leuchtturm-cluster:
+deploy-sopedu-master:
   stage: deploy
-  tags:
-    - deploy-leuchtturm-cluster
-  script:
-    - export PATH=~/anaconda2/bin:$PATH
-    # - ./deploy_pipeline.sh 2>/dev/null
-    - echo "skipped..."
-    
-deploy-sopedu-cluster:
-  stage: deploy
+  only: master
   tags:
     - deploy-sopedu-cluster
   script:
     - export PATH=~/anaconda2/bin:$PATH
-    - ./deploy_pipeline.sh 2> /dev/null
+    - export SPARK_HOME=/usr/hdp/2.6.2.0-205/spark2/
+    - ./deploy_pipeline.sh 2>/dev/null
+  environment:
+    name: sopedu_master
+    url: http://sopedu.hpi.uni-potsdam.de:8983/solr/dnc_master
+
+deploy-sopedu-dev:
+  stage: deploy
+  only: dev
+  tags:
+    - deploy-sopedu-cluster
+  script:
+    - export PATH=~/anaconda2/bin:$PATH
+    - export SPARK_HOME=/usr/hdp/2.6.2.0-205/spark2/
+    - ./deploy_pipeline.sh 2>/dev/null
+  environment:
+    name: sopedu_master
+    url: http://sopedu.hpi.uni-potsdam.de:8983/solr/dnc_dev
+
+deploy-sopedu-mr:
+  stage: deploy
+  only: /^[deploy_sopedu_mr] /
+  except:
+    - branches
+  tags:
+    - deploy-sopedu-cluster
+  script:
+    - export PATH=~/anaconda2/bin:$PATH
+    - export SPARK_HOME=/usr/hdp/2.6.2.0-205/spark2/
+    - ./deploy_pipeline.sh 2>/dev/null
+  environment:
+    name: sopedu_master
+    url: http://sopedu.hpi.uni-potsdam.de:8983/solr/dnc_master

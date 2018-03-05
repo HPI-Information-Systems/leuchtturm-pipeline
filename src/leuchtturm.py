@@ -2,6 +2,7 @@
 
 import json
 import re
+import os
 from email import message_from_string, policy, errors
 from email.utils import getaddresses, parsedate, parseaddr, unquote
 from time import mktime
@@ -162,14 +163,12 @@ def extract_topics(rdd):
     Arguments: rdd with text_clean field for each doc in json format
     Returns: rdd with a topics field for each doc in json format
     """
-    hdfs_client = HDFileSystem()
-
     def process_partition(items):
-        with hdfs_client.open(PATH_LDA_MODEL, user='leuchtturm') as pfile:
-            lda = pickle.loads(pfile.read())
+        with open(os.path.abspath(os.path.dirname(__file__) + './../models/pickled_lda_model.p'), mode='rb') as pfile:
+            lda = pickle.load(pfile)
 
-        with hdfs_client.open(PATH_LDA_DICT, user='leuchtturm') as pfile:
-            dictionary = pickle.loads(pfile.read())
+        with open(os.path.abspath(os.path.dirname(__file__) + './../models/pickled_lda_dictionary.p'), mode='rb') as pfile:
+            dictionary = pickle.load(pfile)
 
         def process_document(data):
             document = json.loads(data)
@@ -186,7 +185,7 @@ def extract_topics(rdd):
 
             document['topics'] = str(topic_terms)
 
-            return json.dumps(document, ensure_ascii=False)
+            return json.dumps(document)
 
         for item in items:
             yield process_document(item)

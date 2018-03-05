@@ -2,8 +2,8 @@
 
 from settings import NEO4J_CLIENT_URL, PATH_PIPELINE_RESULTS
 import json
+import os
 from neo4j.v1 import DirectDriver
-from hdfs3 import HDFileSystem
 from pyspark import SparkContext
 
 
@@ -16,8 +16,9 @@ def write_to_neo4j():
     """
     sc = SparkContext()
 
+    command = 'hadoop fs -ls {} | sed "1d;s/  */ /g" | cut -d\  -f8'.format(PATH_PIPELINE_RESULTS)
     with DirectDriver(NEO4J_CLIENT_URL).session() as session:
-        for part in HDFileSystem().ls(PATH_PIPELINE_RESULTS):
+        for part in os.popen(command).read().splitlines():
             for document in sc.textFile(part).collect():
                 if (len(document) != 0):
                     sender = {"name": "", "email": ""}

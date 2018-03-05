@@ -1,12 +1,13 @@
 """This job collects and dumps text documents to a spark rdd."""
 
-from settings import PATH_FILES_LISTED, PATH_EMAILS_RAW, CLUSTER_PARALLELIZATION
+from settings import PATH_FILES_LISTED, PATH_EMAILS_RAW
 import json
 import email
+import sys
 from pyspark import SparkContext, SparkConf
 
 
-def collect_files():
+def collect_files(input_path=PATH_EMAILS_RAW, output_path=PATH_FILES_LISTED):
     """Read all txt documents from a folder and collect them in one rdd.
 
     Arguments: none.
@@ -24,14 +25,14 @@ def collect_files():
                         .set('spark.hadoop.mapreduce.input.fileinputformat.input.dir.recursive', 'true')
     sc = SparkContext(conf=config)
 
-    rdd = sc.wholeTextFiles(PATH_EMAILS_RAW, minPartitions=CLUSTER_PARALLELIZATION)
+    rdd = sc.wholeTextFiles(input_path)
 
     rdd.filter(lambda x: filter_emails(x)) \
        .map(lambda x: create_document(x)) \
-       .saveAsTextFile(PATH_FILES_LISTED)
+       .saveAsTextFile(output_path)
 
     sc.stop()
 
 
 if __name__ == '__main__':
-    collect_files()
+    collect_files(input_path=sys.argv[1], output_path=sys.argv[2])
