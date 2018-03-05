@@ -10,11 +10,12 @@ echo '[stage 1 of 4] Building conda environment ...'
 conda create -n leuchtturm_env python=3.6 -y --copy || true
 source activate leuchtturm_env
 pip install --quiet -r requirements.txt
-cp -r ~/anaconda2/envs/leuchtturm_env . && cd leuchtturm_env && zip -r --quiet leuchtturm_env.zip * && cd ..
-cd models && zip --quiet models.zip * && cd ..
+cp -r ~/anaconda2/envs/leuchtturm_env . && cd leuchtturm_env && zip -r --quiet leuchtturm_env.zip * && cd .. || return
+cp ~/gitlab-runner/models/* models/ && cd models && zip --quiet models.zip * && cd .. || return
 source deactivate
 
 echo '[stage 2 of 4] Running file lister ...'
+hdfs dfs -rm -r $FLISTER || true
 PYSPARK_PYTHON=./leuchtturm_env/bin/python \
     spark-submit --master yarn --deploy-mode cluster \
     --driver-memory 20g --executor-memory 20g --num-executors 8 --executor-cores 10 \
@@ -22,6 +23,7 @@ PYSPARK_PYTHON=./leuchtturm_env/bin/python \
     --py-files src/settings.py \
     src/file_lister.py $EMAILS $FLISTER
 echo '[stage 3 of 4] Running leuchtturm pipeline ...'
+hdfs dfs -rm -r $PRESULT || true
 PYSPARK_PYTHON=./leuchtturm_env/bin/python \
     spark-submit --master yarn --deploy-mode cluster \
     --driver-memory 20g --executor-memory 20g --num-executors 8 --executor-cores 10 \
@@ -35,4 +37,5 @@ echo '[stage 4 of 4] Running db uploads ...'
 # python write_to_neo4j
 
 echo -e '\n[Done]\n\Head of pipeline results:\n'
-hdfs dfs -cat tmp/pipeline_results_dev | head -n 1 | python -m json.tool --sort-keys
+hdfs dfs -cat $PRESULT/part-00000 | head -n 1 | python -m json.tool --sort-keys
+hdfs dfs -cat $PRESULT/part-00000 | head -n 20 > result.txt

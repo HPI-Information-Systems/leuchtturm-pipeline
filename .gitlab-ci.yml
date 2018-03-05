@@ -48,11 +48,15 @@ pipeline-10-emails:
     - pip install --quiet -r requirements.txt
     - ./test_integration_pipeline.sh
     - source deactivate
+  artifacts:
+    paths:
+      - result.txt
+    expire_in: 2 weeks
     
 deploy-sopedu-master:
   stage: deploy
-  only:
-    - master
+  # only:
+  #   - master
   tags:
     - deploy-sopedu-cluster
   script:
@@ -62,6 +66,10 @@ deploy-sopedu-master:
   environment:
     name: sopedu_master
     url: http://sopedu.hpi.uni-potsdam.de:8983/solr/
+  artifacts:
+    paths:
+      - result.txt
+    expire_in: 2 weeks
 
 deploy-sopedu-dev:
   stage: deploy

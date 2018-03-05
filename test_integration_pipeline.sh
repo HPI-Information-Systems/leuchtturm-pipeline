@@ -23,4 +23,4 @@ ls $PRESULT/_SUCCESS
 
 echo -e '\n[Done]\n\Head of pipeline results:\n'
 head -n 1 $PRESULT/part-00000 | python -m json.tool --sort-keys
-cat $PRESULT/part-00000 > pipeline_results.txt
+cat $PRESULT/part-00000 > result.txt
