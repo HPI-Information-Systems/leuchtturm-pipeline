@@ -1,18 +1,98 @@
-image: python
+image: python:3.6
+
+cache:
+  paths:
+    - .pip
 
 stages:
   - test
-  - build
+  - lint
   - deploy
 
-lint_python:
+test_unit:
   stage: test
   script:
-    - pip install -r requirements.txt
-    - flake8 . # this also runs pydocstyle linting as a plugin of flake8 (see requirements.txt)
+    - mkdir -p .pip
+    - pip install -U pip
+    - pip --cache-dir=.pip install -r requirements.txt
+    - pytest --cov=src/ tests/
+  coverage: /\d+\%\s*$/
 
-test_python:
+test_integration:
   stage: test
+  tags:
+    - deploy-leuchtturm-cluster
   script:
-    - pip install -r requirements.txt
-    - pytest
+    - export PATH=~/anaconda2/bin:$PATH
+    - conda create -n leuchtturm_env python=3.6 -y --copy || true
+    - source activate leuchtturm_env
+    - pip install --quiet -r requirements.txt
+    - ./test_integration_pipeline.sh
+    - source deactivate
+  artifacts:
+    paths:
+      - result.txt
+    expire_in: 2 weeks
+
+lint_python:
+  stage: lint
+  allow_failure: true
+  script:
+    - mkdir -p .pip
+    - pip install -U pip
+    - pip --cache-dir=.pip install -r requirements.txt
+    - flake8 .
+    
+deploy-sopedu-master:
+  stage: deploy
+  only:
+    - master
+  tags:
+    - deploy-sopedu-cluster
+  script:
+    - export PATH=~/anaconda2/bin:$PATH
+    - export SPARK_HOME=/usr/hdp/2.6.2.0-205/spark2/
+    - ./deploy_pipeline.sh master 2>/dev/null
+  environment:
+    name: sopedu_pipeline_master
+    url: http://sopedu.hpi.uni-potsdam.de:8983/solr/pipeline_master
+  artifacts:
+    paths:
+      - result.txt
+    expire_in: 2 weeks
+
+deploy-sopedu-dev:
+  stage: deploy
+  only:
+    - dev
+  tags:
+    - deploy-sopedu-cluster
+  script:
+    - export PATH=~/anaconda2/bin:$PATH
+    - export SPARK_HOME=/usr/hdp/2.6.2.0-205/spark2/
+    - ./deploy_pipeline.sh dev 2>/dev/null
+  environment:
+    name: sopedu_pipeline_dev
+    url: http://sopedu.hpi.uni-potsdam.de:8983/solr/pipeline_dev
+  artifacts:
+    paths:
+      - result.txt
+    expire_in: 2 weeks
+
+deploy-sopedu-mr:
+  stage: deploy
+  only:
+    - web
+  tags:
+    - deploy-sopedu-cluster
+  script:
+    - export PATH=~/anaconda2/bin:$PATH
+    - export SPARK_HOME=/usr/hdp/2.6.2.0-205/spark2/
+    - ./deploy_pipeline.sh mr 2>/dev/null
+  environment:
+    name: sopedu_pipeline_mr
+    url: http://sopedu.hpi.uni-potsdam.de:8983/solr/pipeline_mr
+  artifacts:
+    paths:
+      - result.txt
+    expire_in: 2 weeks

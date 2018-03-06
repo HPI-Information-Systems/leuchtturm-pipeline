@@ -1,22 +1,15 @@
-# linting
 flake8
 flake8_docstrings
-
-# testing
 pytest
+pytest-cov
 pytest-gitignore # excludes gitignored files from pytest scope
-
-# cd
-apache-airflow
-safygiphy
-
-# leuchtturm pipeline
 pyspark
 langdetect
-spacy
-https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-1.2.0/en_core_web_sm-1.2.0.tar.gz
-
-# db tasks
-hdfs
+gensim
+https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-2.0.0/en_core_web_sm-2.0.0.tar.gz
+# numpy
+# keras
+# git+https://www.github.com/keras-team/keras-contrib.git
+# sklearn
 pysolr
 neo4j-driver

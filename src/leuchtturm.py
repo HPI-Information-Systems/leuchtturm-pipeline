@@ -1,18 +1,15 @@
-# -*- coding: utf-8 -*-
-
 """This module provides methods to processes emails and text."""
 
 import json
 import re
-import email
+from email import message_from_string, policy, errors
 from email.utils import getaddresses, parsedate, parseaddr, unquote
 from time import mktime
 from string import whitespace
 from langdetect import detect
 import en_core_web_sm as spacy
-from hdfs import Client
 import pickle
-from settings import hdfs_client_url, path_lda_model, path_lda_dict
+from settings import PATH_LDA_MODEL, PATH_LDA_DICT
 
 
 def split_emails(rdd):
@@ -59,7 +56,7 @@ def extract_metadata(rdd):
     """
     def add_metadata(data):
         document = json.loads(data)
-        msg = email.message_from_string(document['raw'])
+        msg = message_from_string(document['raw'])
 
         header = {}
         header['sender'] = {'name': unquote(parseaddr(msg.get('from', ''))[0]),
@@ -178,31 +175,26 @@ def extract_topics(rdd):
     Arguments: rdd with text_clean field for each doc in json format
     Returns: rdd with a topics field for each doc in json format
     """
-    hdfs_client = Client(hdfs_client_url)
-
     def process_partition(items):
-        with hdfs_client.read(path_lda_model, encoding='utf-8') as pfile:
-            lda = pickle.loads(pfile.data)
+        with open('./models/pickled_lda_model.p', mode='rb') as pfile:
+            lda = pickle.load(pfile)
 
-        with hdfs_client.read(path_lda_dict, encoding='utf-8') as pfile:
-            dictionary = pickle.loads(pfile.data)
+        with open('./models/pickled_lda_dictionary.p', mode='rb') as pfile:
+            dictionary = pickle.load(pfile)
 
         def process_document(data):
             document = json.loads(data)
 
-            bow = dictionary.doc2bow(document['text_clean'].split())
+            bow = dictionary.doc2bow(document['text_clean'].split()[:500])
 
             topic_terms = []
-
-            topics = lda.get_document_topics(bow)
-
-            for topic in topics:
+            for topic in lda.get_document_topics(bow, minimum_probability=0):
                 terms = map(lambda xy: (dictionary[xy[0]], xy[1]), lda.get_topic_terms(topic[0], topn=10))
                 topic_terms.append(str((str(topic[1]), (list(terms)))))
 
             document['topics'] = str(topic_terms)
 
-            return json.dumps(document, ensure_ascii=False)
+            return json.dumps(document)
 
         for item in items:
             yield process_document(item)
@@ -245,7 +237,7 @@ def extract_entities(rdd):
 
             lines = [document['text_clean'][i: i + 1000] for i in range(0, len(document['text_clean']), 1000)]
             for line in lines:
-                for entity in filter(lambda x: x.text != ' ', nlp(line).ents):
+                for entity in filter(lambda x: x.text.strip(whitespace) != '', nlp(line).ents):
                     if (entity.label_ == 'PERSON'):
                         entities['person'].append(entity.text.strip(whitespace))
                     elif (entity.label_ == 'LOC' or entity.label_ == 'GPE' or entity.label_ == 'FAC'):
