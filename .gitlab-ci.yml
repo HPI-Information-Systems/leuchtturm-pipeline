@@ -65,7 +65,7 @@ deploy-sopedu-master:
     - ./deploy_pipeline.sh 2>/dev/null
   environment:
     name: sopedu_pipeline_master
-    url: http://sopedu.hpi.uni-potsdam.de:8983/solr/
+    url: http://sopedu.hpi.uni-potsdam.de:8983/solr/pipeline_master
   artifacts:
     paths:
       - result.txt
@@ -83,7 +83,7 @@ deploy-sopedu-dev:
     - ./deploy_pipeline.sh 2>/dev/null
   environment:
     name: sopedu_pipeline_dev
-    url: http://sopedu.hpi.uni-potsdam.de:8983/solr/
+    url: http://sopedu.hpi.uni-potsdam.de:8983/solr/pipeline_dev
   artifacts:
     paths:
       - result.txt
@@ -101,7 +101,7 @@ deploy-sopedu-mr:
     - ./deploy_pipeline.sh 2>/dev/null
   environment:
     name: sopedu_pipeline_mr
-    url: http://sopedu.hpi.uni-potsdam.de:8983/solr/
+    url: http://sopedu.hpi.uni-potsdam.de:8983/solr/pipeline_mr
   artifacts:
     paths:
       - result.txt

@@ -2,19 +2,19 @@
 
 from settings import SOLR_CLIENT_URL, PATH_PIPELINE_RESULTS
 import json
-import os
+import sys
 from pyspark import SparkContext
 from pysolr import Solr
 
 
-def write_to_solr():
+def write_to_solr(input_path=PATH_PIPELINE_RESULTS, solr=SOLR_CLIENT_URL):
     """Write pipeline results to a predefined solr collection.
 
     Requires: Text mining pipline ran.
     Arguments: none.
     Returns: void.
     """
-    solr_client = Solr(SOLR_CLIENT_URL)
+    solr_client = Solr(solr)
 
     def flatten_document(dd, separator='.', prefix=''):
         return {prefix + separator + k if prefix else k: v
@@ -23,8 +23,7 @@ def write_to_solr():
 
     sc = SparkContext()
 
-    command = 'hadoop fs -ls {} | sed "1d;s/  */ /g" | cut -d\  -f8'.format(PATH_PIPELINE_RESULTS)
-    for part in os.popen(command).read().splitlines():
+    for part in sc.wholeTextFiles(input_path).map(lambda x: x[0]).collect():
         results = sc.textFile(part).collect()
         results = map(lambda x: flatten_document(json.loads(x)), results)
 
@@ -34,4 +33,4 @@ def write_to_solr():
 
 
 if __name__ == '__main__':
-    write_to_solr()
+    write_to_solr(input_path=sys.argv[1], solr=sys.argv[2])

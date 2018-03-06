@@ -154,11 +154,6 @@ def clean_bodies(rdd):
 
     return rdd.map(lambda x: clean_document(x))
 
-with open('./models/pickled_lda_model.p', mode='rb') as pfile:
-    lda = pickle.load(pfile)
-
-with open('./models/pickled_lda_dictionary.p', mode='rb') as pfile:
-    dictionary = pickle.load(pfile)
 
 def extract_topics(rdd):
     """Extract topics from cleaned email bodies.
@@ -167,6 +162,12 @@ def extract_topics(rdd):
     Returns: rdd with a topics field for each doc in json format
     """
     def process_partition(items):
+        with open('./models/pickled_lda_model.p', mode='rb') as pfile:
+            lda = pickle.load(pfile)
+
+        with open('./models/pickled_lda_dictionary.p', mode='rb') as pfile:
+            dictionary = pickle.load(pfile)
+
         def process_document(data):
             document = json.loads(data)
 
