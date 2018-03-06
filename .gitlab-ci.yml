@@ -92,7 +92,7 @@ deploy-sopedu-dev:
 deploy-sopedu-mr:
   stage: deploy
   only:
-    - /^[deploy_sopedu_mr] /
+    - /^[deploy_sopedu_mr] .*/
   except:
     - branches
   tags:
