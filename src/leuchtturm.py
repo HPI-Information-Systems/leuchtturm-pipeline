@@ -62,13 +62,29 @@ def extract_metadata(rdd):
         msg = email.message_from_string(document['raw'])
 
         header = {}
-        header['sender'] = {'name': unquote(parseaddr(msg.get('from', ''))[0]),
-                            'email': unquote(parseaddr(msg.get('from', ''))[1].lower())}
+        sender = parseaddr(msg.get('from', ''))
+        sender_name, sender_email = '', ''
+        if sender[0]:
+            sender_name = unquote(sender[0])
+        elif sender[1] and '@' not in sender[1]:
+            sender_name = unquote(sender[1])
+        if sender[1] and '@' in sender[1]:
+            sender_email = unquote(sender[1])
+
+        header['sender'] = {'name': sender_name, 'email': sender_email.lower()}
+
         header['recipients'] = []
         for recipient in getaddresses(msg.get_all('to', []) + msg.get_all('cc', []) + msg.get_all('bcc', [])):
-            if recipient[0] or recipient[1]:
-                header['recipients'].append({'name': unquote(recipient[0]),
-                                             'email': unquote(recipient[1].lower())})
+            recipient_name, recipient_email = '', ''
+            if recipient[0]:
+                recipient_name = unquote(recipient[0])
+            elif recipient[1] and '@' not in recipient[1]:
+                recipient_name = unquote(recipient[1])
+            if recipient[1] and '@' in recipient[1]:
+                recipient_email = unquote(recipient[1])
+            if recipient_name or recipient_email:
+                header['recipients'].append({'name': recipient_name, 'email': recipient_email})
+
         date = parsedate(msg.get('date', '') + msg.get('sent', ''))
         header['date'] = mktime(date) if (date is not None) else -1.0
         header['subject'] = msg.get('subject', '')
