@@ -52,6 +52,7 @@ PYSPARK_PYTHON=./leuchtturm_env/bin/python \
 
 echo '[stage 4 of 4] Running db uploads ...'
 source activate leuchtturm_env
+curl $SOLR/update\?commit\=true -d  '<delete><query>*:*</query></delete>'
 python write_to_solr.py $PRESULT_ $SOLR
 # python write_to_neo4j
 

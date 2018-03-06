@@ -174,7 +174,7 @@ def extract_topics(rdd):
             bow = dictionary.doc2bow(document['text_clean'].split()[:500])
 
             topic_terms = []
-            for topic in lda.get_document_topics(bow):
+            for topic in lda.get_document_topics(bow, minimum_probability=0):
                 terms = map(lambda xy: (dictionary[xy[0]], xy[1]), lda.get_topic_terms(topic[0], topn=10))
                 topic_terms.append(str((str(topic[1]), (list(terms)))))
 
