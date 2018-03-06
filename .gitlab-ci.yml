@@ -6,7 +6,7 @@ cache:
 
 stages:
   - test
-  - codequality
+  - lint
   - deploy
 
 test_unit:
