@@ -9,7 +9,6 @@ from string import whitespace
 from langdetect import detect
 import en_core_web_sm as spacy
 import pickle
-from settings import PATH_LDA_MODEL, PATH_LDA_DICT
 
 
 def split_emails(rdd):
@@ -174,11 +173,13 @@ def extract_topics(rdd):
             bow = dictionary.doc2bow(document['text_clean'].split()[:500])
 
             topic_terms = []
-            for topic in lda.get_document_topics(bow, minimum_probability=0):
+            for topic in lda.get_document_topics(bow):
                 terms = map(lambda xy: (dictionary[xy[0]], xy[1]), lda.get_topic_terms(topic[0], topn=10))
                 topic_terms.append(str((str(topic[1]), (list(terms)))))
 
             document['topics'] = str(topic_terms)
+
+            #dictionary = dictionary.clear()
 
             return json.dumps(document)
 
