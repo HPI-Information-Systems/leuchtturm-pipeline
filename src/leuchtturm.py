@@ -7,7 +7,7 @@ from email.utils import getaddresses, parsedate, parseaddr, unquote
 from time import mktime
 from string import whitespace
 from langdetect import detect
-import en_core_web_sm as spacy
+# import en_core_web_sm as spacy
 import pickle
 from settings import PATH_LDA_MODEL, PATH_LDA_DICT
 
@@ -154,13 +154,17 @@ def clean_bodies(rdd):
     return rdd.map(lambda x: clean_document(x))
 
 
-def train_topic_model(rdd):
+def train_topic_model(training_data):
     """Train topic model on cleaned bodies.
 
     Arguments: rdd with text_clean field for each doc in json format
     Returns: rdd with no further fields and stores a trained topic model
     """
-    # save rdd to training data text file // alternatively collect rdd
+    # Params   
+    iterations = 1000
+    num_topics = 100
+    alpha = 50/num_topics
+    eta = 0.1
 
     # assemble trainign corpus from said text file
 
