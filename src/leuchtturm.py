@@ -179,8 +179,6 @@ def extract_topics(rdd):
 
             document['topics'] = str(topic_terms)
 
-            #dictionary = dictionary.clear()
-
             return json.dumps(document)
 
         for item in items:
