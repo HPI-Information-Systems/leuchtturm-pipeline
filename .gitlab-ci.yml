@@ -6,36 +6,18 @@ cache:
 
 stages:
   - test_unit
-  - codequality
   - test_integration
+  - codequality
   - deploy
 
-# test:
-#   stage: test_unit
-#   script:
-#     - mkdir -p .pip
-#     - pip install -U pip
-#     - pip --cache-dir=.pip install -r requirements.txt
-#     - pytest --cov=src/ tests/
-#   coverage: /\d+\%\s*$/
-
-# lint:
-#   stage: codequality
-#   allow_failure: true
-#   script:
-#     - mkdir -p .pip
-#     - pip install -U pip
-#     - pip --cache-dir=.pip install -r requirements.txt
-#     - flake8 .
-
-# lint_strict:
-#   stage: codequality
-#   allow_failure: true
-#   script:
-#     - mkdir -p .pip
-#     - pip install -U pip
-#     - pip --cache-dir=.pip install flake8 mccabe flake8-print flake8-requirements flake8-bandit flake8-deprecated flake8-single-quotes flake8-todo
-#     - flake8 . --max-complexity 10
+test:
+  stage: test_unit
+  script:
+    - mkdir -p .pip
+    - pip install -U pip
+    - pip --cache-dir=.pip install -r requirements.txt
+    - pytest --cov=src/ tests/
+  coverage: /\d+\%\s*$/
 
 pipeline-10-emails:
   stage: test_integration
@@ -52,19 +34,37 @@ pipeline-10-emails:
     paths:
       - result.txt
     expire_in: 2 weeks
+
+lint:
+  stage: codequality
+  allow_failure: true
+  script:
+    - mkdir -p .pip
+    - pip install -U pip
+    - pip --cache-dir=.pip install -r requirements.txt
+    - flake8 .
+
+lint_strict:
+  stage: codequality
+  allow_failure: true
+  script:
+    - mkdir -p .pip
+    - pip install -U pip
+    - pip --cache-dir=.pip install flake8 mccabe flake8-print flake8-requirements flake8-bandit flake8-deprecated flake8-single-quotes flake8-todo
+    - flake8 . --max-complexity 10
     
 deploy-sopedu-master:
   stage: deploy
-  # only:
-  #   - master
+  only:
+    - master
   tags:
     - deploy-sopedu-cluster
   script:
     - export PATH=~/anaconda2/bin:$PATH
     - export SPARK_HOME=/usr/hdp/2.6.2.0-205/spark2/
-    - ./deploy_pipeline.sh # 2>/dev/null
+    - ./deploy_pipeline.sh 2>/dev/null
   environment:
-    name: sopedu_master
+    name: sopedu_pipeline_master
     url: http://sopedu.hpi.uni-potsdam.de:8983/solr/
   artifacts:
     paths:
@@ -82,8 +82,12 @@ deploy-sopedu-dev:
     - export SPARK_HOME=/usr/hdp/2.6.2.0-205/spark2/
     - ./deploy_pipeline.sh 2>/dev/null
   environment:
-    name: sopedu_master
+    name: sopedu_pipeline_dev
     url: http://sopedu.hpi.uni-potsdam.de:8983/solr/
+  artifacts:
+    paths:
+      - result.txt
+    expire_in: 2 weeks
 
 deploy-sopedu-mr:
   stage: deploy
@@ -98,5 +102,9 @@ deploy-sopedu-mr:
     - export SPARK_HOME=/usr/hdp/2.6.2.0-205/spark2/
     - ./deploy_pipeline.sh 2>/dev/null
   environment:
-    name: sopedu_master
+    name: sopedu_pipeline_mr
     url: http://sopedu.hpi.uni-potsdam.de:8983/solr/
+  artifacts:
+    paths:
+      - result.txt
+    expire_in: 2 weeks

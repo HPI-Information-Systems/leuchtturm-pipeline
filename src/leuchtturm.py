@@ -2,7 +2,6 @@
 
 import json
 import re
-import os
 from email import message_from_string, policy, errors
 from email.utils import getaddresses, parsedate, parseaddr, unquote
 from time import mktime
@@ -155,6 +154,11 @@ def clean_bodies(rdd):
 
     return rdd.map(lambda x: clean_document(x))
 
+with open('./models/pickled_lda_model.p', mode='rb') as pfile:
+    lda = pickle.load(pfile)
+
+with open('./models/pickled_lda_dictionary.p', mode='rb') as pfile:
+    dictionary = pickle.load(pfile)
 
 def extract_topics(rdd):
     """Extract topics from cleaned email bodies.
@@ -163,22 +167,13 @@ def extract_topics(rdd):
     Returns: rdd with a topics field for each doc in json format
     """
     def process_partition(items):
-        with open('./models/pickled_lda_model.p', mode='rb') as pfile:
-            lda = pickle.load(pfile)
-
-        with open('./models/pickled_lda_dictionary.p', mode='rb') as pfile:
-            dictionary = pickle.load(pfile)
-
         def process_document(data):
             document = json.loads(data)
 
             bow = dictionary.doc2bow(document['text_clean'].split()[:500])
 
             topic_terms = []
-
-            topics = lda.get_document_topics(bow)
-
-            for topic in topics:
+            for topic in lda.get_document_topics(bow):
                 terms = map(lambda xy: (dictionary[xy[0]], xy[1]), lda.get_topic_terms(topic[0], topn=10))
                 topic_terms.append(str((str(topic[1]), (list(terms)))))
 
@@ -227,7 +222,7 @@ def extract_entities(rdd):
 
             lines = [document['text_clean'][i: i + 1000] for i in range(0, len(document['text_clean']), 1000)]
             for line in lines:
-                for entity in filter(lambda x: x.text != ' ', nlp(line).ents):
+                for entity in filter(lambda x: x.text.strip(whitespace) != '', nlp(line).ents):
                     if (entity.label_ == 'PERSON'):
                         entities['person'].append(entity.text.strip(whitespace))
                     elif (entity.label_ == 'LOC' or entity.label_ == 'GPE' or entity.label_ == 'FAC'):

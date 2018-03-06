@@ -37,5 +37,5 @@ echo '[stage 4 of 4] Running db uploads ...'
 # python write_to_neo4j
 
 echo -e '\n[Done]\n\Head of pipeline results:\n'
-hdfs dfs -cat $PRESULT/part-00000 | head -n 1 | python -m json.tool --sort-keys
-hdfs dfs -cat $PRESULT/part-00000 | head -n 20 > result.txt
+hdfs dfs -cat $PRESULT/* | head -n 1 | python -m json.tool
+hdfs dfs -cat $PRESULT/* | head -n 20 > result.txt

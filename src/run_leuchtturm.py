@@ -1,7 +1,7 @@
 """This module runs pipeline tasks in correct order."""
 
 from settings import PATH_FILES_LISTED, PATH_PIPELINE_RESULTS
-from leuchtturm import (split_emails, extract_metadata, deduplicate_emails,
+from leuchtturm import (extract_metadata, deduplicate_emails,
                         clean_bodies, detect_languages, extract_entities, extract_topics)
 import sys
 from pyspark import SparkContext, SparkConf
@@ -16,7 +16,7 @@ def run_email_pipeline(input_path=PATH_FILES_LISTED, output_path=PATH_PIPELINE_R
     """
     config = SparkConf().set('spark.hive.mapred.supports.subdirectories', 'true') \
                         .set('spark.hadoop.mapreduce.input.fileinputformat.input.dir.recursive', 'true') \
-                        .set('spark.default.parallelism', 128) \
+                        .set('spark.default.parallelism', 120) \
                         .set('spark.logConf', True) \
                         .set('spark.logLevel', 'ERROR') \
                         .set('spark.yarn.maxAppAttempts', 1)
@@ -25,7 +25,6 @@ def run_email_pipeline(input_path=PATH_FILES_LISTED, output_path=PATH_PIPELINE_R
 
     data = sc.textFile(input_path)
 
-    # data = split_emails(data)
     data = extract_metadata(data)
     data = deduplicate_emails(data)
     data = clean_bodies(data)
