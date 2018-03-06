@@ -196,7 +196,7 @@ def extract_topics(rdd):
 
             topic_terms = []
 
-            topics = lda.get_document_topics(bow)
+            topics = lda.get_document_topics(bow, minimum_probability=0)
 
             for topic in topics:
                 terms = map(lambda xy: (dictionary[xy[0]], xy[1]), lda.get_topic_terms(topic[0], topn=10))
