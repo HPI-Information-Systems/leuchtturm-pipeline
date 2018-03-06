@@ -93,8 +93,6 @@ deploy-sopedu-mr:
   stage: deploy
   only:
     - web
-  except:
-    - branches
   tags:
     - deploy-sopedu-cluster
   script:
