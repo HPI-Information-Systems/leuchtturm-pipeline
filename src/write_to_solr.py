@@ -3,6 +3,7 @@
 from settings import SOLR_CLIENT_URL, PATH_PIPELINE_RESULTS
 import json
 import sys
+import argparse
 from pyspark import SparkContext
 from pysolr import Solr
 

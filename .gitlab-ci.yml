@@ -5,13 +5,12 @@ cache:
     - .pip
 
 stages:
-  - test_unit
-  - test_integration
+  - test
   - codequality
   - deploy
 
-test:
-  stage: test_unit
+test_unit:
+  stage: test
   script:
     - mkdir -p .pip
     - pip install -U pip
@@ -19,8 +18,8 @@ test:
     - pytest --cov=src/ tests/
   coverage: /\d+\%\s*$/
 
-pipeline-10-emails:
-  stage: test_integration
+test_integration:
+  stage: test
   tags:
     - deploy-leuchtturm-cluster
   script:
@@ -35,23 +34,14 @@ pipeline-10-emails:
       - result.txt
     expire_in: 2 weeks
 
-lint:
-  stage: codequality
+lint_python:
+  stage: lint
   allow_failure: true
   script:
     - mkdir -p .pip
     - pip install -U pip
     - pip --cache-dir=.pip install -r requirements.txt
     - flake8 .
-
-lint_strict:
-  stage: codequality
-  allow_failure: true
-  script:
-    - mkdir -p .pip
-    - pip install -U pip
-    - pip --cache-dir=.pip install flake8 mccabe flake8-print flake8-requirements flake8-bandit flake8-deprecated flake8-single-quotes flake8-todo
-    - flake8 . --max-complexity 10
     
 deploy-sopedu-master:
   stage: deploy
@@ -62,7 +52,7 @@ deploy-sopedu-master:
   script:
     - export PATH=~/anaconda2/bin:$PATH
     - export SPARK_HOME=/usr/hdp/2.6.2.0-205/spark2/
-    - ./deploy_pipeline.sh 2>/dev/null
+    - ./deploy_pipeline.sh master 2>/dev/null
   environment:
     name: sopedu_pipeline_master
     url: http://sopedu.hpi.uni-potsdam.de:8983/solr/pipeline_master
@@ -80,7 +70,7 @@ deploy-sopedu-dev:
   script:
     - export PATH=~/anaconda2/bin:$PATH
     - export SPARK_HOME=/usr/hdp/2.6.2.0-205/spark2/
-    - ./deploy_pipeline.sh 2>/dev/null
+    - ./deploy_pipeline.sh dev 2>/dev/null
   environment:
     name: sopedu_pipeline_dev
     url: http://sopedu.hpi.uni-potsdam.de:8983/solr/pipeline_dev
@@ -98,7 +88,7 @@ deploy-sopedu-mr:
   script:
     - export PATH=~/anaconda2/bin:$PATH
     - export SPARK_HOME=/usr/hdp/2.6.2.0-205/spark2/
-    - ./deploy_pipeline.sh 2>/dev/null
+    - ./deploy_pipeline.sh mr 2>/dev/null
   environment:
     name: sopedu_pipeline_mr
     url: http://sopedu.hpi.uni-potsdam.de:8983/solr/pipeline_mr
