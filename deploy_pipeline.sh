@@ -51,7 +51,6 @@ source deactivate
 #     src/run_leuchtturm.py $FLISTER $PRESULT
 
 echo '[stage 4 of 4] Running db uploads ...'
-source activate leuchtturm_env
 curl $SOLR/update\?commit\=true -d  '<delete><query>*:*</query></delete>' || true
 PYSPARK_PYTHON=./leuchtturm_env/bin/python \
     spark-submit --master yarn --deploy-mode cluster \
@@ -60,7 +59,6 @@ PYSPARK_PYTHON=./leuchtturm_env/bin/python \
     --py-files src/settings.py \
     src/write_to_solr.py $PRESULT_ $SOLR
 # python write_to_neo4j
-source deactivate
 
 echo -e '\n[Done]\n\Head of pipeline results:\n'
 hdfs dfs -cat $PRESULT/* | head -n 1 | python -m json.tool
