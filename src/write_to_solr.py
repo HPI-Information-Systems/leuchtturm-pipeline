@@ -3,7 +3,6 @@
 from settings import SOLR_CLIENT_URL, PATH_PIPELINE_RESULTS
 import json
 import sys
-import argparse
 from pyspark import SparkContext
 from pysolr import Solr
 
@@ -23,6 +22,7 @@ def write_to_solr(input_path=PATH_PIPELINE_RESULTS, solr=SOLR_CLIENT_URL):
                 for k, v in flatten_document(vv, separator, kk).items()} if isinstance(dd, dict) else {prefix: dd}
 
     sc = SparkContext()
+    sc.setLogLevel('WARN')
 
     for part in sc.wholeTextFiles(input_path).map(lambda x: x[0]).collect():
         results = sc.textFile(part).collect()

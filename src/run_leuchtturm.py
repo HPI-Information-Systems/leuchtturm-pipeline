@@ -16,12 +16,10 @@ def run_email_pipeline(input_path=PATH_FILES_LISTED, output_path=PATH_PIPELINE_R
     """
     config = SparkConf().set('spark.hive.mapred.supports.subdirectories', 'true') \
                         .set('spark.hadoop.mapreduce.input.fileinputformat.input.dir.recursive', 'true') \
-                        .set('spark.default.parallelism', 276) \
-                        .set('spark.logConf', True) \
-                        .set('spark.logLevel', 'ERROR') \
-                        .set('spark.yarn.maxAppAttempts', 1)
+                        .set('spark.default.parallelism', 276)
 
     sc = SparkContext(conf=config)
+    sc.setLogLevel('WARN')
 
     data = sc.textFile(input_path)
 
