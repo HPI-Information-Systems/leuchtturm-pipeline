@@ -9,7 +9,6 @@ import os.path
 import json
 
 
-def run_topic_training(input_path=PATH_FILES_LISTED, output_path=PATH_PIPELINE_RESULTS):
 def run_topic_training(input_path=PATH_FILES_LISTED):
     """Run entire text processing pipeline.
 
