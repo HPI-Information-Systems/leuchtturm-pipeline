@@ -38,4 +38,7 @@ def run_email_pipeline(input_path=PATH_FILES_LISTED, output_path=PATH_PIPELINE_R
 
 
 if __name__ == '__main__':
-    run_email_pipeline(input_path=sys.argv[1], output_path=sys.argv[2])
+    if os.path.isfile(PATH_LDA_MODEL):
+        run_email_pipeline(input_path=sys.argv[1], output_path=sys.argv[2])
+    else:
+        raise Exception("No LDA model was found. Train a model first.")
