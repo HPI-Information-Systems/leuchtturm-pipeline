@@ -41,9 +41,13 @@ def split_emails(rdd):
         parts = detect_parts(document['raw'])
 
         splitted_emails = []
-        for part in parts:
+        original_doc_id = document['doc_id']
+        for index, part in enumerate(parts):
             obj = document
             obj['raw'] = part
+            # if there are multiple parts, add an identifier to the original document id
+            if len(parts) > 1:
+                obj['doc_id'] = original_doc_id + '_part_' + str(index + 1) + '_of_' + str(len(parts))
             splitted_emails.append(json.dumps(obj))
 
         return splitted_emails
