@@ -48,7 +48,7 @@ PYSPARK_PYTHON=./leuchtturm_env/bin/python \
     --driver-memory 20g --executor-memory 20g --num-executors 8 --executor-cores 10 \
     --archives leuchtturm_env.zip#leuchtturm_env,models.zip#models \
     --py-files src/settings.py,src/leuchtturm.py \
-    src/run_leuchtturm.py $FLISTER $PRESULT
+    src/run_pipeline.py $FLISTER $PRESULT
 
 echo '[stage 4 of 4] Running db uploads ...'
 source activate leuchtturm_env
