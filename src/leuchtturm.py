@@ -2,14 +2,19 @@
 
 import json
 import re
-from email import message_from_string, policy, errors
+from email import message_from_string
 from email.utils import getaddresses, parsedate, parseaddr, unquote
 from time import mktime
 from string import whitespace
 from langdetect import detect
+from gensim import corpora
+from gensim import models
+from collections import defaultdict
 # import en_core_web_sm as spacy
 import pickle
-from settings import PATH_LDA_MODEL, PATH_LDA_DICT
+from nltk.corpus import stopwords as nltksw
+from nltk.stem.wordnet import WordNetLemmatizer
+from string import punctuation
 
 
 def split_emails(rdd):
