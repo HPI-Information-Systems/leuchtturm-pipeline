@@ -9,7 +9,7 @@ import json
 def write_to_solr():
     """Write pipeline results to a predefined solr collection.
 
-    Requires: Text mining pipline ran.
+    Requires: Text mining pipeline ran.
     Arguments: none.
     Returns: void.
     """
@@ -27,12 +27,12 @@ def write_to_solr():
                               delimiter='\n') as reader:
             docs_to_push = []
             for document in reader:
-                if (len(document) != 0):
+                if len(document) != 0:
                     docs_to_push.append(flatten_document(json.loads(document)))
-                if (len(docs_to_push) % 1000 == 0):
+                if len(docs_to_push) % 1000 == 0:
                     solr_client.add(docs_to_push)
                     docs_to_push = []
-            if (len(docs_to_push)):
+            if len(docs_to_push):
                 solr_client.add(docs_to_push)
                 docs_to_push = []
 
