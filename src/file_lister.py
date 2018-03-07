@@ -28,7 +28,7 @@ def collect_files(input_path=PATH_EMAILS_RAW, output_path=PATH_FILES_LISTED):
     sc = SparkContext(conf=config)
     sc.setLogLevel('WARN')
 
-    rdd = sc.wholeTextFiles(input_path)
+    rdd = sc.wholeTextFiles(input_path, 276)
 
     rdd.filter(lambda x: filter_emails(x)) \
        .map(lambda x: create_document(x)) \
