@@ -10,6 +10,7 @@ import json
 
 
 def run_topic_training(input_path=PATH_FILES_LISTED, output_path=PATH_PIPELINE_RESULTS):
+def run_topic_training(input_path=PATH_FILES_LISTED):
     """Run entire text processing pipeline.
 
     Requires: File listing.
@@ -26,16 +27,16 @@ def run_topic_training(input_path=PATH_FILES_LISTED, output_path=PATH_PIPELINE_R
     sc = SparkContext(conf=config)
 
     data = sc.textFile(input_path)
-
     data = extract_metadata(data)
-    data = clean_bodies(data)
-    data = train_topic_model(data)
+    data = clean_bodies(data).map(lambda x: json.loads(x)['text_clean']).collect()
 
-    data.saveAsTextFile(output_path)
+    train_topic_model(data)
 
     sc.stop()
 
 
 if __name__ == '__main__':
-    if not os.path.isfile(PATH_LDA_Model): 
-        run_topic_training(input_path=sys.argv[1], output_path=sys.argv[2])
+    if not os.path.isfile(PATH_LDA_MODEL):
+        run_topic_training(input_path=sys.argv[1])
+    else:
+        raise Exception('A LDA model alread exists.')
