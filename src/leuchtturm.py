@@ -2,12 +2,13 @@
 
 import json
 import re
-from email import message_from_string, policy, errors
+from email import message_from_string, policy
 from email.utils import getaddresses, parsedate, parseaddr, unquote
 from time import mktime
 from string import whitespace
 from langdetect import detect
 import en_core_web_sm as spacy
+import html2text
 import pickle
 
 
@@ -55,7 +56,7 @@ def extract_metadata(rdd):
     """
     def add_metadata(data):
         document = json.loads(data)
-        msg = message_from_string(document['raw'])
+        msg = message_from_string(document['raw'], policy=policy.default)
 
         header = {}
         header['sender'] = {'name': unquote(parseaddr(msg.get('from', ''))[0]),
@@ -71,11 +72,12 @@ def extract_metadata(rdd):
         document['header'] = header
 
         document['body'] = ''
-        if msg.is_multipart():
-            for payload in msg.get_payload():
-                document['body'] += payload.get_payload()
-        else:
-            document['body'] = msg.get_payload()
+        for payload in msg.get_body().walk():
+            charset = payload.get_content_charset()
+            if payload.get_content_type() == 'text/plain':
+                document['body'] += str(payload.get_payload(decode=True), str(charset), 'ignore')
+            elif payload.get_content_type() == 'text/html':
+                document['body'] += html2text.html2text(str(payload.get_payload(decode=True), str(charset), 'ignore'))
 
         return json.dumps(document)
 
@@ -170,7 +172,7 @@ def extract_topics(rdd):
         def process_document(data):
             document = json.loads(data)
 
-            bow = dictionary.doc2bow(document['text_clean'].split()[:500])
+            bow = dictionary.doc2bow(document['text_clean'].split())
 
             topic_terms = []
             for topic in lda.get_document_topics(bow):
