@@ -1,11 +1,12 @@
 """This module runs the model training pipeline."""
 
-from settings import PATH_FILES_LISTED, PATH_LDA_Model
+from settings import PATH_FILES_LISTED, PATH_LDA_MODEL
 from leuchtturm import (extract_metadata,
                         clean_bodies, train_topic_model)
 import sys
 from pyspark import SparkContext, SparkConf
 import os.path
+import json
 
 
 def run_topic_training(input_path=PATH_FILES_LISTED, output_path=PATH_PIPELINE_RESULTS):
