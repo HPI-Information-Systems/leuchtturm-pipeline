@@ -6,6 +6,7 @@ PATH_FILES_LISTED = 'tmp/files_listed_dev'
 PATH_PIPELINE_RESULTS = 'tmp/pipeline_results_dev'
 PATH_LDA_MODEL = 'models/pickled_lda_model.p'
 PATH_LDA_DICT = 'models/pickled_lda_dictionary.p'
+PATH_LDA_TRAINING_DATA = 'models/training'
 
 SOLR_COLLECTION = 'enron_dev'
 
