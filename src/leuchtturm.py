@@ -2,7 +2,7 @@
 
 import json
 import re
-from email import message_from_string, policy
+from email import message_from_string
 from email.utils import getaddresses, parsedate, parseaddr, unquote
 from time import mktime
 from string import whitespace
@@ -56,7 +56,7 @@ def extract_metadata(rdd):
     """
     def add_metadata(data):
         document = json.loads(data)
-        msg = message_from_string(document['raw'], policy=policy.default)
+        msg = message_from_string(document['raw'])
 
         header = {}
         header['sender'] = {'name': unquote(parseaddr(msg.get('from', ''))[0]),
@@ -72,12 +72,22 @@ def extract_metadata(rdd):
         document['header'] = header
 
         document['body'] = ''
-        for payload in msg.get_body().walk():
-            charset = payload.get_content_charset()
-            if payload.get_content_type() == 'text/plain':
-                document['body'] += str(payload.get_payload(decode=True), str(charset), 'ignore')
+        if msg.is_multipart():
+            for payload in msg.walk():
+                charset = payload.get_content_charset()
+                if payload.get_content_type() == 'text/plain':
+                    document['body'] = str(payload.get_payload(decode=True), str(charset), 'ignore')
+                    break
+                elif payload.get_content_type() == 'text/html':
+                    document['body'] = html2text.html2text(str(payload.get_payload(decode=True), str(charset), 'ignore'))
+                    break
+        else:
+            charset = msg.get_content_charset()
+            if msg.get_content_type() == 'text/plain':
+                document['body'] = str(msg.get_payload(decode=True), str(charset), 'ignore')
             elif payload.get_content_type() == 'text/html':
-                document['body'] += html2text.html2text(str(payload.get_payload(decode=True), str(charset), 'ignore'))
+                document['body'] = html2text.html2text(str(payload.msg(decode=True), str(charset), 'ignore'))
+
 
         return json.dumps(document)
 
