@@ -53,7 +53,12 @@ echo '[stage 1 of 4] Building conda environment ...'
 echo '[stage 4 of 4] Running db uploads ...'
 source activate leuchtturm_env
 curl $SOLR/update\?commit\=true -d  '<delete><query>*:*</query></delete>' || true
-python src/write_to_solr.py $PRESULT_ $SOLR
+PYSPARK_PYTHON=./leuchtturm_env/bin/python \
+    spark-submit --master yarn --deploy-mode cluster \
+    --driver-memory 8g --executor-memory 8g --num-executors 23 --executor-cores 4 \
+    --archives leuchtturm_env.zip#leuchtturm_env \
+    --py-files src/settings.py \
+    src/write_to_solr.py $PRESULT_ $SOLR
 # python write_to_neo4j
 
 echo -e '\n[Done]\n\Head of pipeline results:\n'
