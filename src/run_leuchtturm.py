@@ -20,10 +20,10 @@ def run_email_pipeline():
     data = split_emails(data)
     data = extract_metadata(data)
     data = deduplicate_emails(data)
-    # data = clean_bodies(data)
-    # data = extract_topics(data)
-    # data = detect_languages(data)
-    # data = extract_entities(data)
+    data = clean_bodies(data)
+    data = extract_topics(data)
+    data = detect_languages(data)
+    data = extract_entities(data)
 
     data.saveAsTextFile(PATH_PIPELINE_RESULTS)
 

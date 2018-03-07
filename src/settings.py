@@ -3,8 +3,8 @@
 import re
 
 
-PATH_EMAILS_RAW = 'hdfs://172.18.20.109/LEUCHTTURM/enron_calo_flat/mann-k/*'
-PATH_FILES_LISTED = 'hdfs://172.18.20.109/LEUCHTTURM/tmp/names-test'
+PATH_EMAILS_RAW = 'hdfs://172.18.20.109/LEUCHTTURM/enron_calo_flat/*/*'
+PATH_FILES_LISTED = 'hdfs://172.18.20.109/LEUCHTTURM/tmp/files_listed_dev_daily'
 PATH_FILES_LISTED_SHORT = re.sub(r'^hdfs://(\d{1,3}\.){3}\d{1,3}', '', PATH_FILES_LISTED)  # don't touch!
 PATH_PIPELINE_RESULTS = 'hdfs://172.18.20.109/LEUCHTTURM/tmp/pipeline_results_dev_daily'
 PATH_PIPELINE_RESULTS_SHORT = re.sub(r'^hdfs://(\d{1,3}\.){3}\d{1,3}', '', PATH_PIPELINE_RESULTS)  # don't touch!
