@@ -88,7 +88,7 @@ deploy-sopedu-mr:
   script:
     - export PATH=~/anaconda2/bin:$PATH
     - export SPARK_HOME=/usr/hdp/2.6.2.0-205/spark2/
-    - ./deploy_pipeline.sh mr 2>/dev/null
+    - ./deploy_pipeline.sh mr # 2>/dev/null
   environment:
     name: sopedu_pipeline_mr
     url: http://sopedu.hpi.uni-potsdam.de:8983/solr/pipeline_mr
