@@ -10,7 +10,7 @@ from langdetect import detect
 from gensim import corpora
 from gensim import models
 from collections import defaultdict
-# import en_core_web_sm as spacy
+import en_core_web_sm as spacy
 import pickle
 from nltk.corpus import stopwords as nltksw
 from nltk.stem.wordnet import WordNetLemmatizer
@@ -226,7 +226,7 @@ def train_topic_model(data):
     docs = [doc for doc in docs if doc]
 
     processed_corpus = docs
-    
+
     dictionary = corpora.Dictionary(processed_corpus)
     with open('./models/models/pickled_lda_dictionary.p', 'wb') as pfile:
         pickle.dump(dictionary, pfile)
