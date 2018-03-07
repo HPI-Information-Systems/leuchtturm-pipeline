@@ -33,22 +33,22 @@ cp -r ~/anaconda2/envs/leuchtturm_env . && cd leuchtturm_env && zip -r --quiet l
 cp ~/gitlab-runner/models/* models/ && cd models && zip --quiet models.zip * && mv models.zip .. && cd .. || return
 source deactivate
 
-# echo '[stage 2 of 4] Running file lister ...'
-# hdfs dfs -rm -r $FLISTER || true
-# PYSPARK_PYTHON=./leuchtturm_env/bin/python \
-#     spark-submit --master yarn --deploy-mode cluster \
-#     --driver-memory 8g --executor-memory 4g --num-executors 23 --executor-cores 4 \
-#     --archives leuchtturm_env.zip#leuchtturm_env \
-#     --py-files src/settings.py \
-#     src/file_lister.py $EMAILS $FLISTER
-# echo '[stage 3 of 4] Running leuchtturm pipeline ...'
-# hdfs dfs -rm -r $PRESULT || true
-# PYSPARK_PYTHON=./leuchtturm_env/bin/python \
-#     spark-submit --master yarn --deploy-mode cluster \
-#     --driver-memory 8g --executor-memory 4g --num-executors 23 --executor-cores 4 \
-#     --archives leuchtturm_env.zip#leuchtturm_env,models.zip#models \
-#     --py-files src/settings.py,src/leuchtturm.py \
-#     src/run_leuchtturm.py $FLISTER $PRESULT
+echo '[stage 2 of 4] Running file lister ...'
+hdfs dfs -rm -r $FLISTER || true
+PYSPARK_PYTHON=./leuchtturm_env/bin/python \
+    spark-submit --master yarn --deploy-mode cluster \
+    --driver-memory 8g --executor-memory 4g --num-executors 23 --executor-cores 4 \
+    --archives leuchtturm_env.zip#leuchtturm_env \
+    --py-files src/settings.py \
+    src/file_lister.py $EMAILS $FLISTER 2>/dev/null
+echo '[stage 3 of 4] Running leuchtturm pipeline ...'
+hdfs dfs -rm -r $PRESULT || true
+PYSPARK_PYTHON=./leuchtturm_env/bin/python \
+    spark-submit --master yarn --deploy-mode cluster \
+    --driver-memory 8g --executor-memory 4g --num-executors 23 --executor-cores 4 \
+    --archives leuchtturm_env.zip#leuchtturm_env,models.zip#models \
+    --py-files src/settings.py,src/leuchtturm.py \
+    src/run_leuchtturm.py $FLISTER $PRESULT 2>/dev/null
 
 echo '[stage 4 of 4] Running db uploads ...'
 curl $SOLR/update\?commit\=true -d  '<delete><query>*:*</query></delete>' || true
@@ -57,9 +57,7 @@ PYSPARK_PYTHON=./leuchtturm_env/bin/python \
     --driver-memory 8g --executor-memory 8g --num-executors 23 --executor-cores 4 \
     --archives leuchtturm_env.zip#leuchtturm_env \
     --py-files src/settings.py \
-    src/write_to_solr.py $PRESULT_ $SOLR
+    src/write_to_solr.py $PRESULT_ $SOLR 2>/dev/null
 # python write_to_neo4j
 
-echo -e '\n[Done]\n\Head of pipeline results:\n'
-hdfs dfs -cat $PRESULT/* | head -n 1 | python -m json.tool
-hdfs dfs -cat $PRESULT/* | head -n 20 > result.txt
+echo -e '\n[Done]'
