@@ -1,5 +1,10 @@
 # Source directory for email raw text
-mails*/
+emails/*.eml
+
+# models
+models/*.p
+models/*.json
+models/*.hdf5
 
 # Text Concat result file
 txtfiles.txt

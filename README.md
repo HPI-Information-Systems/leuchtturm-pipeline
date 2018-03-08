@@ -1,67 +1,42 @@
 # Leuchtturm Pipeline
 
-This repository contains all code to read, process and export emails.
+This repository contains all code to process emails.
 
 ## Getting started:
 
 Requirements:
 
-- python3 and pip3
-- spark2.2.0
-
-On every cluster node, run once:
+Make sure you have `Python 3` and `Spark 2.2` installed on your machine.
 
 ```bash
-pip3 install -r requirements.txt
-spacy download en_core_web_sm
+# create a python environment (optional) and install all requirements
+(~/pipeline)$ conda create -n leuchtturm python=3.6 && source activate leuchtturm
+(~/pipeline)$ pip install -r requirements.txt
 ```
 
-To execute a task, run on one cluster node:
+## Running a pipeline
+
+Crowd the `emails` folder with some fishy emails (one file for each email, `RFC 822` compliant as e.g. exports from Thunderbird or Apple Mail).
+
+And you're ready to go!
+
 ```bash
-export SPARK_HOME={path-to-your-spark2-home}
-export PYSPARK_PYTHON=python3
-spark-submit --master yarn \
-             --deploy-mode cluster \
-             --driver-memory {set recommended} \
-             --executor-memory {set recommended} \
-             --num-executors {set recommended} \
-             --executor-cores {set recommended} \
-             --py-files {dependent .py files (e.g. leuchtturm.py} \
-             {.py file you want to run (e.g. run_leuchtturm.py)}
+# start the email pipeline
+(~/pipeline)$ python src/file_lister.py ./emails ./tmp/fl
+(~/pipeline)$ python src/run_leuchtturm.py ./tmp/fl ./tmp/pr
+(~/pipeline)$ python src/write_to_solr.py  ./tmp/pr http://0.0.0.0:8983/solr/emails  # if you have a running solr instance
 ```
 
-Track your application's progress here: http://b7689.byod.hpi.de:8088/cluster
+Check Solr or the `tmp` folder for the results! To deploy the pipeline on a yarn cluster, consult [this Guide](https://hpi.de/naumann/leuchtturm/gitlab/leuchtturm/meta/wikis/Pipeline/Pipeline-Architektur).
 
+## Pipeline tasks
 
-## Pipeline
-
-### Preprocessing
-
-`file_lister.py`
-
-Read all emails of a directory, and save them to a Spark RDD.
-Emails must be in `RFC 822` format (e.g. an `.eml` file or a `Nuix`-Export).
-Every line in the resulting RDD represents one email of the directory. Lines are `JSON` compliant.
-
-
-### Pipeline
-
-`run_leuchtturm.py` and `leuchtturm.py`
-
-Read the prepared RDD, and process defined tasks on the contained emails:
-
+- read `.eml` compliant files
 - splitting
 - metadata extraction
 - deduplication
 - cleaning of text (for further text mining tasks)
 - language detection
 - entity extraction
-
-Resulting file is a dumped RDD with `JSON` compliant lines.
-
-
-### DB tasks
-
-`write_to_solr.py` and `write_to_neo4j.py`
-
-Read the processed RDD and write it to connected databases, such as *Solr* or *Neo4J*.
+- write to solr db
+- write to neo4j db
