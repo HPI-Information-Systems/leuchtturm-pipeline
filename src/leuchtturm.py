@@ -256,13 +256,13 @@ def train_topic_model(data):
     processed_corpus = docs
 
     dictionary = corpora.Dictionary(processed_corpus)
-    with open('./models/models/pickled_lda_dictionary.p', 'wb') as pfile:
+    with open('./models/pickled_lda_dictionary.p', 'wb') as pfile:
         pickle.dump(dictionary, pfile)
 
     bow_corpus = [dictionary.doc2bow(text) for text in processed_corpus]
 
     lda = models.ldamodel.LdaModel(bow_corpus, num_topics=100, iterations=iterations, eta=eta, alpha=alpha)
-    with open('./models/models/pickled_lda_model.p', 'wb') as pfile:
+    with open('./models/pickled_lda_model.p', 'wb') as pfile:
         pickle.dump(lda, pfile)
 
 
@@ -273,10 +273,10 @@ def extract_topics(rdd):
     Returns: rdd with a topics field for each doc in json format
     """
     def process_partition(items):
-        with open('./models/models/pickled_lda_model.p', mode='rb') as pfile:
+        with open('./models/pickled_lda_model.p', mode='rb') as pfile:
             lda = pickle.load(pfile)
 
-        with open('./models/models/pickled_lda_dictionary.p', mode='rb') as pfile:
+        with open('./models/pickled_lda_dictionary.p', mode='rb') as pfile:
             dictionary = pickle.load(pfile)
 
         def process_document(data):
