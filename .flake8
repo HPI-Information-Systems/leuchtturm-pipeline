@@ -1,4 +1,4 @@
 [flake8]
-exclude = bin,include,lib,man,emailbody
+exclude = bin,include,lib,man,utils
 max-line-length = 120
 ignore = E402, D413
