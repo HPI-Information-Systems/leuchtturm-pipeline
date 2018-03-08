@@ -15,29 +15,32 @@ def run_email_pipeline(input_path=PATH_FILES_LISTED, output_path=PATH_PIPELINE_R
     Arguments: none.
     Returns: void.
     """
-    config = SparkConf().set('spark.hive.mapred.supports.subdirectories', 'true') \
-                        .set('spark.hadoop.mapreduce.input.fileinputformat.input.dir.recursive', 'true') \
-                        .set('spark.default.parallelism', 276)
+    if os.path.isfile(PATH_LDA_MODEL):
 
-    sc = SparkContext(conf=config)
-    sc.setLogLevel('WARN')
+        config = SparkConf().set('spark.hive.mapred.supports.subdirectories', 'true') \
+                            .set('spark.hadoop.mapreduce.input.fileinputformat.input.dir.recursive', 'true') \
+                            .set('spark.default.parallelism', 276)
 
-    data = sc.textFile(input_path, 276)
+        sc = SparkContext(conf=config)
+        sc.setLogLevel('WARN')
 
-    data = extract_metadata(data)
-    data = deduplicate_emails(data)
-    data = clean_bodies(data)
-    data = extract_topics(data)
-    data = detect_languages(data)
-    data = extract_entities(data)
+        data = sc.textFile(input_path, 276)
 
-    data.saveAsTextFile(output_path)
+        data = extract_metadata(data)
+        data = deduplicate_emails(data)
+        data = clean_bodies(data)
+        data = extract_topics(data)
+        data = detect_languages(data)
+        data = extract_entities(data)
 
-    sc.stop()
+        data.saveAsTextFile(output_path)
+
+        sc.stop()
+
+    else:
+        raise Exception('Please train a LDA model first.')
 
 
 if __name__ == '__main__':
-    if os.path.isfile(PATH_LDA_MODEL):
-        run_email_pipeline(input_path=sys.argv[1], output_path=sys.argv[2])
-    else:
-        raise Exception("No LDA model was found. Train a model first.")
+    run_email_pipeline(input_path=sys.argv[1], output_path=sys.argv[2])
+
