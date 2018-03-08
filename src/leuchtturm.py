@@ -5,17 +5,15 @@ import re
 from email import message_from_string
 from email.utils import getaddresses, parsedate, parseaddr, unquote
 from time import mktime
-from string import whitespace
 from langdetect import detect
-from gensim import corpora
-from gensim import models
+from gensim import corpora, models
 from collections import defaultdict
 import en_core_web_sm as spacy
 import html2text
 import pickle
 from nltk.corpus import stopwords as nltksw
 from nltk.stem.wordnet import WordNetLemmatizer
-from string import punctuation
+from string import punctuation, whitespace
 
 
 def split_emails(rdd):
@@ -261,7 +259,7 @@ def train_topic_model(data):
 
     bow_corpus = [dictionary.doc2bow(text) for text in processed_corpus]
 
-    lda = models.ldamodel.LdaModel(bow_corpus, num_topics=100, iterations=iterations, eta=eta, alpha=alpha)
+    lda = models.ldamodel.LdaModel(bow_corpus, num_topics=num_topics, iterations=iterations, eta=eta, alpha=alpha)
     with open('./models/pickled_lda_model.p', 'wb') as pfile:
         pickle.dump(lda, pfile)
 
