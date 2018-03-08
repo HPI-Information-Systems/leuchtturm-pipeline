@@ -18,7 +18,7 @@ echo '[stage 2 of 3] Running file lister ...'
 python src/file_lister.py $EMAILS $FLISTER
 ls $FLISTER/_SUCCESS
 echo '[stage 3 of 3] Running leuchtturm pipeline ...'
-python src/run_leuchtturm.py $FLISTER $PRESULT
+python src/run_pipeline.py $FLISTER $PRESULT
 ls $PRESULT/_SUCCESS
 
 echo -e '\n[Done]\n\nHead of pipeline results:\n'

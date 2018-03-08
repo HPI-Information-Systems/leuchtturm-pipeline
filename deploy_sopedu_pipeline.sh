@@ -40,7 +40,7 @@ PYSPARK_PYTHON=./leuchtturm_env/bin/python \
     --driver-memory 8g --executor-memory 4g --num-executors 23 --executor-cores 4 \
     --archives leuchtturm_env.zip#leuchtturm_env \
     --py-files src/settings.py \
-    src/file_lister.py $EMAILS $FLISTER 2>/dev/null
+    src/file_lister.py $EMAILS $FLISTER
 echo '[stage 3 of 4] Running leuchtturm pipeline ...'
 hdfs dfs -rm -r $PRESULT || true
 PYSPARK_PYTHON=./leuchtturm_env/bin/python \
@@ -48,7 +48,7 @@ PYSPARK_PYTHON=./leuchtturm_env/bin/python \
     --driver-memory 8g --executor-memory 4g --num-executors 23 --executor-cores 4 \
     --archives leuchtturm_env.zip#leuchtturm_env,models.zip#models \
     --py-files src/settings.py,src/leuchtturm.py \
-    src/run_leuchtturm.py $FLISTER $PRESULT 2>/dev/null
+    src/run_pipeline.py $FLISTER $PRESULT
 
 echo '[stage 4 of 4] Running db uploads ...'
 curl $SOLR/update\?commit\=true -d  '<delete><query>*:*</query></delete>' || true
