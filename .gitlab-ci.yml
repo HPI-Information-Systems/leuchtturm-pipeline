@@ -36,7 +36,6 @@ test_integration:
 
 lint_python:
   stage: lint
-  allow_failure: true
   script:
     - mkdir -p .pip
     - pip install -U pip
@@ -52,14 +51,10 @@ deploy-sopedu-master:
   script:
     - export PATH=~/anaconda2/bin:$PATH
     - export SPARK_HOME=/usr/hdp/2.6.2.0-205/spark2/
-    - ./deploy_pipeline.sh master 2>/dev/null
+    - ./deploy_sopedu_pipeline.sh master
   environment:
     name: sopedu_pipeline_master
-    url: http://sopedu.hpi.uni-potsdam.de:8983/solr/pipeline_master
-  artifacts:
-    paths:
-      - result.txt
-    expire_in: 2 weeks
+    url: http://sopedu.hpi.uni-potsdam.de:8983/solr/#/pipeline_master
 
 deploy-sopedu-dev:
   stage: deploy
@@ -70,14 +65,10 @@ deploy-sopedu-dev:
   script:
     - export PATH=~/anaconda2/bin:$PATH
     - export SPARK_HOME=/usr/hdp/2.6.2.0-205/spark2/
-    - ./deploy_pipeline.sh dev 2>/dev/null
+    - ./deploy_sopedu_pipeline.sh dev
   environment:
     name: sopedu_pipeline_dev
-    url: http://sopedu.hpi.uni-potsdam.de:8983/solr/pipeline_dev
-  artifacts:
-    paths:
-      - result.txt
-    expire_in: 2 weeks
+    url: http://sopedu.hpi.uni-potsdam.de:8983/solr/#/pipeline_dev
 
 deploy-sopedu-mr:
   stage: deploy
@@ -88,11 +79,7 @@ deploy-sopedu-mr:
   script:
     - export PATH=~/anaconda2/bin:$PATH
     - export SPARK_HOME=/usr/hdp/2.6.2.0-205/spark2/
-    - ./deploy_pipeline.sh mr 2>/dev/null
+    - ./deploy_sopedu_pipeline.sh mr
   environment:
     name: sopedu_pipeline_mr
-    url: http://sopedu.hpi.uni-potsdam.de:8983/solr/pipeline_mr
-  artifacts:
-    paths:
-      - result.txt
-    expire_in: 2 weeks
+    url: http://sopedu.hpi.uni-potsdam.de:8983/solr/#/pipeline_mr

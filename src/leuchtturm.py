@@ -11,6 +11,7 @@ from gensim import corpora
 from gensim import models
 from collections import defaultdict
 import en_core_web_sm as spacy
+import html2text
 import pickle
 from nltk.corpus import stopwords as nltksw
 from nltk.stem.wordnet import WordNetLemmatizer
@@ -43,9 +44,13 @@ def split_emails(rdd):
         parts = detect_parts(document['raw'])
 
         splitted_emails = []
-        for part in parts:
+        original_doc_id = document['doc_id']
+        for index, part in enumerate(parts):
             obj = document
             obj['raw'] = part
+            # if there are multiple parts, add an identifier to the original document id
+            if len(parts) > 1:
+                obj['doc_id'] = original_doc_id + '_part_' + str(index + 1) + '_of_' + str(len(parts))
             splitted_emails.append(json.dumps(obj))
 
         return splitted_emails
@@ -63,13 +68,25 @@ def extract_metadata(rdd):
         document = json.loads(data)
         msg = message_from_string(document['raw'])
 
+        def parse_correspondent_info(correspondent):
+            parsed_correspondent = {'name': '', 'email': ''}
+            if correspondent[0]:
+                parsed_correspondent['name'] = unquote(correspondent[0])
+            elif correspondent[1] and '@' not in correspondent[1]:
+                parsed_correspondent['name'] = unquote(correspondent[1])
+            if correspondent[1] and '@' in correspondent[1]:
+                parsed_correspondent['email'] = unquote(correspondent[1]).lower()
+            return parsed_correspondent
+
         header = {}
-        header['sender'] = {'name': unquote(parseaddr(msg.get('from', ''))[0]),
-                            'email': unquote(parseaddr(msg.get('from', ''))[1].lower())}
+        sender = parseaddr(msg.get('from', ''))
+        header['sender'] = parse_correspondent_info(sender)
+
         header['recipients'] = []
         for recipient in getaddresses(msg.get_all('to', []) + msg.get_all('cc', []) + msg.get_all('bcc', [])):
-                header['recipients'].append({'name': unquote(recipient[0]),
-                                             'email': unquote(recipient[1].lower())})
+            if recipient[0] or [1]:
+                header['recipients'].append(parse_correspondent_info(recipient))
+
         date = parsedate(msg.get('date', '') + msg.get('sent', ''))
         header['date'] = mktime(date) if (date is not None) else -1.0
         header['subject'] = msg.get('subject', '')
@@ -77,10 +94,21 @@ def extract_metadata(rdd):
 
         document['body'] = ''
         if msg.is_multipart():
-            for payload in msg.get_payload():
-                document['body'] += payload.get_payload()
+            for payload in msg.walk():
+                charset = payload.get_content_charset()
+                if payload.get_content_type() == 'text/plain':
+                    document['body'] = str(payload.get_payload(decode=True), str(charset), 'ignore')
+                    break
+                elif payload.get_content_type() == 'text/html':
+                    document['body'] = html2text.html2text(str(payload.get_payload(decode=True),
+                                                               str(charset), 'ignore'))
+                    break
         else:
-            document['body'] = msg.get_payload()
+            charset = msg.get_content_charset()
+            if msg.get_content_type() == 'text/plain':
+                document['body'] = str(msg.get_payload(decode=True), str(charset), 'ignore')
+            elif payload.get_content_type() == 'text/html':
+                document['body'] = html2text.html2text(str(payload.msg(decode=True), str(charset), 'ignore'))
 
         return json.dumps(document)
 
@@ -254,10 +282,10 @@ def extract_topics(rdd):
         def process_document(data):
             document = json.loads(data)
 
-            bow = dictionary.doc2bow(document['text_clean'].split()[:500])
+            bow = dictionary.doc2bow(document['text_clean'].split())
 
             topic_terms = []
-            for topic in lda.get_document_topics(bow, minimum_probability=0):
+            for topic in lda.get_document_topics(bow):
                 terms = map(lambda xy: (dictionary[xy[0]], xy[1]), lda.get_topic_terms(topic[0], topn=10))
                 topic_terms.append(str((str(topic[1]), (list(terms)))))
 
