@@ -16,7 +16,6 @@ def run_topic_training(input_path=PATH_FILES_LISTED):
     Arguments: none.
     Returns: void.
     """
-
     if not os.path.isfile(PATH_LDA_MODEL):
 
         config = SparkConf().set('spark.hive.mapred.supports.subdirectories', 'true') \
