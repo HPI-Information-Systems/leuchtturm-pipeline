@@ -43,4 +43,3 @@ def run_email_pipeline(input_path=PATH_FILES_LISTED, output_path=PATH_PIPELINE_R
 
 if __name__ == '__main__':
     run_email_pipeline(input_path=sys.argv[1], output_path=sys.argv[2])
-
