@@ -10,7 +10,7 @@ from pysolr import Solr
 def write_to_solr(input_path=PATH_PIPELINE_RESULTS, solr=SOLR_CLIENT_URL):
     """Write pipeline results to a predefined solr collection.
 
-    Requires: Text mining pipline ran.
+    Requires: Text mining pipeline ran.
     Arguments: none.
     Returns: void.
     """

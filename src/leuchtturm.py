@@ -38,9 +38,13 @@ def split_emails(rdd):
         parts = detect_parts(document['raw'])
 
         splitted_emails = []
-        for part in parts:
+        original_doc_id = document['doc_id']
+        for index, part in enumerate(parts):
             obj = document
             obj['raw'] = part
+            # if there are multiple parts, add an identifier to the original document id
+            if len(parts) > 1:
+                obj['doc_id'] = original_doc_id + '_part_' + str(index + 1) + '_of_' + str(len(parts))
             splitted_emails.append(json.dumps(obj))
 
         return splitted_emails
@@ -58,14 +62,25 @@ def extract_metadata(rdd):
         document = json.loads(data)
         msg = message_from_string(document['raw'])
 
+        def parse_correspondent_info(correspondent):
+            parsed_correspondent = {'name': '', 'email': ''}
+            if correspondent[0]:
+                parsed_correspondent['name'] = unquote(correspondent[0])
+            elif correspondent[1] and '@' not in correspondent[1]:
+                parsed_correspondent['name'] = unquote(correspondent[1])
+            if correspondent[1] and '@' in correspondent[1]:
+                parsed_correspondent['email'] = unquote(correspondent[1]).lower()
+            return parsed_correspondent
+
         header = {}
-        header['sender'] = {'name': unquote(parseaddr(msg.get('from', ''))[0]),
-                            'email': unquote(parseaddr(msg.get('from', ''))[1].lower())}
+        sender = parseaddr(msg.get('from', ''))
+        header['sender'] = parse_correspondent_info(sender)
+
         header['recipients'] = []
         for recipient in getaddresses(msg.get_all('to', []) + msg.get_all('cc', []) + msg.get_all('bcc', [])):
-            if recipient[0] or recipient[1]:
-                header['recipients'].append({'name': unquote(recipient[0]),
-                                             'email': unquote(recipient[1].lower())})
+            if recipient[0] or [1]:
+                header['recipients'].append(parse_correspondent_info(recipient))
+
         date = parsedate(msg.get('date', '') + msg.get('sent', ''))
         header['date'] = mktime(date) if (date is not None) else -1.0
         header['subject'] = msg.get('subject', '')
