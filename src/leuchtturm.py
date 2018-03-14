@@ -14,6 +14,8 @@ import pickle
 from nltk.corpus import stopwords as nltksw
 from nltk.stem.wordnet import WordNetLemmatizer
 from string import punctuation, whitespace
+import talon
+from talon import signature
 
 
 def split_emails(rdd):
@@ -140,6 +142,37 @@ def deduplicate_emails(rdd):
               .reduceByKey(lambda x, y: select_email(x, y)) \
               .map(lambda x: revert_to_json(x))
 
+def extract_signatures(rdd):
+    edrm_footer = ('***********\r\nEDRM Enron Email Data Set has been produced in EML, PST and NSF format by ZL '
+                   'Technologies, Inc. This Data Set is licensed under a Creative Commons Attribution 3.0 United '
+                   'States License <http://creativecommons.org/licenses/by/3.0/us/> . To provide attribution, '
+                   'please cite to \"ZL Technologies, Inc. (http://www.zlti.com).\"\r\n***********')
+
+    blackberry_signature = ('--------------------------\n'
+                            'Sent from my BlackBerry Wireless Handheld (www.BlackBerry.net)')
+
+    def prepare(data):
+        # TODO: remove lines that contain "attached", "attachment", "file" etc.
+        pass
+
+    def extract(data):
+        document = json.loads(data)
+
+        # TODO: see whether we can init only once or use mapPartitions instead
+        talon.init()
+        text, email_signature = signature.extract(document['body'], sender=document['header']['sender']['email'])
+
+        print('----------email address---------')
+        print(document['header']['sender']['email'])
+        print('--------------signature--------------')
+        print(email_signature)
+        print('--------------body--------------')
+        print(document['body'])
+        print('\n')
+
+        return data
+
+    return rdd.map(extract)
 
 def clean_bodies(rdd):
     """Extract email body of each email.
