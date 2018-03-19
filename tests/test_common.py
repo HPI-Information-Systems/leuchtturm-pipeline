@@ -13,10 +13,12 @@ def test_spark_parallelism(monkeypatch):
     default_cluster = SparkProvider.spark_parallelism()
     assert default_cluster == 276
 
+
 def test_spark_conf():
     """Spark config provider actually returns a valid conf."""
     conf = SparkProvider.spark_conf()
     assert conf is not None
+
 
 def test_pyfiles():
     """Pyfiles returns a list of files."""
@@ -24,15 +26,18 @@ def test_pyfiles():
     assert len(files) > 0
     assert 'src/common.py' in files
 
+
 def test_pipeline_initializes():
     """Pipeline object initializes wo. raising exceptions."""
     pipeline = Pipeline(str(), str(), str())
     assert pipeline is not None
 
+
 def test_pipeline_init_exception():
     """Pipeline object raises error when not initialized with all params."""
     with pytest.raises(TypeError):
         Pipeline()
+
 
 def test_pipe_initializes():
     """Pipe object initializes wo. raising an exception."""

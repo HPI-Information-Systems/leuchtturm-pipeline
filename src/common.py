@@ -33,7 +33,7 @@ class SparkProvider(object):
                           .set('spark.hadoop.mapreduce.input.fileinputformat.input.dir.recursive', 'true') \
                           .set('spark.default.parallelism', SparkProvider.spark_parallelism())
 
-        return conf   
+        return conf
 
     @staticmethod
     def py_files():
