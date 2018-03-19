@@ -10,12 +10,12 @@ import html2text
 from langdetect import detect
 import textacy
 
-from common import Pipe
+from .common import Pipe
 
 
 class HeaderBodyParsing(Pipe):
     """Parse metadata of an email and split main header from body.
-    
+
     Get sender, recipients, date, subject from emails in standard format.
     Get body from a mime multipart email.
     """
@@ -64,8 +64,8 @@ class HeaderBodyParsing(Pipe):
     def parse_date(self, date_string):
         """Normalize date from a string. If self.use_unix_time=True, return unix timestamp."""
         date = parsedate(date_string)
-        date = mktime(date) if self.use_unix_time else date
-    
+        date = mktime(date) if self.use_unix_time and date is not None else date
+
         return date
 
     def parse_subject(self, subject_string):
@@ -155,8 +155,7 @@ class TextCleaning(Pipe):
         headers = [r'^(((subject:)|(from:)|(sent:)|(date:)|(to:)|(cc:))(\s.*\n)){3,}\s+',
                    r'----- forwarded.*((from:.*)|subject:(.)*|to:(.)*|sent:(.)*|cc:(.)*|\n)*\n',
                    r'-----\s?original message\s?-----',
-                   r'(\*|=|-){40,}\s(.|\n)+(\*|=|-){40,}\s',
-                   r'\b\w{1,2}\b']
+                   r'(\*|=|-){40,}\s(.|\n)+(\*|=|-){40,}\s']
 
         for header in headers:
             text_clean = re.sub(header, '', text, re.MULTILINE | re.IGNORECASE | re.UNICODE)

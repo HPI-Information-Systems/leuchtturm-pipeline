@@ -2,12 +2,12 @@
 
 import json
 
-from common import Pipe
+from .common import Pipe
 
 
 class EmailDeduplication(Pipe):
     """Remove duplicated emails from a corpus.
-    
+
     Recognise duplicates by their metadata.
     Based on logic in select_email(), duplicate will be dropped from rdd.
     """
@@ -15,7 +15,7 @@ class EmailDeduplication(Pipe):
     def __init__(self, use_metadata=True):
         """Select deduplication method. We might offer more advaced options here."""
         super().__init__()
-        self.use_metadata = use_metadata
+        self.use_metadata = use_metadata  # IMPLEMENT ME
 
     def convert_to_tupel(self, document):
         """Convert to tuple RDD where relevant metadata for deduplication are the keys."""
@@ -36,7 +36,7 @@ class EmailDeduplication(Pipe):
     def convert_from_tupel(self, document_tupel):
         """Convert tupel entry of rdd to usual format for pipeline."""
         return document_tupel[1]
-    
+
     def run(self, rdd):
         """Run pipe in spark context."""
         return rdd.map(lambda x: self.convert_to_tupel(x)) \

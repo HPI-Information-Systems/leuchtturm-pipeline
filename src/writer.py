@@ -5,12 +5,12 @@ import json
 from neo4j.v1 import DirectDriver
 from pysolr import Solr
 
-from common import Pipe
+from .common import Pipe
 
 
 class SolrWriter(Pipe):
     """Write all documents to a solr instance.
-    
+
     Collect all documents of a spark rdd.
     Eliminate nested structures and upload data to solr instance.
     """
@@ -31,7 +31,7 @@ class SolrWriter(Pipe):
         """Collect docs partitionswise, flatten nested structures and upload."""
         docs = partition.collect()
         docs_flattened = [self.flatten_document(json.loads(doc)) for doc in docs]
-        solr_client.add(docs_flattened)
+        self.solr_client.add(docs_flattened)
 
     def run(self, rdd):
         """Run task in spark context."""

@@ -9,7 +9,7 @@ from gensim import corpora, models
 from nltk.corpus import stopwords as nltksw
 from nltk.stem.wordnet import WordNetLemmatizer
 
-from common import Pipe
+from .common import Pipe
 
 
 class TopicModelTraining(Pipe):
@@ -102,7 +102,7 @@ class TopicModelPrediction(Pipe):
     """Predict topics for a given text.
 
     Needs trained lda model + dictionary.
-    Will add topic field with 
+    Will add topic field.
     """
 
     def __init__(self, read_from='text_clean', path_model='./models/pickled_lda_model.p',

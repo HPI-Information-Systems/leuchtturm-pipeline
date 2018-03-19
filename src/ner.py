@@ -5,12 +5,12 @@ from string import whitespace
 
 import en_core_web_sm as spacy
 
-from common import Pipe
+from .common import Pipe
 
 
 class SpacyNer(Pipe):
     """NER on texts using spacy.
-    
+
     Process texts using the en_core_web_sm model.
     Recognize entities of type person, location, organization and assign others to category miscellaneous.
     """
@@ -47,6 +47,10 @@ class SpacyNer(Pipe):
                 'organization': list(set(entities['organization'])),
                 'miscellaneous': list(set(entities['miscellaneous']))}
 
+    def load_spacy(self):
+        """Load spacy model."""
+        self.spacy = spacy.load()
+
     def run_on_document(self, raw_message):
         """Get entities for a leuchtturm document."""
         document = json.loads(raw_message)
@@ -56,7 +60,7 @@ class SpacyNer(Pipe):
 
     def run_on_partition(self, partition):
         """Run task in spark context. Partitionwise for performance reasosn."""
-        self.spacy = spacy.load()
+        self.load_spacy()
 
         for doc in partition:
             yield self.run_on_document(doc)

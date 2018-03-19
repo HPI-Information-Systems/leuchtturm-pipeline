@@ -1,7 +1,7 @@
 """Entry points to leuchtturm pipelines.
 
 Read documents from different sources and transform them into leuchtturm format.
-Leuchtturm format is a Spark RDD where each line represents a document. 
+Leuchtturm format is a Spark RDD where each line represents a document.
 Resulting documents must be in json format with at least these fields:
     {
         'doc_id': 'something_unique',
@@ -14,14 +14,12 @@ import email
 import json
 import uuid
 
-from pyspark import SparkContext
-
-from common import Pipe, SparkProvider
+from .common import Pipe, SparkProvider
 
 
 class EmlReader(Pipe):
     """Read emails from a directory.
-    
+
     Each raw email is stored in a separate file.
     Will be represented as a json object including basic metainfo in rdd.
     """
@@ -56,7 +54,7 @@ class EmlReader(Pipe):
 
 class RddReader(Pipe):
     """Read rdd that has been exported using saveAsTextfile.
-    
+
     Expect json format as specified.
     No transformations will be applied.
     """
