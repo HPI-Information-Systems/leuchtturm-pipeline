@@ -28,6 +28,7 @@ cp ~/gitlab-runner/models/* models/ && cd models && zip --quiet models.zip * && 
 source deactivate
 
 echo '[stage 2 of 2] Running leuchtturm pipeline. This might take a while ...'
+export LEUCHTTURM_RUNNER=CLUSTER
 hdfs dfs -rm -r $PRESULT || true
 curl $SOLR/update\?commit\=true -d  '<delete><query>*:*</query></delete>' || true
 PYSPARK_PYTHON=./leuchtturm_env/bin/python \
