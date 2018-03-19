@@ -9,7 +9,7 @@ from gensim import corpora, models
 from nltk.corpus import stopwords as nltksw
 from nltk.stem.wordnet import WordNetLemmatizer
 
-from .common import Pipe
+from common import Pipe
 
 
 class TopicModelTraining(Pipe):

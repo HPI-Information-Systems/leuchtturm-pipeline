@@ -10,7 +10,7 @@ import html2text
 from langdetect import detect
 import textacy
 
-from .common import Pipe
+from common import Pipe
 
 
 class HeaderBodyParsing(Pipe):

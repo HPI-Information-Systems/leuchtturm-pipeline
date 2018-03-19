@@ -2,13 +2,13 @@
 
 import argparse
 
-from .common import Pipeline, SparkProvider
-from .reader import EmlReader
-from .preprocessing import HeaderBodyParsing, TextCleaning, LanguageDetection
-from .deduplication import EmailDeduplication
-from .ner import SpacyNer
-from .topics import TopicModelPrediction
-from .writer import TextfileWriter, SolrWriter
+from common import Pipeline, SparkProvider
+from reader import EmlReader
+from preprocessing import HeaderBodyParsing, TextCleaning, LanguageDetection
+from deduplication import EmailDeduplication
+from ner import SpacyNer
+from topics import TopicModelPrediction
+from writer import TextfileWriter, SolrWriter
 
 
 def run_email_pipeline(read_from='./emails', write_to='./pipeline_result',

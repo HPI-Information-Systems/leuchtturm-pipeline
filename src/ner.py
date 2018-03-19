@@ -5,7 +5,7 @@ from string import whitespace
 
 import en_core_web_sm as spacy
 
-from .common import Pipe
+from common import Pipe
 
 
 class SpacyNer(Pipe):

@@ -14,7 +14,7 @@ import email
 import json
 import uuid
 
-from .common import Pipe, SparkProvider
+from common import Pipe, SparkProvider
 
 
 class EmlReader(Pipe):

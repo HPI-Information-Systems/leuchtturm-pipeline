@@ -5,7 +5,7 @@ import json
 from neo4j.v1 import DirectDriver
 from pysolr import Solr
 
-from .common import Pipe
+from common import Pipe
 
 
 class SolrWriter(Pipe):
