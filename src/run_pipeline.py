@@ -1,45 +1,51 @@
-"""This module runs pipeline tasks in correct order."""
+"""This module runs the main pipeline."""
 
-from settings import PATH_FILES_LISTED, PATH_PIPELINE_RESULTS, PATH_LDA_MODEL
-from leuchtturm import (extract_metadata, deduplicate_emails,
-                        clean_bodies, detect_languages, extract_entities, extract_topics)
-import sys
-import os
-from pyspark import SparkContext, SparkConf
+import argparse
+
+from common import Pipeline, SparkProvider
+from reader import EmlReader
+from preprocessing import HeaderBodyParsing, TextCleaning, LanguageDetection
+from deduplication import EmailDeduplication
+from ner import SpacyNer
+from topics import TopicModelPrediction
+from writer import TextfileWriter, SolrWriter
 
 
-def run_email_pipeline(input_path=PATH_FILES_LISTED, output_path=PATH_PIPELINE_RESULTS):
-    """Run entire text processing pipeline.
+def run_email_pipeline(read_from='./emails', write_to='./pipeline_result',
+                       solr=False, solr_url='http://0.0.0.0:8983/solr/enron'):
+    """Run main email pipeline."""
+    SparkProvider.spark_context()
 
-    Requires: File listing.
-    Arguments: none.
-    Returns: void.
-    """
-    if os.path.isfile(PATH_LDA_MODEL):
+    reader = EmlReader(read_from)
 
-        config = SparkConf().set('spark.hive.mapred.supports.subdirectories', 'true') \
-                            .set('spark.hadoop.mapreduce.input.fileinputformat.input.dir.recursive', 'true') \
-                            .set('spark.default.parallelism', 276)
+    pipes = [HeaderBodyParsing(clean_subject=False, use_unix_time=True),
+             EmailDeduplication(use_metadata=True),
+             TextCleaning(read_from='body', write_to='text_clean'),
+             TopicModelPrediction(),
+             LanguageDetection(read_from='text_clean'),
+             SpacyNer(read_from='text_clean')]
 
-        sc = SparkContext(conf=config)
-        sc.setLogLevel('WARN')
+    writer = TextfileWriter(path=write_to) if not solr else SolrWriter(solr_url=solr_url)
 
-        data = sc.textFile(input_path, 276)
+    Pipeline(reader, pipes, writer).run()
 
-        data = extract_metadata(data)
-        data = deduplicate_emails(data)
-        data = clean_bodies(data)
-        data = extract_topics(data)
-        data = detect_languages(data)
-        data = extract_entities(data)
-
-        data.saveAsTextFile(output_path)
-
-        sc.stop()
-
-    else:
-        raise Exception('Please train a LDA model first.')
+    SparkProvider.stop_spark_context()
 
 
 if __name__ == '__main__':
-    run_email_pipeline(input_path=sys.argv[1], output_path=sys.argv[2])
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--read_from',
+                        help='Path to directory where raw emails are located.',
+                        default='./emails')
+    parser.add_argument('--write_to',
+                        help='Path where results will be written to. Must not yet exist.',
+                        default='./pipeline_result')
+    parser.add_argument('--solr',
+                        action='store_true',
+                        help='Set if results should be written to solr.')
+    parser.add_argument('--solr_url',
+                        help='Url to running solr instance (core/collection specified).',
+                        default='http://0.0.0.0:8983/solr/enron')
+    args = parser.parse_args()
+
+    run_email_pipeline(read_from=args.read_from, write_to=args.write_to, solr=args.solr, solr_url=args.solr_url)
