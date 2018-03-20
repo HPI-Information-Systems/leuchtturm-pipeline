@@ -8,7 +8,7 @@ from preprocessing import HeaderBodyParsing, TextCleaning, LanguageDetection
 from deduplication import EmailDeduplication
 from ner import SpacyNer
 from topics import TopicModelPrediction
-from writer import TextFileWriter, SolrWriter, Neo4JWriter
+from writer import TextFileWriter, SolrWriter  # , Neo4JWriter
 
 
 def run_email_pipeline(read_from='./emails', write_to='./pipeline_result',

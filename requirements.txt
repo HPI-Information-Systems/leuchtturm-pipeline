@@ -1,7 +1,6 @@
 flake8
 flake8_docstrings
 pytest
-pytest-cov
 pytest-gitignore  # excludes gitignored files from pytest scope
 pyspark
 html2text
