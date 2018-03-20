@@ -153,7 +153,7 @@ def clean_bodies(rdd):
 
     rules = [r'<[^>].+>',
              r'^(((subject:)|(from:)|(sent:)|(date:)|(to:)|(cc:))(\s.*\n)){3,}\s+',
-             r'----- forwarded.*((from:.*)|fubject:(.)*|to:(.)*|sent:(.)*|cc:(.)*|\n)*\n',
+             r'----- forwarded.*((from:.*)|subject:(.)*|to:(.)*|sent:(.)*|cc:(.)*|\n)*\n',
              r'-----\s?original message\s?-----',
              r'(\*|=|-){40,}\s(.|\n)+(\*|=|-){40,}\s',
              r'\b\w{1,2}\b']
