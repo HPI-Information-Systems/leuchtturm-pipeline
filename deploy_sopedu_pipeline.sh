@@ -28,16 +28,14 @@ cp ~/gitlab-runner/models/* models/ && cd models && zip --quiet models.zip * && 
 source deactivate
 
 echo '[stage 2 of 2] Running leuchtturm pipeline. This might take a while ...'
-export LEUCHTTURM_RUNNER=CLUSTER
 hdfs dfs -rm -r $PRESULT || true
 curl $SOLR/update\?commit\=true -d  '<delete><query>*:*</query></delete>' || true
 PYSPARK_PYTHON=./leuchtturm_env/bin/python \
     spark-submit --master yarn --deploy-mode cluster \
     --driver-memory 8g --executor-memory 4g --num-executors 23 --executor-cores 4 \
     --archives leuchtturm_env.zip#leuchtturm_env,models.zip#models \
-    --py-files src/settings.py,src/leuchtturm.py \
-    src/run_pipeline.py --read_from $EMAILS --solr --solr_url $SOLR 2>/dev/null
-
-# python write_to_neo4j
+    --py-files src/common.py,src/deduplication.py,src/ner.py,src/preprocessing.py,src/reader.py,src/topics.py,src/writer.py \
+    src/run_pipeline.py --read_from $EMAILS --write_to $PRESULT 2>/dev/null
+# --solr --solr_url $SOLR
 
 echo -e '\n[Done]'

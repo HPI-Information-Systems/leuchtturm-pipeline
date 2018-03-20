@@ -3,12 +3,12 @@
 import argparse
 
 from common import Pipeline, SparkProvider
-from reader import EmlReader
+from reader import EmlReader, TextFileReader
 from preprocessing import HeaderBodyParsing, TextCleaning, LanguageDetection
 from deduplication import EmailDeduplication
 from ner import SpacyNer
 from topics import TopicModelPrediction
-from writer import TextfileWriter, SolrWriter
+from writer import TextFileWriter, SolrWriter, Neo4JWriter
 
 
 def run_email_pipeline(read_from='./emails', write_to='./pipeline_result',
@@ -18,16 +18,22 @@ def run_email_pipeline(read_from='./emails', write_to='./pipeline_result',
 
     reader = EmlReader(read_from)
 
-    pipes = [HeaderBodyParsing(clean_subject=False, use_unix_time=True),
+    pipes = [HeaderBodyParsing(clean_subject=False, use_unix_time=False),
              EmailDeduplication(use_metadata=True),
              TextCleaning(read_from='body', write_to='text_clean'),
              TopicModelPrediction(),
              LanguageDetection(read_from='text_clean'),
              SpacyNer(read_from='text_clean')]
 
-    writer = TextfileWriter(path=write_to) if not solr else SolrWriter(solr_url=solr_url)
+    writer = TextFileWriter(path=write_to)
 
+    # data mining pipeline
     Pipeline(reader, pipes, writer).run()
+
+    # db upload pipelines
+    if solr:
+        Pipeline(TextFileReader(path=write_to), [], SolrWriter(solr_url=solr_url)).run()
+    # Pipeline(TextFileReader(path=write_to), [], Neo4JWriter(...).run()
 
     SparkProvider.stop_spark_context()
 

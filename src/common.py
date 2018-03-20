@@ -30,8 +30,7 @@ class SparkProvider(object):
     def spark_conf():
         """Provide config for spark context."""
         conf = SparkConf().set('spark.hive.mapred.supports.subdirectories', 'true') \
-                          .set('spark.hadoop.mapreduce.input.fileinputformat.input.dir.recursive', 'true') \
-                          .set('spark.default.parallelism', SparkProvider.spark_parallelism())
+                          .set('spark.hadoop.mapreduce.input.fileinputformat.input.dir.recursive', 'true')
 
         return conf
 
@@ -44,10 +43,10 @@ class SparkProvider(object):
     def is_in_clustermode():
         """Check if env variabke LEUCHTTURM_RUNNER is set to CLUSTER."""
         try:
-            if environ['LEUCHTTURM_RUNNER'] == 'CLUSTER':
-                return True
+            if environ['LEUCHTTURM_RUNNER'] == 'LOCAL':
+                return False
         except KeyError:
-            return False
+            return True
 
     @staticmethod
     def spark_parallelism():

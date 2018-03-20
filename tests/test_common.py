@@ -8,10 +8,10 @@ from src.common import SparkProvider, Pipe, Pipeline
 def test_spark_parallelism(monkeypatch):
     """Parallelism level depends on env variable."""
     default = SparkProvider.spark_parallelism()
-    assert default == 1
-    monkeypatch.setenv('LEUCHTTURM_RUNNER', 'CLUSTER')
+    assert default == 276
+    monkeypatch.setenv('LEUCHTTURM_RUNNER', 'LOCAL')
     default_cluster = SparkProvider.spark_parallelism()
-    assert default_cluster == 276
+    assert default_cluster == 1
 
 
 def test_spark_conf():

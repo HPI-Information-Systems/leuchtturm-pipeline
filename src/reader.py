@@ -45,28 +45,28 @@ class EmlReader(Pipe):
 
     def run(self):
         """Run task in a spark context. Return rdd."""
-        rdd = SparkProvider.spark_context().wholeTextFiles(self.source_directory, self.parallelism)
+        rdd = SparkProvider.spark_context().wholeTextFiles(self.source_directory, minPartitions=self.parallelism)
         rdd = rdd.filter(lambda x: self.is_valid_email(x[1])) if self.apply_email_filter else rdd
         rdd = rdd.map(lambda x: self.create_document(x[1], x[0]))
 
         return rdd
 
 
-class RddReader(Pipe):
+class TextFileReader(Pipe):
     """Read rdd that has been exported using saveAsTextfile.
 
     Expect json format as specified.
     No transformations will be applied.
     """
 
-    def __init__(self, path):
+    def __init__(self, path='./pipeline_result'):
         """Set params. path is location of dumped rdd (local or hdfs)."""
         super().__init__()
         self.path = path
 
     def run(self):
         """Run task in spark context."""
-        return SparkProvider.spark_context.textFile(self.path, self.parallelism)
+        return SparkProvider.spark_context.textFile(self.path, minPartitions=self.parallelism)
 
 
 class CsvReader(Pipe):

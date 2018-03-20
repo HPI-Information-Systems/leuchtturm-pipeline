@@ -97,14 +97,14 @@ class Neo4JWriter(Pipe):
         rdd.mapPartitions(lambda x: self.run_on_partition(x))
 
 
-class TextfileWriter(Pipe):
+class TextFileWriter(Pipe):
     """Dump a rdd to disk as readable textfile.
 
     Use spark saveastextfile method to save a rdd to disk.
     Given path will be produced and must not exist. Each line will represent a document.
     """
 
-    def __init__(self, path='./pipeline'):
+    def __init__(self, path='./pipeline_result'):
         """Set output path."""
         super().__init__()
         self.path = path

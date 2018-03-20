@@ -5,6 +5,7 @@ from email.utils import getaddresses, parsedate, parseaddr, unquote
 import json
 import re
 from time import mktime
+from datetime import datetime
 
 import html2text
 from langdetect import detect
@@ -20,7 +21,7 @@ class HeaderBodyParsing(Pipe):
     Get body from a mime multipart email.
     """
 
-    def __init__(self, clean_subject=False, use_unix_time=True):
+    def __init__(self, clean_subject=False, use_unix_time=False):
         """Set parsing rules."""
         super().__init__()
         self.clean_subject = clean_subject  # TODO is not implemented
@@ -64,9 +65,9 @@ class HeaderBodyParsing(Pipe):
     def parse_date(self, date_string):
         """Normalize date from a string. If self.use_unix_time=True, return unix timestamp."""
         date = parsedate(date_string)
-        date = mktime(date) if self.use_unix_time and date is not None else date
+        date = mktime(date) if date is not None else 0
 
-        return date
+        return date if self.use_unix_time else datetime.fromtimestamp(int(date)).isoformat() + 'Z'
 
     def parse_subject(self, subject_string):
         """Clean subject line from RE:, AW: etc if self.clean_subject=True."""
