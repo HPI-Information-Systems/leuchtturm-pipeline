@@ -142,37 +142,66 @@ def deduplicate_emails(rdd):
               .reduceByKey(lambda x, y: select_email(x, y)) \
               .map(lambda x: revert_to_json(x))
 
-def extract_signatures(rdd):
-    edrm_footer = ('***********\r\nEDRM Enron Email Data Set has been produced in EML, PST and NSF format by ZL '
-                   'Technologies, Inc. This Data Set is licensed under a Creative Commons Attribution 3.0 United '
-                   'States License <http://creativecommons.org/licenses/by/3.0/us/> . To provide attribution, '
-                   'please cite to \"ZL Technologies, Inc. (http://www.zlti.com).\"\r\n***********')
 
-    blackberry_signature = ('--------------------------\n'
-                            'Sent from my BlackBerry Wireless Handheld (www.BlackBerry.net)')
+def extract_signature_information(rdd):
+    """Extract the signature from an email. If a signature could be extracted, extract pieces of information from it."""
+    # edrm_footer = ('***********\r\nEDRM Enron Email Data Set has been produced in EML, PST and NSF format by ZL '
+    #                'Technologies, Inc. This Data Set is licensed under a Creative Commons Attribution 3.0 United '
+    #                'States License <http://creativecommons.org/licenses/by/3.0/us/> . To provide attribution, '
+    #                'please cite to \"ZL Technologies, Inc. (http://www.zlti.com).\"\r\n***********')
+    #
+    # blackberry_signature = ('--------------------------\n'
+    #                         'Sent from my BlackBerry Wireless Handheld (www.BlackBerry.net)')
+    #
+    # cell_phone_signatures = [r'Sent from my iPhone\s*\n?$',
+    #                          r'Sent from my iPad\s*\n?$',
+    #                          r'']
 
-    def prepare(data):
-        # TODO: remove lines that contain "attached", "attachment", "file" etc.
-        pass
+    def remove_attachment_signatures(data):
+        """Improve the results of the signature extraction by Talon.
 
-    def extract(data):
+        Remove strings that hint at attached files and occur after the signature in an email.
+        """
+        file_formats_pattern = r'(xlsx?|docx?|pdf|gif|jpg|jpeg|txt)'
+        attached_files_patterns = [r'\s*(<<(.+)\.' + file_formats_pattern + r'\s*>>\s*)+$',
+                                   # this one should come before ...[IMAGE]... because both can exist in one email
+                                   r'(\n\s?-\s?.+\.' + file_formats_pattern + r'\s*)+$',
+                                   r'(\n\[IMAGE\]\s*)+$']
+
+        document = json.loads(data)
+        document['body_no_attachments'] = document['body']
+        for pattern in attached_files_patterns:
+            document['body_no_attachments'] = re.sub(pattern, '', document['body_no_attachments'])
+
+        # TODO:remove phone signature, add a boolean field to the document to indicate whether mail was sent from mobile
+        return json.dumps(document)
+
+    def extract_signature(data):
         document = json.loads(data)
 
         # TODO: see whether we can init only once or use mapPartitions instead
         talon.init()
-        text, email_signature = signature.extract(document['body'], sender=document['header']['sender']['email'])
+        text, email_signature = signature.extract(
+            document['body_no_attachments'],
+            sender=document['header']['sender']['email']
+        )
 
         print('----------email address---------')
         print(document['header']['sender']['email'])
         print('--------------signature--------------')
         print(email_signature)
+        if document['body'] != document['body_no_attachments']:
+            print('------ body no attachments -----')
+            print(document['body_no_attachments'])
         print('--------------body--------------')
         print(document['body'])
         print('\n')
 
-        return data
+        return json.dumps(document)
 
-    return rdd.map(extract)
+    return rdd.map(remove_attachment_signatures) \
+              .map(extract_signature)
+
 
 def clean_bodies(rdd):
     """Extract email body of each email.
