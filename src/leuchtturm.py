@@ -143,7 +143,7 @@ def deduplicate_emails(rdd):
               .map(lambda x: revert_to_json(x))
 
 
-def extract_signature_information(rdd):
+def extract_signature_information(rdd, test_mode=False):
     """Extract the signature from an email. If a signature could be extracted, extract pieces of information from it."""
     # edrm_footer = ('***********\r\nEDRM Enron Email Data Set has been produced in EML, PST and NSF format by ZL '
     #                'Technologies, Inc. This Data Set is licensed under a Creative Commons Attribution 3.0 United '
@@ -185,22 +185,28 @@ def extract_signature_information(rdd):
             document['body_no_attachments'],
             sender=document['header']['sender']['email']
         )
+        document['signature'] = email_signature
 
-        print('----------email address---------')
-        print(document['header']['sender']['email'])
-        print('--------------signature--------------')
-        print(email_signature)
-        if document['body'] != document['body_no_attachments']:
-            print('------ body no attachments -----')
-            print(document['body_no_attachments'])
-        print('--------------body--------------')
-        print(document['body'])
-        print('\n')
+        if not test_mode:
+            print('----------email address---------')
+            print(document['header']['sender']['email'])
+            print('--------------signature--------------')
+            print(document['signature'])
+            if document['body'] != document['body_no_attachments']:
+                print('------ body no attachments -----')
+                print(document['body_no_attachments'])
+            print('--------------body--------------')
+            print(document['body'])
+            print('\n')
+
 
         return json.dumps(document)
 
-    return rdd.map(remove_attachment_signatures) \
-              .map(extract_signature)
+    if not test_mode:
+        return rdd.map(remove_attachment_signatures) \
+                  .map(extract_signature)
+    else:
+        return extract_signature(remove_attachment_signatures(rdd))
 
 
 def clean_bodies(rdd):
