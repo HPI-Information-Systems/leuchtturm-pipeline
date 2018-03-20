@@ -162,11 +162,12 @@ def extract_signature_information(rdd, test_mode=False):
 
         Remove strings that hint at attached files and occur after the signature in an email.
         """
-        file_formats_pattern = r'(xlsx?|docx?|pdf|gif|jpg|jpeg|txt)'
-        attached_files_patterns = [r'\s*(<<(.+)\.' + file_formats_pattern + r'\s*>>\s*)+$',
+        file_formats_pattern = r'(xlsx?|docx?|pdf|gif|jpg|jpeg|txt|vcf|wpd)'
+        attached_files_patterns = [  # TODO: first one also occurs in between
+                                   r'\s*(<<(.+)\.' + file_formats_pattern + r'\s*>>\s*(=20)?\s*)+$',
                                    # this one should come before ...[IMAGE]... because both can exist in one email
-                                   r'(\n\s?-\s?.+\.' + file_formats_pattern + r'\s*)+$',
-                                   r'(\n\[IMAGE\]\s*)+$']
+                                   r'(\n\s?-\s?(.|\n)+\.' + file_formats_pattern + r'(=20)?\s*)+$',
+                                   r'(\n\[IMAGE\](=20)?\s*)+$']
 
         document = json.loads(data)
         document['body_no_attachments'] = document['body']
