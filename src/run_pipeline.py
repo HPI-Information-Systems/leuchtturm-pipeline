@@ -37,6 +37,8 @@ def run_email_pipeline(input_path=PATH_FILES_LISTED, output_path=PATH_PIPELINE_R
         # data = detect_languages(data)
         # data = extract_entities(data)
 
+        # correspondent_data = extract_correspondent_data(data)
+
         data.saveAsTextFile(output_path)
 
         sc.stop()

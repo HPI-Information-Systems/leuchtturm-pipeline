@@ -227,7 +227,19 @@ def extract_signature_information(rdd, test_mode=False):
                   .map(extract_signature) \
                   .map(pretty_print_stuff)
     else:
-        return extract_signature(remove_attachment_signatures(rdd))
+        return extract_signature(remove_attachment_notices(rdd))
+
+
+def extract_correspondent_data(rdd):
+    """Extract single pieces of information about correspondents from emails."""
+    def extract_phone_numbers(data):
+        document = json.loads(data)
+        phone_pattern = r'\(?\b[0-9]{3}\)?(-|\.|/| {1,2})?[0-9]{3}[-\./ ]?[0-9]{4}\b'
+        print('------ phone numbers -----')
+        print(re.findall(phone_pattern, document['body_no_attachments']))
+        print('----- body for phones ------')
+
+        return json.dumps(document)
 
 
 def clean_bodies(rdd):
