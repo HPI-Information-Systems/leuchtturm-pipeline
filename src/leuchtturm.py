@@ -16,6 +16,7 @@ from nltk.stem.wordnet import WordNetLemmatizer
 from string import punctuation, whitespace
 import talon
 from talon import signature
+# from pprint import pprint
 
 
 def split_emails(rdd):
@@ -188,24 +189,26 @@ def extract_signature_information(rdd, test_mode=False):
         )
         document['signature'] = email_signature
 
-        if not test_mode:
-            print('----------email address---------')
-            print(document['header']['sender']['email'])
-            print('--------------signature--------------')
-            print(document['signature'])
-            if document['body'] != document['body_no_attachments']:
-                print('------ body no attachments -----')
-                print(document['body_no_attachments'])
-            print('--------------body--------------')
-            print(document['body'])
-            print('\n')
-
-
         return json.dumps(document)
 
+    def pretty_print_stuff(data):
+        # document = json.loads(data)
+        # print('\n\n\n\n\n')
+        # print('--------------------------------------------------------------------------------------------------SIGNATURE')
+        # print(document['signature'])
+        # print('--------------------------------------------------------------------------------------------------BODY')
+        # print(document['body'])
+        # if document['body'] != document['body_without_signature']:
+        #     print('--------------------------------------------------------------------------------------------------BODY_WITHOUT_SIGNATURE')
+        #     print(document['body_without_signature'])
+
+        return data
+
     if not test_mode:
-        return rdd.map(remove_attachment_signatures) \
-                  .map(extract_signature)
+        return rdd.map(remove_standard_signatures) \
+                  .map(remove_attachment_notices) \
+                  .map(extract_signature) \
+                  .map(pretty_print_stuff)
     else:
         return extract_signature(remove_attachment_signatures(rdd))
 
