@@ -1,7 +1,5 @@
 """Test common package."""
 
-import pytest
-
 from src.common import SparkProvider
 
 
