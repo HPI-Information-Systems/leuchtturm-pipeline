@@ -185,19 +185,15 @@ def extract_signature_information(rdd, test_mode=False):
 
         Remove strings that hint at attached files and occur after the signature in an email.
         """
-        file_formats_pattern = r'(xlsx?|docx?|pdf|gif|jpg|jpeg|txt|vcf|wpd)'
-        attached_files_patterns = [  # TODO: first one also occurs in between
-                                   r'\s*(<<(.+)\.' + file_formats_pattern + r'\s*>>\s*(=20)?\s*)+$',
-                                   # this one should come before ...[IMAGE]... because both can exist in one email
-                                   r'(\n\s?-\s?(.|\n)+\.' + file_formats_pattern + r'(=20)?\s*)+$',
+        file_formats_pattern = r'(xlsx?|docx?|pdf|gif|jpg|jpeg|txt|vcf|wpd|pptx?|xlsx?)'
+        attached_files_patterns = [r'\s*(<<(.+)\.' + file_formats_pattern + r'\s*>>\s*(=20)?\s*)+',
+                                   r'(\n\s?-\s?.+\.' + file_formats_pattern + r'(=20)?\s*)+$',
                                    r'(\n\[IMAGE\](=20)?\s*)+$']
 
         document = json.loads(data)
-        document['body_no_attachments'] = document['body']
         for pattern in attached_files_patterns:
-            document['body_no_attachments'] = re.sub(pattern, '', document['body_no_attachments'])
+            document['body_without_signature'] = re.sub(pattern, '\n', document['body_without_signature'])
 
-        # TODO:remove phone signature, add a boolean field to the document to indicate whether mail was sent from mobile
         return json.dumps(document)
 
     def extract_signature(data):
@@ -205,11 +201,10 @@ def extract_signature_information(rdd, test_mode=False):
 
         # TODO: see whether we can init only once or use mapPartitions instead
         talon.init()
-        text, email_signature = signature.extract(
-            document['body_no_attachments'],
+        document['body_without_signature'], document['signature'] = signature.extract(
+            document['body_without_signature'],
             sender=document['header']['sender']['email']
         )
-        document['signature'] = email_signature
 
         return json.dumps(document)
 
