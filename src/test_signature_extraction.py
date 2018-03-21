@@ -1,3 +1,4 @@
+"""Test the signature extraction script against an annotated dataset."""
 from leuchtturm import extract_signature_information
 import os
 import json
@@ -46,16 +47,15 @@ for filename in os.listdir(raw_mails_path):
                         existent_signatures_recognized_correctly += 1
                     else:
                         print_stuff += '+ incorrectly '
-                    if print_stuff:
-                        print('\n\n\n')
-                        print(print_stuff)
-                        print('----quagga signature-----')
-                        print(signature_denotation_text[0])
-                        print('----my extracted signature-----')
-                        print(mail_w_signature['signature'])
-                        print('----original email------')
-                        print(annotated_mails_path + '/' + filename + '.ann')
-                        print(mail)
+                    print('\n\n\n')
+                    print(print_stuff)
+                    print('----quagga signature-----')
+                    print(signature_denotation_text[0])
+                    print('----my extracted signature-----')
+                    print(mail_w_signature['signature'])
+                    print('----original email------')
+                    print(annotated_mails_path + '/' + filename + '.ann')
+                    print(mail)
 
 print('total_mails_with_quagga_signatures', total_mails_with_quagga_signatures)
 print('signatures_recognized', existent_signatures_recognized)
