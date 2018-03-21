@@ -145,20 +145,42 @@ def deduplicate_emails(rdd):
 
 
 def extract_signature_information(rdd, test_mode=False):
-    """Extract the signature from an email. If a signature could be extracted, extract pieces of information from it."""
-    # edrm_footer = ('***********\r\nEDRM Enron Email Data Set has been produced in EML, PST and NSF format by ZL '
-    #                'Technologies, Inc. This Data Set is licensed under a Creative Commons Attribution 3.0 United '
-    #                'States License <http://creativecommons.org/licenses/by/3.0/us/> . To provide attribution, '
-    #                'please cite to \"ZL Technologies, Inc. (http://www.zlti.com).\"\r\n***********')
-    #
-    # blackberry_signature = ('--------------------------\n'
-    #                         'Sent from my BlackBerry Wireless Handheld (www.BlackBerry.net)')
-    #
-    # cell_phone_signatures = [r'Sent from my iPhone\s*\n?$',
-    #                          r'Sent from my iPad\s*\n?$',
-    #                          r'']
+    """Extract the signature from the bottom of an email."""
+    def get_mobile_signature_patterns():
+        return [
+            r'--------------------------\r?\nSent from my BlackBerry Wireless Handheld \(www\.BlackBerry\.net\)\r?\s*$'
+        ]
 
-    def remove_attachment_signatures(data):
+    def get_standard_signatures():
+        return [
+            (
+                r'_________________________________________________________________\r?\n'
+                r'Join the world\'s largest e-mail service with MSN Hotmail. \r?\n'
+                r'http:\/\/www\.hotmail\.com'
+            ),
+            (
+                r'_{50,60}\r?\n'
+                r'Do You Yahoo!\?\r?\n'
+                r'(.*\r?\n)?'
+                r'.*yahoo\.com.*\r?\s*'
+            )
+        ]
+
+    def remove_standard_signatures(data):
+        document = json.loads(data)
+        document['body_without_signature'] = document['body']
+
+        for standard_signature in get_standard_signatures():
+            document['body_without_signature'] = re.sub(standard_signature, '\n', document['body_without_signature'])
+
+        for mobile_signature in get_mobile_signature_patterns():
+            if re.search(mobile_signature, document['body_without_signature']):
+                document['sent_from_mobile'] = True
+                document['body_without_signature'] = re.sub(mobile_signature, '\n', document['body_without_signature'])
+
+        return json.dumps(document)
+
+    def remove_attachment_notices(data):
         """Improve the results of the signature extraction by Talon.
 
         Remove strings that hint at attached files and occur after the signature in an email.
