@@ -1,6 +1,7 @@
 """Pipes to preprocess emails, extract their meta-data, segmentation, ... for leuchtturm pipelines."""
 
 from email import message_from_string
+from email.errors import HeaderParseError
 from email.policy import default
 from email.utils import getaddresses, parsedate, parseaddr, unquote
 import ujson as json
@@ -66,9 +67,12 @@ def decode_mime_email(rdd, get_attachement_names=True):
     def run_on_document(document):
         """Get main body and extract attachement names on a leuchtturm doc."""
         doc = json.loads(document)
-        message = message_from_string(doc['raw'], policy=default)
-        doc['raw'] = get_main_header(message) + '\n\n' + get_body(message)
-        doc['attachements'] = get_attachement_names(message)
+        try:
+            message = message_from_string(doc['raw'], policy=default)
+            doc['raw'] = get_main_header(message) + '\n\n' + get_body(message)
+            doc['attachments'] = get_attachement_names(message)
+        except HeaderParseError:
+            doc['attachments'] = []
 
         return json.dumps(doc)
 
