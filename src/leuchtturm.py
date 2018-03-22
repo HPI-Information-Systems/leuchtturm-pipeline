@@ -196,17 +196,20 @@ def extract_signature_information(rdd, test_mode=False):
 
         return json.dumps(document)
 
-    def extract_signature(data):
-        document = json.loads(data)
-
-        # TODO: see whether we can init only once or use mapPartitions instead
+    def extract_signatures(items):
         talon.init()
-        document['body_without_signature'], document['signature'] = signature.extract(
-            document['body_without_signature'],
-            sender=document['header']['sender']['email']
-        )
 
-        return json.dumps(document)
+        def extract_signature(data):
+            document = json.loads(data)
+            document['body_without_signature'], document['signature'] = signature.extract(
+                document['body_without_signature'],
+                sender=document['header']['sender']['email']
+            )
+
+            return json.dumps(document)
+
+        for item in items:
+            yield extract_signature(item)
 
     def pretty_print_stuff(data):
         # document = json.loads(data)
@@ -224,10 +227,10 @@ def extract_signature_information(rdd, test_mode=False):
     if not test_mode:
         return rdd.map(remove_standard_signatures) \
                   .map(remove_attachment_notices) \
-                  .map(extract_signature) \
+                  .mapPartitions(extract_signatures) \
                   .map(pretty_print_stuff)
     else:
-        return extract_signature(remove_attachment_notices(rdd))
+        return extract_signatures(remove_attachment_notices(rdd))
 
 
 def extract_correspondent_data(rdd):
