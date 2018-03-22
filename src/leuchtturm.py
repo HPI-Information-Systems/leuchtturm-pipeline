@@ -253,13 +253,13 @@ def extract_correspondent_data(rdd):
     """Extract single pieces of information about correspondents from emails."""
     def extract_phone_numbers(data):
         document = json.loads(data)
-        phone_pattern = r'\(?\b[0-9]{3}\)?(-|\.|/| {1,2})?[0-9]{3}[-\./ ]?[0-9]{4}\b'
-        print('------ phone numbers -----')
-        print(re.findall(phone_pattern, document['body_no_attachments']))
-        print('----- body for phones ------')
+        if document['signature']:
+            phone_number_pattern = r'\(?\b[0-9]{3}\)?(?:-|\.|/| {1,2}| - )?[0-9]{3}(?:-|\.|/| {1,2}| - )?[0-9]{4,5}\b'
+            document['phone_numbers'] = re.findall(phone_number_pattern, document['signature'], flags=re.IGNORECASE)
 
         return json.dumps(document)
 
+    return rdd.map(extract_phone_numbers)
 
 def clean_bodies(rdd):
     """Extract email body of each email.
