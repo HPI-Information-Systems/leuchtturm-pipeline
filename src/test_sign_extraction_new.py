@@ -29,16 +29,33 @@ with open(results_path) as results:
                     existent_signatures_recognized += 1
                     if signature_denotation_text[0].strip() == result['signature'].strip():
                         existent_signatures_recognized_correctly += 1
+                    else:
+                        print('\n\n\n\n\n')
+                        print('incorrectly recognized')
+                        print(annotated_mails_path + '/' + result['doc_id'] + '.txt')
+                        print('----------------quagga signature(s)--------------------------------------------------------')
+                        print(signature_denotation_text)
+                        print('----------------from email address---------------------------------------------------------')
+                        print(annotated_res['meta']['header']['From'])
+                        print('----------------my signature--------------------------------------------------------')
+                        print(result['signature'])
+                        print('----------------body without signature-----------------------------------------------------')
+                        print(result['body_without_signature'])
+                        print('----------------body-----------------------------------------------------------------------')
+                        print(result['body'])
+
                 else:
                     print('\n\n\n\n\n')
                     print('unrecognized')
                     print(annotated_mails_path + '/' + result['doc_id'] + '.txt')
                     print('----------------quagga signature(s)--------------------------------------------------------')
                     print(signature_denotation_text)
-                    print('----------------body-----------------------------------------------------------------------')
-                    print(result['body'])
+                    print('----------------from email address---------------------------------------------------------')
+                    print(annotated_res['meta']['header']['From'])
                     print('----------------body without signature-----------------------------------------------------')
                     print(result['body_without_signature'])
+                    print('----------------body-----------------------------------------------------------------------')
+                    print(result['body'])
 
 print('total_mails_with_quagga_signatures', total_mails_with_quagga_signatures)
 print('signatures_recognized', existent_signatures_recognized)
