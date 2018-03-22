@@ -163,12 +163,27 @@ def extract_signature_information(rdd, test_mode=False):
                 r'Do You Yahoo!\?\r?\n'
                 r'(.*\r?\n)?'
                 r'.*yahoo\.com.*\r?\s*'
+            ),
+            (
+                '\*{78}\r?\n'
+                '*\*{7}\r?\n\n'
+                'This message is a PRIVATE communication\.   If you are not the intended\r?\n'
+                'recipient, please do not read, copy, or use it, and do not disclose it to\r?\n'
+                'others\.  Please notify the sender of the delivery error by replying to this\r?\n'
+                'message, and then delete it from your system\.  Thank you\.\r?\n'
+                '\*{78}\r?\n'
+                '\*{7}\r?\n*'
+                'For more information on McDERMOTT, WILL & EMERY please visit our website at:\n'
+                'http:\/\/www\.mwe\.com\/\s*'
             )
         ]
 
     def remove_standard_signatures(data):
         document = json.loads(data)
         document['body_without_signature'] = document['body']
+
+        # remove blank lines from EOF
+        document['body_without_signature'] = re.sub('\s*$', '', document['body_without_signature'])
 
         for standard_signature in get_standard_signatures():
             document['body_without_signature'] = re.sub(standard_signature, '\n', document['body_without_signature'])
@@ -185,14 +200,15 @@ def extract_signature_information(rdd, test_mode=False):
 
         Remove strings that hint at attached files and occur after the signature in an email.
         """
-        file_formats_pattern = r'(xlsx?|docx?|pdf|gif|jpg|jpeg|txt|vcf|wpd|pptx?|xlsx?)'
-        attached_files_patterns = [r'\s*(<<(.+)\.' + file_formats_pattern + r'\s*>>\s*(=20)?\s*)+',
+        file_formats_pattern = r'(\w{2,4})'
+        attached_files_patterns = [r'(\(See attached\s{,3}file: (.+)\.' + file_formats_pattern + '?\)\s*)+',
+                                   r'(<<(.+)\.' + file_formats_pattern + r'?\s*>>\s*(=20)?\s*)+',
                                    r'(\n\s?-\s?.+\.' + file_formats_pattern + r'(=20)?\s*)+$',
-                                   r'(\n\[IMAGE\](=20)?\s*)+$']
+                                   r'(\n\[image\](=20)?\s*)+$']
 
         document = json.loads(data)
         for pattern in attached_files_patterns:
-            document['body_without_signature'] = re.sub(pattern, '\n', document['body_without_signature'])
+            document['body_without_signature'] = re.sub(pattern, '\n', document['body_without_signature'], flags=re.IGNORECASE)
 
         return json.dumps(document)
 
