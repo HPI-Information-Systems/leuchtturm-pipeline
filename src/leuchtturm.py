@@ -271,7 +271,7 @@ def extract_correspondent_data(rdd):
                 return phone_type_keys[i]
         return phone_type_keys[0]  # set type to 'office' by default
 
-    def extract_phone_numbers(data):
+    def extract_phone_numbers_from_signature(data):
         document = json.loads(data)
         if document['signature']:
             phone_numbers = {'office': [], 'cell': [], 'fax': [], 'home': []}
@@ -287,10 +287,17 @@ def extract_correspondent_data(rdd):
                 phone_number_type = _get_phone_number_type(enclosing_line)
                 phone_numbers[phone_number_type].append(split_signature[i])
             document['phone_numbers'] = phone_numbers
-
         return json.dumps(document)
 
-    return rdd.map(extract_phone_numbers)
+    def extract_email_address_from_signature(data):
+        document = json.loads(data)
+        if document['signature']:
+            email_address_pattern = r'\b[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+\b'
+            document['email_addresses_from_signature'] = re.findall(email_address_pattern, document['signature'])
+        return json.dumps(document)
+
+    return rdd.map(extract_phone_numbers_from_signature) \
+              .map(extract_email_address_from_signature)
 
 
 def clean_bodies(rdd):
