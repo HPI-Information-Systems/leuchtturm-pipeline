@@ -208,7 +208,8 @@ def extract_signature_information(rdd, test_mode=False):
 
         document = json.loads(data)
         for pattern in attached_files_patterns:
-            document['body_without_signature'] = re.sub(pattern, '\n', document['body_without_signature'], flags=re.IGNORECASE)
+            document['body_without_signature'] = \
+                re.sub(pattern, '\n', document['body_without_signature'], flags=re.IGNORECASE)
 
         return json.dumps(document)
 
@@ -251,101 +252,46 @@ def extract_signature_information(rdd, test_mode=False):
 
 def extract_correspondent_data(rdd):
     """Extract single pieces of information about correspondents from emails."""
+    phone_pattern = r'(\(?\b[0-9]{3}\)?(?:-|\.|/| {1,2}| - )?[0-9]{3}(?:-|\.|/| {1,2}| - )?[0-9]{4,5}\b)'
+    phone_type_patterns = [r'(off|ph|tel|dir|voice)',
+                           r'(cell|mobile|mob)',
+                           r'(fax|fx|facs|facsimile|facsim)',
+                           r'home']
+    phone_type_keys = ['office',  # this will be default
+                       'cell',
+                       'fax',
+                       'home']
+
+    def _split_signature_on_phone_numbers(signature):
+        return re.split(phone_pattern, signature, flags=re.IGNORECASE)
+
+    def _get_phone_number_type(enclosing_line):
+        for i, pattern in enumerate(phone_type_patterns):
+            if re.search(pattern, enclosing_line, flags=re.IGNORECASE):
+                return phone_type_keys[i]
+        return phone_type_keys[0]  # set type to 'office' by default
+
     def extract_phone_numbers(data):
         document = json.loads(data)
         if document['signature']:
-            office_phone_pattern = r'(ph|tel|off|dir|voice)'
-            cell_phone_pattern = r'(cell|mobile|mob)'
-            fax_phone_pattern = r'(fax|fx|facs|facsimile|facsim)'
-            home_phone_pattern = r'home'
-
             phone_numbers = {'office': [], 'cell': [], 'fax': [], 'home': []}
+            split_signature = _split_signature_on_phone_numbers(document['signature'])
 
-            phone_pattern = r'(\(?\b[0-9]{3}\)?(?:-|\.|/| {1,2}| - )?[0-9]{3}(?:-|\.|/| {1,2}| - )?[0-9]{4,5}\b)'
-            split_signature = re.split(phone_pattern, document['signature'], flags=re.IGNORECASE)
-            print('\n\n\n\n')
-            print(split_signature)
-            prefixed = True
+            # iterate over all phone numbers found in the signature
+            # i is pointing to the current phone number string, i-1 and i+1 to strings before and after the phone number
             for i in range(1, len(split_signature), 2):
-                if prefixed:
-                    if re.search(r'\n.{,7}' + office_phone_pattern + r'.{,7}$', split_signature[i - 1], flags=re.IGNORECASE):
-                        phone_numbers['office'].append(split_signature[i])
-                        prefixed = True
-                        continue
-                    if re.search(r'^.{,7}' + office_phone_pattern + r'.{,7}(\n|$)', split_signature[i + 1], flags=re.IGNORECASE):
-                        phone_numbers['office'].append(split_signature[i])
-                        prefixed = False
-                        continue
-                    if re.search(r'\n.{,7}' + cell_phone_pattern + r'.{,7}$', split_signature[i - 1], flags=re.IGNORECASE):
-                        phone_numbers['cell'].append(split_signature[i])
-                        prefixed = True
-                        continue
-                    if re.search(r'^.{,7}' + cell_phone_pattern + r'.{,7}(\n|$)', split_signature[i + 1], flags=re.IGNORECASE):
-                        phone_numbers['cell'].append(split_signature[i])
-                        prefixed = False
-                        continue
-                    if re.search(r'\n.{,7}' + fax_phone_pattern + r'.{,7}$', split_signature[i - 1], flags=re.IGNORECASE):
-                        phone_numbers['fax'].append(split_signature[i])
-                        prefixed = True
-                        continue
-                    if re.search(r'^.{,7}' + fax_phone_pattern + r'.{,7}(\n|$)', split_signature[i + 1], flags=re.IGNORECASE):
-                        phone_numbers['fax'].append(split_signature[i])
-                        prefixed = False
-                        continue
-                    if re.search(r'\n.{,7}' + home_phone_pattern + r'.{,7}$', split_signature[i - 1], flags=re.IGNORECASE):
-                        phone_numbers['home'].append(split_signature[i])
-                        prefixed = True
-                        continue
-                    if re.search(r'^.{,7}' + home_phone_pattern + r'.{,7}(\n|$)', split_signature[i + 1], flags=re.IGNORECASE):
-                        phone_numbers['home'].append(split_signature[i])
-                        prefixed = False
-                        continue
-                    else:
-                        phone_numbers['office'].append(split_signature[i])
-                else:
-                    if re.search(r'^.{,7}' + office_phone_pattern + r'.{,7}(\n|$)', split_signature[i + 1], flags=re.IGNORECASE):
-                        phone_numbers['office'].append(split_signature[i])
-                        prefixed = False
-                        continue
-                    if re.search(r'\n.{,7}' + office_phone_pattern + r'.{,7}$', split_signature[i - 1], flags=re.IGNORECASE):
-                        phone_numbers['office'].append(split_signature[i])
-                        prefixed = True
-                        continue
-                    if re.search(r'^.{,7}' + cell_phone_pattern + r'.{,7}(\n|$)', split_signature[i + 1], flags=re.IGNORECASE):
-                        phone_numbers['cell'].append(split_signature[i])
-                        prefixed = False
-                        continue
-                    if re.search(r'\n.{,7}' + cell_phone_pattern + r'.{,7}$', split_signature[i - 1], flags=re.IGNORECASE):
-                        phone_numbers['cell'].append(split_signature[i])
-                        prefixed = True
-                        continue
-                    if re.search(r'^.{,7}' + fax_phone_pattern + r'.{,7}(\n|$)', split_signature[i + 1], flags=re.IGNORECASE):
-                        phone_numbers['fax'].append(split_signature[i])
-                        prefixed = False
-                        continue
-                    if re.search(r'\n.{,7}' + fax_phone_pattern + r'.{,7}$', split_signature[i - 1], flags=re.IGNORECASE):
-                        phone_numbers['fax'].append(split_signature[i])
-                        prefixed = True
-                        continue
-                    if re.search(r'^.{,7}' + home_phone_pattern + r'.{,7}(\n|$)', split_signature[i + 1], flags=re.IGNORECASE):
-                        phone_numbers['home'].append(split_signature[i])
-                        prefixed = False
-                        continue
-                    if re.search(r'\n.{,7}' + home_phone_pattern + r'.{,7}$', split_signature[i - 1], flags=re.IGNORECASE):
-                        phone_numbers['home'].append(split_signature[i])
-                        prefixed = True
-                        continue
-                    else:
-                        phone_numbers['office'].append(split_signature[i])
-
-            print(phone_numbers)
-            print(document['signature'])
-
+                # get the line on which the phone number occurs (without the phone number itself)
+                # '...\nFax: 123-4567-8910 ab\n...' => 'Fax:  ab'
+                enclosing_line = split_signature[i - 1].rpartition('\n')[-1] \
+                    + split_signature[i + 1].partition('\n')[0]
+                phone_number_type = _get_phone_number_type(enclosing_line)
+                phone_numbers[phone_number_type].append(split_signature[i])
             document['phone_numbers'] = phone_numbers
 
         return json.dumps(document)
 
     return rdd.map(extract_phone_numbers)
+
 
 def clean_bodies(rdd):
     """Extract email body of each email.
