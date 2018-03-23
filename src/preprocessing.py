@@ -24,7 +24,7 @@ def decode_mime_email(rdd, get_attachement_names=True):
         if encoding is None:
             encoding = 'utf-8'
 
-        return str(text, encoding, 'replace')
+        return text.decode(encoding, 'ignore')
 
     def remove_html_tags(text):
         """Convert html to corresponding md."""
@@ -69,8 +69,10 @@ def decode_mime_email(rdd, get_attachement_names=True):
         try:
             message = message_from_string(doc['raw'], policy=default)
             doc['raw'] = get_main_header(message) + '\n\n' + get_body(message)
+            doc['raw'] = textacy.preprocess.fix_bad_unicode(doc['raw'])
             doc['attachments'] = get_attachement_names(message)
         except Exception:
+            doc['raw'] = textacy.preprocess.fix_bad_unicode(doc['raw'])
             doc['attachments'] = []
 
         return json.dumps(doc)
@@ -86,7 +88,7 @@ def header_parsing(rdd, clean_subject=False, use_unix_time=False):
     """
     def get_body(message):
         """Given a message object, return the text of the mime part representing the body and decode it."""
-        return message.get_payload()
+        return str(message.get_payload())
 
     def parse_correspondent(correspondent):
         """Given a tuple (name, email), return a correspondant dict."""
@@ -101,7 +103,7 @@ def header_parsing(rdd, clean_subject=False, use_unix_time=False):
         return parsed_correspondent
 
     def parse_date(date_string):
-        """Normalize date from a string. If .use_unix_time=True, return unix timestamp."""
+        """Normalize date from a string. If use_unix_time=True, return unix timestamp."""
         date = parsedate(date_string)
         date = mktime(date) if date is not None else 0
 
@@ -179,7 +181,7 @@ def text_cleaning(rdd, read_from='body', write_to='text_clean', readable=True):
                    r'(\*|=|-){40,}\s(.|\n)+(\*|=|-){40,}\s']
 
         for header in headers:
-            text_clean = re.sub(header, '', text, re.MULTILINE | re.IGNORECASE | re.UNICODE)
+            text_clean = re.sub(header, '', str(text), re.MULTILINE | re.IGNORECASE | re.UNICODE)
 
         edrm_footer = ('***********\r\nEDRM Enron Email Data Set has been produced in EML, PST and NSF format by ZL '
                        'Technologies, Inc. This Data Set is licensed under a Creative Commons Attribution 3.0 United '
