@@ -296,8 +296,18 @@ def extract_correspondent_data(rdd):
             document['email_addresses_from_signature'] = re.findall(email_address_pattern, document['signature'])
         return json.dumps(document)
 
+    def extract_alias_from_signature(data):
+        document = json.loads(data)
+        if document['signature']:
+            first_email_address_characters = document['header']['sender']['email'][:3]
+            alias_name_pattern = r'(?:^|\n)\b(' + first_email_address_characters + r'[\w -.]*)(?:\n|$)'
+            document['sender_alias'] = re.findall(alias_name_pattern, document['signature'], flags=re.IGNORECASE)
+
+        return json.dumps(document)
+
     return rdd.map(extract_phone_numbers_from_signature) \
-              .map(extract_email_address_from_signature)
+              .map(extract_email_address_from_signature) \
+              .map(extract_alias_from_signature)
 
 
 def clean_bodies(rdd):
