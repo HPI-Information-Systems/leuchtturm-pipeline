@@ -35,6 +35,7 @@ PYSPARK_PYTHON=./leuchtturm_env/bin/python \
     --driver-memory 8g --executor-memory 4g --num-executors 23 --executor-cores 4 \
     --archives leuchtturm_env.zip#leuchtturm_env,models.zip#models \
     --py-files src/common.py,src/deduplication.py,src/ner.py,src/preprocessing.py,src/reader.py,src/topics.py,src/writer.py \
-    src/run_pipeline.py --read-from $EMAILS --write-to $PRESULT --solr --solr-url $SOLR 2>/dev/null
+    src/run_pipeline.py --read_from $EMAILS --write_to $PRESULT 2>/dev/null
+# --solr --solr_url $SOLR
 
 echo -e '\n[Done]'

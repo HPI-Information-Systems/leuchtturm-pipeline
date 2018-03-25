@@ -16,7 +16,7 @@ cp ~/gitlab-runner/emails/* $EMAILS/
 # export SPARK_HOME=/usr/hdp/2.6.2.0-205/spark2/
 echo '[stage 3 of 3] Running pipeline ...'
 export LEUCHTTURM_RUNNER=LOCAL
-python src/run_pipeline.py --read-from $EMAILS --write-to $PRESULT
+python src/run_pipeline.py --read_from $EMAILS --write_to $PRESULT
 ls $PRESULT/_SUCCESS
 
 echo -e '\n[Done]\n\nHead of pipeline results:\n'
