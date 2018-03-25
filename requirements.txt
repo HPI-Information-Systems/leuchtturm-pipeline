@@ -15,4 +15,3 @@ textacy
 pysolr
 neo4j-driver
 nltk
-ujson

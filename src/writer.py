@@ -1,43 +1,60 @@
 """Exit points for leuchtturm pipelines."""
 
-import ujson as json
+import json
 
 from neo4j.v1 import DirectDriver
 from pysolr import Solr
 
+from common import Pipe
 
-def solr_writer(rdd, solr_url='http://localhost:8983/solr/emails'):
+
+class SolrWriter(Pipe):
     """Write all documents to a solr instance.
 
     Collect all documents of a spark rdd.
     Eliminate nested structures and upload data to solr instance.
     """
-    def run_on_partition(partition):
+
+    def __init__(self, solr_url='http://localhost:8983/solr/emails'):
+        """Set url to solr instance."""
+        super().__init__()
+        self.solr_url = solr_url
+        self.solr_client = Solr(self.solr_url)
+
+    def flatten_document(self, dd, separator='.', prefix=''):
+        """Flatten a nested pyton dict. Keys will be separated by dots."""
+        return {prefix + separator + k if prefix else k: v
+                for kk, vv in dd.items()
+                for k, v in self.flatten_document(vv, separator, kk).items()} if isinstance(dd, dict) else {prefix: dd}
+
+    def run_on_partition(self, partition):
         """Collect docs partitionswise, flatten nested structures and upload."""
-        def flatten_document(dd, separator='.', prefix=''):
-            """Flatten a nested pyton dict. Keys will be separated by dots."""
-            return {prefix + separator + k if prefix else k: v
-                    for kk, vv in dd.items()
-                    for k, v in flatten_document(vv, separator, kk).items()} if isinstance(dd, dict) else {prefix: dd}
+        docs = partition.collect()
+        docs_flattened = [self.flatten_document(json.loads(doc)) for doc in docs]
+        self.solr_client.add(docs_flattened)
 
-        docs_flattened = [flatten_document(json.loads(doc)) for doc in partition]
-        Solr(solr_url).add(docs_flattened)
-
-        return partition
-
-    rdd.foreachPartition(lambda x: run_on_partition(x))
+    def run(self, rdd):
+        """Run task in spark context."""
+        rdd.mapPartitions(lambda x: self.run_on_partition(x))
 
 
-def neo4j_writer(rdd, neo4j_uri='bolt://localhost:7687'):
+class Neo4JWriter(Pipe):
     """Write a limited set of information contained in the email documents to a Neo4j instance.
 
     Collect all documents of a spark rdd.
     Extract relevant information (such as communication data) and upload it.
     """
-    def run_on_partition(partition):
+
+    def __init__(self, neo4j_uri='bolt://localhost:7687'):
+        """Set Neo4j instance where data sould be uploaded to."""
+        super().__init__()
+        self.neo4j_uri = neo4j_uri
+        self.neo4j_client = DirectDriver(self.neo4j_uri)
+
+    def run_on_partition(self, partition):
         """Collect docs partitionwise and upload them."""
-        with DirectDriver(neo4j_uri).session() as session:
-            for document in partition:
+        with self.neo4j_client.session() as session:
+            for document in partition.collect():
                 if (len(document) != 0):
                     sender = {"name": "", "email": ""}
                     recipients = []
@@ -75,18 +92,31 @@ def neo4j_writer(rdd, neo4j_uri='bolt://localhost:7687'):
                                     email_recipient=recipient['email'],
                                     mail_id=mail_id)
 
-    rdd.foreachPartition(lambda x: run_on_partition(x))
+    def run(self, rdd):
+        """Run task in spark context."""
+        rdd.mapPartitions(lambda x: self.run_on_partition(x))
 
 
-def textfile_writer(rdd, path='./pipeline_result'):
+class TextFileWriter(Pipe):
     """Dump a rdd to disk as readable textfile.
 
     Use spark saveastextfile method to save a rdd to disk.
     Given path will be produced and must not exist. Each line will represent a document.
     """
-    rdd.saveAsTextFile(path)
+
+    def __init__(self, path='./pipeline_result'):
+        """Set output path."""
+        super().__init__()
+        self.path = path
+
+    def run(self, rdd):
+        """Run task in spark context."""
+        rdd.saveAsTextFile(self.path)
 
 
-def arango_writer(rdd, url='http://localhost'):
+class ArangoWriter(Pipe):
     """Write all documents to arango db instance."""
-    raise NotImplementedError
+
+    def __init__(self):
+        """IMPLEMENT ME."""
+        raise NotImplementedError
