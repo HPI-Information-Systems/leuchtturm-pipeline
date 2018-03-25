@@ -21,11 +21,10 @@ Crowd the `emails` folder with some fishy emails (one file for each email, `RFC 
 And you're ready to go!
 
 ```bash
-export LEUCHTTURM=RUNNER=LOCAL  # to run in debug mode with limited num of partitions
 # start the email pipeline
-(~/pipeline)$ python src/run_pipeline.py --read-from ./emails --write-to ./tmp
-# or start pipeline with upload to solr
-(~/pipeline)$ python src/run_pipeline.py --read-from ./emails --write-to ./tmp --solr --solr-url http://where/yor/solr/is:running
+(~/pipeline)$ python src/file_lister.py ./emails ./tmp/fl
+(~/pipeline)$ python src/run_leuchtturm.py ./tmp/fl ./tmp/pr
+(~/pipeline)$ python src/write_to_solr.py  ./tmp/pr http://0.0.0.0:8983/solr/emails  # if you have a running solr instance
 ```
 
 Check Solr or the `tmp` folder for the results! To deploy the pipeline on a yarn cluster, consult [this Guide](https://hpi.de/naumann/leuchtturm/gitlab/leuchtturm/meta/wikis/Pipeline/Pipeline-Architektur).
@@ -33,7 +32,6 @@ Check Solr or the `tmp` folder for the results! To deploy the pipeline on a yarn
 ## Pipeline tasks
 
 - read `.eml` compliant files
-- decode multipart mime emails
 - splitting
 - metadata extraction
 - deduplication
