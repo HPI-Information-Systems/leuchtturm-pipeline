@@ -13,7 +13,7 @@ echo '[stage 2 of 3] Fetching data ...'
 cp ~/gitlab-runner/models/* models/
 cp ~/gitlab-runner/emails/* $EMAILS/
 
-export SPARK_HOME=/usr/hdp/2.6.2.0-205/spark2/
+# export SPARK_HOME=/usr/hdp/2.6.2.0-205/spark2/
 echo '[stage 3 of 3] Running pipeline ...'
 export LEUCHTTURM_RUNNER=LOCAL
 python ./run_pipeline.py --read-from $EMAILS --write-to $PRESULT
