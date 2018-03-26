@@ -37,7 +37,7 @@ curl $SOLR/update\?commit\=true -d  '<delete><query>*:*</query></delete>' || tru
 PYSPARK_PYTHON=./leuchtturm_env/bin/python \
     spark-submit --master yarn --deploy-mode cluster \
     --driver-memory 8g --executor-memory 4g --num-executors 23 --executor-cores 4 \
-    --archives leuchtturm_env.zip#leuchtturm_env,models.zip#models,src.zip#src \
+    --archives leuchtturm_env.zip#leuchtturm_env,models.zip#models \
     --py-files src.zip \
     run_pipeline.py --read-from $EMAILS --write-to $PRESULT --solr --solr-url $SOLR 2>/dev/null
 
