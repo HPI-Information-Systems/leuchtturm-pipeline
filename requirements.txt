@@ -13,5 +13,5 @@ textacy
 # git+https://www.github.com/keras-team/keras-contrib.git
 # sklearn
 pysolr
-neo4j-driver
+py2neo
 nltk
