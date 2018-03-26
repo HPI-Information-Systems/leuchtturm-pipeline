@@ -1,11 +1,11 @@
 """NER pipes for leuchtturm pipelines."""
 
-import json
+import ujson as json
 from string import whitespace
 
 import en_core_web_sm as spacy
 
-from common import Pipe
+from .common import Pipe
 
 
 class SpacyNer(Pipe):
@@ -19,9 +19,8 @@ class SpacyNer(Pipe):
         """Set params. read_from: field to search entities in."""
         super().__init__()
         self.read_from = read_from
-        self.spacy = None
 
-    def extract_entities(self, text):
+    def extract_entities(self, text, spacy_model):
         """Extract entities from a string."""
         entities = {'person': [],
                     'location': [],
@@ -31,7 +30,7 @@ class SpacyNer(Pipe):
         # split text into smaller chunks to avoid exceeding memory
         lines = [text[i: i + 1000] for i in range(0, len(text), 1000)]
         for line in lines:
-            for entity in filter(lambda x: x.text.strip(whitespace) != '', self.spacy(line).ents):
+            for entity in filter(lambda x: x.text.strip(whitespace) != '', spacy_model(line).ents):
                 if (entity.label_ == 'PERSON'):
                     entities['person'].append(entity.text.strip(whitespace))
                 elif (entity.label_ == 'LOC' or entity.label_ == 'GPE' or entity.label_ == 'FAC'):
@@ -49,21 +48,22 @@ class SpacyNer(Pipe):
 
     def load_spacy(self):
         """Load spacy model."""
-        self.spacy = spacy.load()
+        return spacy.load()
 
-    def run_on_document(self, raw_message):
+    def run_on_document(self, raw_message, spacy_model=None):
         """Get entities for a leuchtturm document."""
+        spacy_model = spacy_model if spacy_model is not None else self.load_spacy()
         document = json.loads(raw_message)
-        document['entities'] = self.extract_entities(document[self.read_from])
+        document['entities'] = self.extract_entities(document[self.read_from], spacy_model)
 
         return json.dumps(document)
 
     def run_on_partition(self, partition):
         """Run task in spark context. Partitionwise for performance reasosn."""
-        self.load_spacy()
+        spacy_model = self.load_spacy()
 
         for doc in partition:
-            yield self.run_on_document(doc)
+            yield self.run_on_document(doc, spacy_model=spacy_model)
 
     def run(self, rdd):
         """Run task in a spark context."""

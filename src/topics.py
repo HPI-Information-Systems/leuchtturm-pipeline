@@ -1,7 +1,7 @@
 """Topic modeling pipes for leuchtturm pipelines."""
 
 from collections import defaultdict
-import json
+import ujson as json
 import pickle
 from string import punctuation
 
@@ -9,7 +9,7 @@ from gensim import corpora, models
 from nltk.corpus import stopwords as nltksw
 from nltk.stem.wordnet import WordNetLemmatizer
 
-from common import Pipe
+from .common import Pipe
 
 
 class TopicModelTraining(Pipe):
@@ -29,7 +29,7 @@ class TopicModelTraining(Pipe):
         num_topics = 100
         alpha = 50 / num_topics
         eta = 0.1
-        raw_corpus = rdd
+        raw_corpus = rdd.collect()
 
         stopwords = nltksw.words('english')
 
@@ -111,41 +111,53 @@ class TopicModelPrediction(Pipe):
         super().__init__()
         self.read_from = read_from
         self.path_model = path_model
-        self.model = None
         self.path_dict = path_dict
-        self.dict = None
         # TODO add variable train_topic_model=Bool to trigger tm training within the main pipeline
 
-    def get_topics(self, text):
+    def get_topics(self, text, model, dictionary):
         """Predict topics for a text."""
-        bow = self.dict.doc2bow(text.split())
+        bow = dictionary.doc2bow(text.split())
 
         topic_terms = []
-        for topic in self.model.get_document_topics(bow):
-            terms = map(lambda xy: (self.dict[xy[0]], xy[1]), self.model.get_topic_terms(topic[0], topn=10))
-            # TODO ...
+        for topic in model.get_document_topics(bow):
+            terms = map(lambda xy: (dictionary[xy[0]], xy[1]), model.get_topic_terms(topic[0], topn=10))
+            # TODO refactor this @nico
             topic_terms.append(str((str(topic[1]), (list(terms)))))
 
         return topic_terms
 
-    def run_on_document(self, raw_message):
+    def load_model(self):
+        """Load lda model from defined path."""
+        with open(self.path_model, mode='rb') as pfile:
+            model = pickle.load(pfile)
+
+        return model
+
+    def load_dictionary(self):
+        """Load dict for lda tm from defined path."""
+        with open(self.path_dict, mode='rb') as pfile:
+            dictionary = pickle.load(pfile)
+
+        return dictionary
+
+    def run_on_document(self, raw_message, model=None, dictionary=None):
         """Predict topics for a leuchtturm document."""
+        model = model if model is not None else self.load_model()
+        dictionary = dictionary if dictionary is not None else self.load_dictionary()
+
         document = json.loads(raw_message)
-        # TODO srsly, this way the resulting 'list' isn't even a list...
-        document['topics'] = str(self.get_topics(document[self.read_from]))
+        # TODO srsly @nico, this way the resulting 'list' isn't even a list...
+        document['topics'] = str(self.get_topics(document[self.read_from], model, dictionary))
 
         return json.dumps(document)
 
     def run_on_partition(self, partition):
         """Run task in spark context. Partitionwise for performance reasosn."""
-        with open(self.path_model, mode='rb') as pfile:
-            self.model = pickle.load(pfile)
-
-        with open(self.path_dict, mode='rb') as pfile:
-            self.dict = pickle.load(pfile)
+        model = self.load_model()
+        dictionary = self.load_dictionary()
 
         for doc in partition:
-            yield self.run_on_document(doc)
+            yield self.run_on_document(doc, model=model, dictionary=dictionary)
 
     def run(self, rdd):
         """Run task in spark context."""

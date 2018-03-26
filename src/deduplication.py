@@ -1,8 +1,8 @@
 """Deduplication pipes for leuchtturm pipelines."""
 
-import json
+import ujson as json
 
-from common import Pipe
+from .common import Pipe
 
 
 class EmailDeduplication(Pipe):

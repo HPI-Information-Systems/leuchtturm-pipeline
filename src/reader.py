@@ -11,10 +11,10 @@ Resulting documents must be in json format with at least these fields:
 """
 
 import email
-import json
+import ujson as json
 import uuid
 
-from common import Pipe, SparkProvider
+from .common import Pipe, SparkProvider
 
 
 class EmlReader(Pipe):
@@ -66,7 +66,7 @@ class TextFileReader(Pipe):
 
     def run(self):
         """Run task in spark context."""
-        return SparkProvider.spark_context.textFile(self.path, minPartitions=self.parallelism)
+        return SparkProvider.spark_context().textFile(self.path, minPartitions=self.parallelism)
 
 
 class CsvReader(Pipe):
