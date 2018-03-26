@@ -27,8 +27,8 @@ pip install --quiet -r requirements.txt
 cp -r ~/anaconda2/envs/leuchtturm_env . && cd leuchtturm_env && zip -r --quiet leuchtturm_env.zip * && mv leuchtturm_env.zip .. && cd .. || return
 #zip requirements for tm...
 cp ~/gitlab-runner/models/* models/ && cd models && zip --quiet models.zip * && mv models.zip .. && cd .. || return
-# zip src dir
-cd src && zip --quiet src.zip * && mv src.zip .. && cd .. || return
+# zip src dir to ship it as py-files
+zip -r --quiet src.zip src || return
 source deactivate
 
 echo '[stage 2 of 2] Running leuchtturm pipeline. This might take a while ...'
@@ -38,6 +38,7 @@ PYSPARK_PYTHON=./leuchtturm_env/bin/python \
     spark-submit --master yarn --deploy-mode cluster \
     --driver-memory 8g --executor-memory 4g --num-executors 23 --executor-cores 4 \
     --archives leuchtturm_env.zip#leuchtturm_env,models.zip#models,src.zip#src \
-    ./run_pipeline.py --read-from $EMAILS --write-to $PRESULT --solr --solr-url $SOLR 2>/dev/null
+    --py-files src.zip \
+    run_pipeline.py --read-from $EMAILS --write-to $PRESULT --solr --solr-url $SOLR 2>/dev/null
 
 echo -e '\n[Done]'
