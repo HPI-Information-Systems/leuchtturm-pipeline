@@ -122,7 +122,7 @@ def deduplicate_emails(rdd):
     Arguments: rdd with raw, header field for each doc in json format
     Returns: rdd that no longer contains duplicates as defined in select_email()
     """
-    def convert_to_tupel(data):
+    def convert_to_tuple(data):
         data_norm = json.loads(data)
         splitting_keys = json.dumps([data_norm['header']['sender']['email'],
                                      data_norm['header']['date'],
@@ -139,7 +139,7 @@ def deduplicate_emails(rdd):
     def revert_to_json(data):
         return data[1]
 
-    return rdd.map(lambda x: convert_to_tupel(x)) \
+    return rdd.map(lambda x: convert_to_tuple(x)) \
               .reduceByKey(lambda x, y: select_email(x, y)) \
               .map(lambda x: revert_to_json(x))
 
