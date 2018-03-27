@@ -257,10 +257,10 @@ def extract_correspondent_data(rdd):
                            r'(cell|mobile|mob)',
                            r'(fax|fx|facs|facsimile|facsim)',
                            r'home']
-    phone_type_keys = ['office',  # this will be default
-                       'cell',
-                       'fax',
-                       'home']
+    phone_type_keys = ['phone_office',  # this will be default
+                       'phone_cell',
+                       'phone_fax',
+                       'phone_home']
 
     def _split_signature_on_phone_numbers(signature):
         return re.split(phone_pattern, signature, flags=re.IGNORECASE)
@@ -288,7 +288,8 @@ def extract_correspondent_data(rdd):
 
     def extract_phone_numbers_from_signature(data):
         document = json.loads(data)
-        phone_numbers = {'office': [], 'cell': [], 'fax': [], 'home': []}
+        for key in phone_type_keys:
+            document[key] = []
         split_signature = _split_signature_on_phone_numbers(document['signature'])
 
         # iterate over all phone numbers found in the signature
@@ -299,8 +300,7 @@ def extract_correspondent_data(rdd):
             enclosing_line = split_signature[i - 1].rpartition('\n')[-1] \
                 + split_signature[i + 1].partition('\n')[0]
             phone_number_type = _get_phone_number_type(enclosing_line)
-            phone_numbers[phone_number_type].append(split_signature[i])
-        document['phone_numbers'] = phone_numbers
+            document[phone_number_type].append(split_signature[i])
         return json.dumps(document)
 
     def extract_email_address_from_signature(data):
@@ -340,25 +340,19 @@ def aggregate_correspondent_data(rdd):
 
         unified_person = {
             'email_address': person1['email_address'],
-            'signature': [],
-            'sender_alias': [],
-            'email_addresses_from_signature': [],
-            'phone_numbers': {
-                'office': [],
-                'cell': [],
-                'fax': [],
-                'home': []
-            }
         }
 
-        unified_person['signature'] = list(set(person1['signature'] + person2['signature']))
-        unified_person['sender_alias'] = list(set(person1['sender_alias'] + person2['sender_alias']))
-        unified_person['email_addresses_from_signature'] = list(set(person1['email_addresses_from_signature'] + person2['email_addresses_from_signature']))
-        unified_person['phone_numbers']['office'] = list(set(person1['phone_numbers']['office'] + person2['phone_numbers']['office']))
-        unified_person['phone_numbers']['cell'] = list(set(person1['phone_numbers']['cell'] + person2['phone_numbers']['cell']))
-        unified_person['phone_numbers']['fax'] = list(set(person1['phone_numbers']['fax'] + person2['phone_numbers']['fax']))
-        unified_person['phone_numbers']['home'] = list(set(person1['phone_numbers']['home'] + person2['phone_numbers']['home']))
-
+        relevant_keys = [
+            'signature',
+            'sender_alias',
+            'email_addresses_from_signature',
+            'phone_office',
+            'phone_cell',
+            'phone_fax',
+            'phone_home'
+        ]
+        for key in relevant_keys:
+            unified_person[key] = list(set(person1[key] + person2[key]))
         return json.dumps(unified_person)
 
     def revert_to_json(data):
