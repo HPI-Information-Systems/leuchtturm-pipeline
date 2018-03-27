@@ -41,7 +41,7 @@ class SparkProvider(object):
 
     @staticmethod
     def is_in_clustermode():
-        """Check if env variabke LEUCHTTURM_RUNNER is set to CLUSTER."""
+        """Check if env variable LEUCHTTURM_RUNNER is set to CLUSTER."""
         try:
             if environ['LEUCHTTURM_RUNNER'] == 'LOCAL':
                 return False
@@ -86,6 +86,14 @@ class Pipe(object):
         """Initialize common vars."""
         super().__init__()
         self.parallelism = SparkProvider.spark_parallelism()
+
+    def run_on_document(self):
+        """Run task on a single document. Should be unit tested."""
+        raise NotImplementedError
+
+    def run_on_partition(self):
+        """Run task on a single partition. For expensive imports."""
+        raise NotImplementedError
 
     def run(self):
         """Run task in spark context. Unless export pipe: return rdd."""
