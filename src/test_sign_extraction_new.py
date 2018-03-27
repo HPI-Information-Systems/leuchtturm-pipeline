@@ -3,6 +3,7 @@ from leuchtturm import extract_signature_information
 import os
 import json
 import re
+from pprint import pprint
 
 # directory that only contains the '*.txt.ann' files
 annotated_mails_path = "/Users/j/Uni/BP/code/pipeline/raw_quagga_annotated_detailled_train_curated_ann"
@@ -17,6 +18,14 @@ with open(results_path) as results:
     results = re.sub('\n{', ', \n{', results)
     results = '[' + results + ']'
     results = json.loads(results)
+
+    # for result in results:
+    #     if result['signature']:
+    #         unwanted = set(result) - set({'signature', 'header', 'phone_numbers', 'sender_alias', 'email_addresses_from_signature', 'phone_numbers'})
+    #         for unwanted_key in unwanted: del result[unwanted_key]
+    #         print('\n\n\n\n---------------------------------------------------------------------------------------------')
+    #         pprint(result)
+
 
     for result in results:
         with open(annotated_mails_path + '/' + result['doc_id'] + '.txt.ann') as annotated_res:
