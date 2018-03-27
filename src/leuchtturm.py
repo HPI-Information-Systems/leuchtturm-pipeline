@@ -222,6 +222,8 @@ def extract_signature_information(rdd, test_mode=False):
                 document['body_without_signature'],
                 sender=document['header']['sender']['email']
             )
+            if not document['signature']:
+                document['signature'] = ''
 
             return json.dumps(document)
 
@@ -271,10 +273,6 @@ def extract_correspondent_data(rdd):
                 return phone_type_keys[i]
         return phone_type_keys[0]  # set type to 'office' by default
 
-    def has_signature(data):
-        document = json.loads(data)
-        return document['signature']
-
     def filter_document_keys(data):
         document = json.loads(data)
         # unwanted = set(result) - set(
@@ -283,7 +281,8 @@ def extract_correspondent_data(rdd):
 
         return json.dumps({
             'signature': document['signature'],
-            'email_address': document['header']['sender']['email']
+            'email_address': document['header']['sender']['email'],
+            'recipients': document['header']['recipients']
         })
 
     def extract_phone_numbers_from_signature(data):
@@ -316,11 +315,16 @@ def extract_correspondent_data(rdd):
         document['sender_aliases'] = re.findall(alias_name_pattern, document['signature'], flags=re.IGNORECASE)
         return json.dumps(document)
 
-    return rdd.filter(has_signature) \
-              .map(filter_document_keys) \
+    def extract_writes_to_relationship(data):
+        document = json.loads(data)
+        document['writes_to'] = list(set([recipient['email'] for recipient in document['recipients']]))
+        return json.dumps(document)
+
+    return rdd.map(filter_document_keys) \
               .map(extract_phone_numbers_from_signature) \
               .map(extract_email_addresses_from_signature) \
-              .map(extract_aliases_from_signature)
+              .map(extract_aliases_from_signature) \
+              .map(extract_writes_to_relationship)
 
 
 def aggregate_correspondent_data(rdd):
@@ -350,7 +354,8 @@ def aggregate_correspondent_data(rdd):
             'phone_numbers_office',
             'phone_numbers_cell',
             'phone_numbers_fax',
-            'phone_numbers_home'
+            'phone_numbers_home',
+            'writes_to'
         ]
         for key in relevant_keys:
             unified_person[key] = list(set(person1[key] + person2[key]))
