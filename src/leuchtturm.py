@@ -257,10 +257,10 @@ def extract_correspondent_data(rdd):
                            r'(cell|mobile|mob)',
                            r'(fax|fx|facs|facsimile|facsim)',
                            r'home']
-    phone_type_keys = ['phone_office',  # this will be default
-                       'phone_cell',
-                       'phone_fax',
-                       'phone_home']
+    phone_type_keys = ['phone_numbers_office',  # this will be default
+                       'phone_numbers_cell',
+                       'phone_numbers_fax',
+                       'phone_numbers_home']
 
     def _split_signature_on_phone_numbers(signature):
         return re.split(phone_pattern, signature, flags=re.IGNORECASE)
@@ -271,7 +271,7 @@ def extract_correspondent_data(rdd):
                 return phone_type_keys[i]
         return phone_type_keys[0]  # set type to 'office' by default
 
-    def remove_documents_without_signature(data):
+    def has_signature(data):
         document = json.loads(data)
         return document['signature']
 
@@ -303,30 +303,31 @@ def extract_correspondent_data(rdd):
             document[phone_number_type].append(split_signature[i])
         return json.dumps(document)
 
-    def extract_email_address_from_signature(data):
+    def extract_email_addresses_from_signature(data):
         document = json.loads(data)
         email_address_pattern = r'\b[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+\b'
         document['email_addresses_from_signature'] = re.findall(email_address_pattern, document['signature'])
         return json.dumps(document)
 
-    def extract_alias_from_signature(data):
+    def extract_aliases_from_signature(data):
         document = json.loads(data)
         first_email_address_characters = document['email_address'][:3]
         alias_name_pattern = r'(?:^|\n)\b(' + first_email_address_characters + r'[\w -.]*)\s?(?:\n|$)'
-        document['sender_alias'] = re.findall(alias_name_pattern, document['signature'], flags=re.IGNORECASE)
+        document['sender_aliases'] = re.findall(alias_name_pattern, document['signature'], flags=re.IGNORECASE)
         return json.dumps(document)
 
-    return rdd.filter(remove_documents_without_signature) \
+    return rdd.filter(has_signature) \
               .map(filter_document_keys) \
               .map(extract_phone_numbers_from_signature) \
-              .map(extract_email_address_from_signature) \
-              .map(extract_alias_from_signature)
+              .map(extract_email_addresses_from_signature) \
+              .map(extract_aliases_from_signature)
 
 
 def aggregate_correspondent_data(rdd):
-    def prepare_signature_field(data):
+    def prepare_non_list_type_fields(data):
         document = json.loads(data)
-        document['signature'] = [document['signature']]
+        document['signatures'] = [document['signature']]
+        del document['signature']
         return json.dumps(document)
 
     def convert_to_tuple(data):
@@ -343,13 +344,13 @@ def aggregate_correspondent_data(rdd):
         }
 
         relevant_keys = [
-            'signature',
-            'sender_alias',
+            'signatures',
+            'sender_aliases',
             'email_addresses_from_signature',
-            'phone_office',
-            'phone_cell',
-            'phone_fax',
-            'phone_home'
+            'phone_numbers_office',
+            'phone_numbers_cell',
+            'phone_numbers_fax',
+            'phone_numbers_home'
         ]
         for key in relevant_keys:
             unified_person[key] = list(set(person1[key] + person2[key]))
@@ -363,7 +364,7 @@ def aggregate_correspondent_data(rdd):
         # pprint(document)
         return data
 
-    return rdd.map(prepare_signature_field) \
+    return rdd.map(prepare_non_list_type_fields) \
               .map(convert_to_tuple) \
               .reduceByKey(select_email) \
               .map(revert_to_json) \
