@@ -121,7 +121,7 @@ class TopicModelPrediction(Pipe):
         topic_terms = []
         for topic in model.get_document_topics(bow):
             terms = map(lambda xy: (dictionary[xy[0]], xy[1]), model.get_topic_terms(topic[0], topn=10))
-            # TODO refactor this @nico
+            # TODO refactor this
             topic_terms.append(str((str(topic[1]), (list(terms)))))
 
         return topic_terms
@@ -146,7 +146,7 @@ class TopicModelPrediction(Pipe):
         dictionary = dictionary if dictionary is not None else self.load_dictionary()
 
         document = json.loads(raw_message)
-        # TODO srsly @nico, this way the resulting 'list' isn't even a list...
+        # TODO srsly, this way the resulting 'list' isn't even a list...
         document['topics'] = str(self.get_topics(document[self.read_from], model, dictionary))
 
         return json.dumps(document)
