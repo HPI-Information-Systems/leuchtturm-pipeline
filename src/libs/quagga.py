@@ -1,5 +1,4 @@
-"""
-Quagga is an email segmentation system written by Tim Repke.
+"""Quagga is an email segmentation system written by Tim Repke.
 
 https://github.com/TimRepke/Quagga
 Ref. Repke, Tim and Krestel R. Bringing Back Structure to Free Text Email Conversations with Recurrent Neural Networks. ECIR 2018.
@@ -13,7 +12,6 @@ from keras_contrib.layers import CRF
 import numpy as np
 from sklearn.preprocessing import LabelEncoder
 import os
-import utils
 
 
 line_embedding_size = 32

@@ -15,8 +15,7 @@ test_unit:
     - mkdir -p .pip
     - pip install -U pip
     - pip --cache-dir=.pip install -r requirements.txt
-    - pytest --cov=src/ tests/
-  coverage: /\d+\%\s*$/
+    - pytest .
 
 test_integration:
   stage: test
@@ -26,8 +25,7 @@ test_integration:
     - export PATH=~/anaconda2/bin:$PATH
     - conda create -n leuchtturm_env python=3.6 -y --copy || true
     - source activate leuchtturm_env
-    - pip install --quiet -r requirements.txt
-    - ./test_integration_pipeline.sh
+    - ./tests/test_integration_pipeline.sh
     - source deactivate
   artifacts:
     paths:
