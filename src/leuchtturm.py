@@ -271,41 +271,54 @@ def extract_correspondent_data(rdd):
                 return phone_type_keys[i]
         return phone_type_keys[0]  # set type to 'office' by default
 
+    def remove_documents_without_signature(data):
+        document = json.loads(data)
+        return document['signature']
+
+    def filter_document_keys(data):
+        document = json.loads(data)
+        # unwanted = set(result) - set(
+        #     {'signature', 'header', 'phone_numbers', 'sender_alias', 'email_addresses_from_signature', 'phone_numbers'})
+        # for unwanted_key in unwanted: del result[unwanted_key]
+
+        return json.dumps({
+            'signature': document['signature'],
+            'email_address': document['header']['sender']['email']
+        })
+
     def extract_phone_numbers_from_signature(data):
         document = json.loads(data)
-        if document['signature']:
-            phone_numbers = {'office': [], 'cell': [], 'fax': [], 'home': []}
-            split_signature = _split_signature_on_phone_numbers(document['signature'])
+        phone_numbers = {'office': [], 'cell': [], 'fax': [], 'home': []}
+        split_signature = _split_signature_on_phone_numbers(document['signature'])
 
-            # iterate over all phone numbers found in the signature
-            # i is pointing to the current phone number string, i-1 and i+1 to strings before and after the phone number
-            for i in range(1, len(split_signature), 2):
-                # get the line on which the phone number occurs (without the phone number itself)
-                # '...\nFax: 123-4567-8910 ab\n...' => 'Fax:  ab'
-                enclosing_line = split_signature[i - 1].rpartition('\n')[-1] \
-                    + split_signature[i + 1].partition('\n')[0]
-                phone_number_type = _get_phone_number_type(enclosing_line)
-                phone_numbers[phone_number_type].append(split_signature[i])
-            document['phone_numbers'] = phone_numbers
+        # iterate over all phone numbers found in the signature
+        # i is pointing to the current phone number string, i-1 and i+1 to strings before and after the phone number
+        for i in range(1, len(split_signature), 2):
+            # get the line on which the phone number occurs (without the phone number itself)
+            # '...\nFax: 123-4567-8910 ab\n...' => 'Fax:  ab'
+            enclosing_line = split_signature[i - 1].rpartition('\n')[-1] \
+                + split_signature[i + 1].partition('\n')[0]
+            phone_number_type = _get_phone_number_type(enclosing_line)
+            phone_numbers[phone_number_type].append(split_signature[i])
+        document['phone_numbers'] = phone_numbers
         return json.dumps(document)
 
     def extract_email_address_from_signature(data):
         document = json.loads(data)
-        if document['signature']:
-            email_address_pattern = r'\b[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+\b'
-            document['email_addresses_from_signature'] = re.findall(email_address_pattern, document['signature'])
+        email_address_pattern = r'\b[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+\b'
+        document['email_addresses_from_signature'] = re.findall(email_address_pattern, document['signature'])
         return json.dumps(document)
 
     def extract_alias_from_signature(data):
         document = json.loads(data)
-        if document['signature']:
-            first_email_address_characters = document['header']['sender']['email'][:3]
-            alias_name_pattern = r'(?:^|\n)\b(' + first_email_address_characters + r'[\w -.]*)(?:\n|$)'
-            document['sender_alias'] = re.findall(alias_name_pattern, document['signature'], flags=re.IGNORECASE)
-
+        first_email_address_characters = document['email_address'][:3]
+        alias_name_pattern = r'(?:^|\n)\b(' + first_email_address_characters + r'[\w -.]*)\s?(?:\n|$)'
+        document['sender_alias'] = re.findall(alias_name_pattern, document['signature'], flags=re.IGNORECASE)
         return json.dumps(document)
 
-    return rdd.map(extract_phone_numbers_from_signature) \
+    return rdd.filter(remove_documents_without_signature) \
+              .map(filter_document_keys) \
+              .map(extract_phone_numbers_from_signature) \
               .map(extract_email_address_from_signature) \
               .map(extract_alias_from_signature)
 
