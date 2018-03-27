@@ -5,6 +5,7 @@ from email.utils import getaddresses, parsedate, parseaddr, unquote
 from email.policy import default
 import ujson as json
 import re
+from string import whitespace
 from time import mktime
 from datetime import datetime
 
@@ -61,15 +62,21 @@ class EmailDecoding(Pipe):
 
     def get_main_header(self, message):
         """Return main header of email."""
+        keys = re.compile(r'(from)|(x-from)|(to)|(x-to)|(cc)|(x-cc)|(bcc)|(x-bcc)|(subject)|(date)',
+                          re.UNICODE | re.IGNORECASE)
+
+        # filter headers for following splitting task
+        filtered_headers = [header for header in message.items() if keys.match(header[0])]
         headers = ''
-        for header in message.items():
+        for header in filtered_headers:
             headers += header[0] + ': ' + header[1] + '\n'
 
         return headers + '\n\n'
 
     def get_attachement_names(self, message):
         """Return list of attachment file names."""
-        file_names = []
+        enron_file = message.get('x-filename', '')
+        file_names = [] if not enron_file else [enron_file]
         for part in message.walk():
             if part.is_attachment():
                 file_names.append(part.get_filename())
@@ -104,22 +111,33 @@ class EmailSplitting(Pipe):
     Use of this pipe is discouraged since correspondent deduplication is not yet implemented.
     """
 
+    header = re.compile(r'((((\t)*)(((-+).*\n(.*-+))\n{0,4}(.*\n){0,3})?(.+\n))|(\S.*\n){0,2})((\t|>)* ?((\n*subject:)|(from:)|(reply-to:)|(sent by:)|(sent:)|(date:)|(to:)|(cc:))(\s.*\n)(.*(@|;|and).*\n)*){3,}', re.MULTILINE | re.IGNORECASE | re.UNICODE)  # NOQA
+
     def __init__(self):
         """Set params if needed here."""
         super().__init__()
 
     def detect_parts(self, email):
         """Split email into its parts and return list of parts."""
-        header = r'^(((subject:)|(from:)|(sent:)|(date:)|(to:)|(cc:))(\s.*\n)){4,}\s+'
+        found_headers = list(EmailSplitting.header.finditer(email))
+        headers = [head.group() for head in found_headers]
+        parts = []
 
-        found_headers = re.finditer(header, email, re.MULTILINE | re.IGNORECASE | re.UNICODE)
-        parts = [email]
-        for found_header in found_headers:
-            current_header = found_header.group()
-            # skip first part since it was already added (main header is usually more complex)
-            if not email.startswith(current_header):
-                current_parts = email.split(current_header)
-                parts.append(current_header + current_parts[1])
+        # when no headers are found is the entire unsplit mail to be added
+        if not headers:
+            parts.append(email)
+        for index, found_header in enumerate(headers):
+            current_header = found_header
+            next_header = ''
+            # determine the next header if the current one is not the last already
+            if index < len(headers) - 1:
+                next_header = headers[index + 1]
+
+            current_parts = email.split(current_header)
+            if next_header:
+                parts.append((current_header + current_parts[1].split(next_header)[0], current_header))
+            else:
+                parts.append((current_header + current_parts[1], current_header))
 
         return parts
 
@@ -129,14 +147,25 @@ class EmailSplitting(Pipe):
 
         parts = self.detect_parts(document['raw'])
 
+        part_docs = []
         splitted_emails = []
+
         original_doc_id = document['doc_id']
-        for index, part in enumerate(parts):
+        for index, (part, header) in enumerate(parts):
             obj = document
-            obj['raw'] = part
+            obj['header'] = header if part.startswith(header) else None
+            obj['body'] = part.replace(header, '')
+
             # if there are multiple parts, add an identifier to the original document id
             if len(parts) > 1:
                 obj['doc_id'] = original_doc_id + '_part_' + str(index + 1) + '_of_' + str(len(parts))
+
+            part_docs.append(dict(obj))
+
+        for index, part in enumerate(part_docs):
+            obj = part
+            obj['successors'] = [part_docs[index - 1]['doc_id'] if not index == 0 else None]
+            obj["predecessor"] = part_docs[index + 1]['doc_id'] if not index == len(part_docs) - 1 else None
             splitted_emails.append(json.dumps(obj))
 
         return splitted_emails
@@ -159,54 +188,90 @@ class HeaderParsing(Pipe):
         self.clean_subject = clean_subject  # TODO is not implemented
         self.use_unix_time = use_unix_time
 
-    def get_body(self, message):
-        """Given a message object, return the text of the mime part representing the body and decode it."""
-        return message.get_payload()
+    def prepare_string(self, text):
+        """Remove whitespace, newlines and other noise."""
+        text = text.replace('----- Original Message -----', '')
+        text = re.sub(r'^(\s|>)+', '', text, re.MULTILINE)  # remove leading >
+        text = re.sub(r'\s+', ' ', text)  # normalize whitespace
+        text = text.strip(whitespace)
+
+        return text
+
+    def transform_header_string(self, header_string):
+        """Split a string that is likely a header into its fields."""
+        header_string = self.prepare_string(header_string)
+
+        header_fields = re.split(r'\s(?=[a-zA-Z-]+:\s)', header_string)  # split different headers
+        for index, header_field in enumerate(header_fields):
+            header_fields[index] = header_field.lower().split(': ', 1)  # make key value pairs out of a header
+
+        return header_fields
+
+    def get_header_value(self, transformed_header, field):
+        """Get value from a transformed header list."""
+        field = [header for header in transformed_header if header[0] == field]
+
+        return field[0][1] if field else ''
 
     def parse_correspondent(self, correspondent):
         """Given a tuple (name, email), return a correspondant dict."""
-        parsed_correspondent = {'name': '', 'email': ''}
-        if correspondent[0]:
-            parsed_correspondent['name'] = unquote(correspondent[0])
-        elif correspondent[1] and '@' not in correspondent[1]:
-            parsed_correspondent['name'] = unquote(correspondent[1])
-        if correspondent[1] and '@' in correspondent[1]:
-            parsed_correspondent['email'] = unquote(correspondent[1]).lower()
+        return correspondent
 
-        return parsed_correspondent
+    def parse_recipients(self, field_string, type='to'):
+        """Parse a list (in string format) to correspondents."""
+        return field_string
 
     def parse_date(self, date_string):
         """Normalize date from a string. If self.use_unix_time=True, return unix timestamp."""
-        date = parsedate(date_string)
-        date = mktime(date) if date is not None else 0
+        # date = parsedate(date_string)
+        # date = mktime(date) if date is not None else 0
 
-        return date if self.use_unix_time else datetime.fromtimestamp(int(date)).isoformat() + 'Z'
+        # return date if self.use_unix_time else datetime.fromtimestamp(int(date)).isoformat() + 'Z'
+        return date_string
 
     def parse_subject(self, subject_string):
         """Clean subject line from RE:, AW: etc if self.clean_subject=True."""
         return subject_string
 
-    def parse_header(self, message):
+    def parse_header(self, header_string):
         """Given a message object, parse all relevant metadata and return them in a header dict."""
-        header = {}
-        header['sender'] = self.parse_correspondent(parseaddr(message.get('from', '')))
-        header['recipients'] = []
-        for recipient in getaddresses(message.get_all('to', []) +
-                                      message.get_all('cc', []) +
-                                      message.get_all('bcc', [])):
-            if recipient[0] or recipient[1]:
-                header['recipients'].append(self.parse_correspondent(recipient))
-        header['subject'] = self.parse_subject(message.get('subject', ''))
-        header['date'] = self.parse_date(message.get('date', '') + message.get('sent', ''))
+        header = {'sender': '',
+                  'recipients': [],
+                  'date': '',
+                  'subject': ''}
+
+        headers = self.transform_header_string(header_string)
+
+        if self.get_header_value(headers, 'from'):
+            header['sender'] = self.parse_correspondent(self.get_header_value(headers, 'from'))
+        else:
+            sender = re.sub(r'\d{2}/\d{2}/\d{4}\s\d{2}:\d{2}(:\d{2})?\s(PM|AM)', '', headers[0],
+                            re.UNICODE | re.IGNORECASE)  # remove date
+            header['sender'] = self.parse_correspondent(sender)
+
+        if self.get_header_value(headers, 'to'):
+            header['recipients'].append(self.parse_recipients(self.get_header_value(headers, 'to'), type='to'))
+        if self.get_header_value(headers, 'cc'):
+            header['recipients'].append(self.parse_recipients(self.get_header_value(headers, 'cc'), type='cc'))
+        if self.get_header_value(headers, 'bcc'):
+            header['recipients'].append(self.parse_recipients(self.get_header_value(headers, 'to'), type='bcc'))
+
+        if self.get_header_value(headers, 'date'):
+            header['date'] = self.parse_date(self.get_header_value(headers, 'date'))
+        elif self.get_header_value(headers, 'sent'):
+            header['date'] = self.parse_date(self.get_header_value(headers, 'sent'))
+        else:
+            header['date'] = re.search(r'\d{2}/\d{2}/\d{4}\s\d{2}:\d{2}(:\d{2})?\s(PM|AM)', headers[0]).group()
+
+        if self.get_header_value(headers, 'subject'):
+            header['subject'] = self.parse_subject(self.get_header_value(headers, 'subject'))
 
         return header
 
     def run_on_document(self, raw_message):
         """Get body and header information for a leuchtturm document."""
         document = json.loads(raw_message)
-        message = message_from_string(document['raw'])
-        document['header'] = self.parse_header(message)
-        document['body'] = self.get_body(message)
+        document['header'] = self.parse_header(document['header'])
 
         return json.dumps(document)
 

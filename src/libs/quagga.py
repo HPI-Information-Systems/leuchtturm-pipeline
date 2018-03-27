@@ -107,6 +107,6 @@ def get_body(raw_email):
     body_text = ''
     for i in range(0, len(head_body_indicator)):
         if int(head_body_indicator[i][1][0]) == int(1.0):
-            body_text += head_body_indicator[i][0]
+            body_text += head_body_indicator[i][0] + '\n'
 
     return body_text
