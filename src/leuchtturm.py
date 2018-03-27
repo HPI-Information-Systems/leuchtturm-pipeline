@@ -16,7 +16,7 @@ from nltk.stem.wordnet import WordNetLemmatizer
 from string import punctuation, whitespace
 import talon
 from talon import signature
-# from pprint import pprint
+from pprint import pprint
 
 
 def split_emails(rdd):
@@ -321,6 +321,59 @@ def extract_correspondent_data(rdd):
               .map(extract_phone_numbers_from_signature) \
               .map(extract_email_address_from_signature) \
               .map(extract_alias_from_signature)
+
+
+def aggregate_correspondent_data(rdd):
+    def prepare_signature_field(data):
+        document = json.loads(data)
+        document['signature'] = [document['signature']]
+        return json.dumps(document)
+
+    def convert_to_tuple(data):
+        document = json.loads(data)
+        splitting_keys = json.dumps(document['email_address'])
+        return splitting_keys, data
+
+    def select_email(data1, data2):
+        person1 = json.loads(data1)
+        person2 = json.loads(data2)
+
+        unified_person = {
+            'email_address': person1['email_address'],
+            'signature': [],
+            'sender_alias': [],
+            'email_addresses_from_signature': [],
+            'phone_numbers': {
+                'office': [],
+                'cell': [],
+                'fax': [],
+                'home': []
+            }
+        }
+
+        unified_person['signature'] = list(set(person1['signature'] + person2['signature']))
+        unified_person['sender_alias'] = list(set(person1['sender_alias'] + person2['sender_alias']))
+        unified_person['email_addresses_from_signature'] = list(set(person1['email_addresses_from_signature'] + person2['email_addresses_from_signature']))
+        unified_person['phone_numbers']['office'] = list(set(person1['phone_numbers']['office'] + person2['phone_numbers']['office']))
+        unified_person['phone_numbers']['cell'] = list(set(person1['phone_numbers']['cell'] + person2['phone_numbers']['cell']))
+        unified_person['phone_numbers']['fax'] = list(set(person1['phone_numbers']['fax'] + person2['phone_numbers']['fax']))
+        unified_person['phone_numbers']['home'] = list(set(person1['phone_numbers']['home'] + person2['phone_numbers']['home']))
+
+        return json.dumps(unified_person)
+
+    def revert_to_json(data):
+        return data[1]
+
+    def pretty_print(data):
+        document = json.loads(data)
+        # pprint(document)
+        return data
+
+    return rdd.map(prepare_signature_field) \
+              .map(convert_to_tuple) \
+              .reduceByKey(select_email) \
+              .map(revert_to_json) \
+              .map(pretty_print)
 
 
 def clean_bodies(rdd):

@@ -1,7 +1,8 @@
 """This module runs pipeline tasks in correct order."""
 
 from settings import PATH_FILES_LISTED, PATH_PIPELINE_RESULTS, PATH_LDA_MODEL
-from leuchtturm import (extract_metadata, deduplicate_emails, extract_signature_information, extract_correspondent_data)
+from leuchtturm import (extract_metadata, deduplicate_emails, extract_signature_information, extract_correspondent_data,
+                        aggregate_correspondent_data)
 import sys
 import os
 from pyspark import SparkContext, SparkConf
@@ -28,7 +29,8 @@ def run_email_pipeline(input_path=PATH_FILES_LISTED, output_path=PATH_PIPELINE_R
         data = extract_metadata(data)
         data = deduplicate_emails(data)
         data = extract_signature_information(data)
-        data = extract_correspondent_data(data)
+        correspondent_data = extract_correspondent_data(data)
+        correspondent_data = aggregate_correspondent_data(correspondent_data)
 
         # ???
         # data = clean_bodies(data)
@@ -38,6 +40,7 @@ def run_email_pipeline(input_path=PATH_FILES_LISTED, output_path=PATH_PIPELINE_R
         # data = extract_entities(data)
 
         data.saveAsTextFile(output_path)
+        correspondent_data.saveAsTextFile(output_path + '_correspondents')
 
         sc.stop()
 
