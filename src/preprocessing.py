@@ -1,17 +1,16 @@
 """Pipes to preprocess emails, extract their meta-data, segmentation, ... for leuchtturm pipelines."""
 
 from email import message_from_string
-from email.utils import getaddresses, parsedate, parseaddr, unquote
+from email.utils import unquote
 from email.policy import default
 import ujson as json
 import re
 from string import whitespace
-from time import mktime
-from datetime import datetime
 
 from html2text import HTML2Text
 from langdetect import detect
 import textacy
+import dateparser
 
 from .common import Pipe
 
@@ -188,22 +187,27 @@ class HeaderParsing(Pipe):
         self.clean_subject = clean_subject  # TODO is not implemented
         self.use_unix_time = use_unix_time
 
-    def prepare_string(self, text):
+    def prepare_header_string(self, text):
         """Remove whitespace, newlines and other noise."""
-        text = text.replace('----- Original Message -----', '')
+        text = text.lower()
+        text = re.sub(r'----- ?original message ?-----', '', text)
         text = re.sub(r'^(\s|>)+', '', text, re.MULTILINE)  # remove leading >
         text = re.sub(r'\s+', ' ', text)  # normalize whitespace
+        text = re.sub(r'-{5,} forwarded by .+ -{5,}', '', text)  # remove intro header (always followed by other)
         text = text.strip(whitespace)
 
         return text
 
     def transform_header_string(self, header_string):
         """Split a string that is likely a header into its fields."""
-        header_string = self.prepare_string(header_string)
+        header_string = self.prepare_header_string(header_string)
 
-        header_fields = re.split(r'\s(?=[a-zA-Z-]+:\s)', header_string)  # split different headers
+        header_fields = re.split(r'\s((?=(x-)?from:\s)|(?=((x|reply)-)?to:\s)|(?=(x-)?b?cc:\s)|(?=date:\s)|(?=sent:\s)|(?=subject:\s))', header_string)  # split into separate headers
+        header_fields = [header_field for header_field in header_fields if header_field is not None and header_field]  # filter none and empty
         for index, header_field in enumerate(header_fields):
-            header_fields[index] = header_field.lower().split(': ', 1)  # make key value pairs out of a header
+            if header_field[-1:] == ':':
+                header_field += ' '  # if empty field is included in header
+            header_fields[index] = header_field.split(': ', 1)  # make key value pairs out of a header
 
         return header_fields
 
@@ -213,29 +217,63 @@ class HeaderParsing(Pipe):
 
         return field[0][1] if field else ''
 
-    def parse_correspondent(self, correspondent):
-        """Given a tuple (name, email), return a correspondant dict."""
-        return correspondent
+    def clean_email(self, email_string):
+        """Clean email address."""
+        email = re.search(r'\S+@\S+\.\S{2,}', email_string)  # get email
+        email = email.group(0) if email is not None else ''
+        email = unquote(email)
 
-    def parse_recipients(self, field_string, type='to'):
+        return email
+
+    def clean_name(self, name_string):
+        """Normailze and clean a name. Lastname, Firstname becomes to Fn Ln."""
+        name = re.sub(r'\S+@\S+\.\S{2,}', '', name_string)  # remove email
+        name = re.sub(r'(?<=\w)/.*', '', name)  # normalize weird enron names (beau ratliff/hou/ees@ees)
+        name = name.replace('"', '').split(',')
+        name.reverse()
+        name = ' '.join(name).strip(whitespace).title()
+        name = re.sub(r'\s{2,}', ' ', name)
+
+        return name
+
+    def parse_correspondent(self, correspondent_string):
+        """Given a string containig name and/or email, return a correspondent dict."""
+        return {'name': self.clean_name(correspondent_string),
+                'email': self.clean_email(correspondent_string)}
+
+    def parse_recipients(self, field_string, kind='to'):
         """Parse a list (in string format) to correspondents."""
-        return field_string
+        if ';' not in field_string:  # make ; seperator for every correspondent list
+            for index, char in enumerate(field_string):
+                if char == ',' and field_string[:index].count('"') % 2 == 0:
+                    new_field_string = list(field_string)
+                    new_field_string[index] = ';'
+                    field_string = ''.join(new_field_string)
+
+        field_splitted = field_string.split(';')
+
+        recipients = []
+        for recipient in field_splitted:
+            recipient_obj = self.parse_correspondent(recipient)
+            recipient_obj['type'] = kind
+            recipients.append(recipient_obj.copy())
+
+        return recipients
 
     def parse_date(self, date_string):
-        """Normalize date from a string. If self.use_unix_time=True, return unix timestamp."""
-        # date = parsedate(date_string)
-        # date = mktime(date) if date is not None else 0
+        """Normalize date from a string."""
+        date = re.sub(r'(\w+)', '', date_string)
+        date = dateparser.parse(date)
 
-        # return date if self.use_unix_time else datetime.fromtimestamp(int(date)).isoformat() + 'Z'
-        return date_string
+        return date.isoformat() + 'Z'
 
     def parse_subject(self, subject_string):
         """Clean subject line from RE:, AW: etc if self.clean_subject=True."""
-        return subject_string
+        return subject_string.title()
 
     def parse_header(self, header_string):
         """Given a message object, parse all relevant metadata and return them in a header dict."""
-        header = {'sender': '',
+        header = {'sender': {},
                   'recipients': [],
                   'date': '',
                   'subject': ''}
@@ -245,26 +283,29 @@ class HeaderParsing(Pipe):
         if self.get_header_value(headers, 'from'):
             header['sender'] = self.parse_correspondent(self.get_header_value(headers, 'from'))
         else:
-            sender = re.sub(r'\d{2}/\d{2}/\d{4}\s\d{2}:\d{2}(:\d{2})?\s(PM|AM)', '', headers[0],
-                            re.UNICODE | re.IGNORECASE)  # remove date
+            sender = re.sub(r'(on )?\d{2}/\d{2}/\d{2,4}\s\d{2}:\d{2}(:\d{2})?\s(am|pm)', '', headers[0][0])  # rm date
             header['sender'] = self.parse_correspondent(sender)
 
         if self.get_header_value(headers, 'to'):
-            header['recipients'].append(self.parse_recipients(self.get_header_value(headers, 'to'), type='to'))
+            header['recipients'] += self.parse_recipients(self.get_header_value(headers, 'to'), kind='to')
         if self.get_header_value(headers, 'cc'):
-            header['recipients'].append(self.parse_recipients(self.get_header_value(headers, 'cc'), type='cc'))
+            header['recipients'] += self.parse_recipients(self.get_header_value(headers, 'cc'), kind='cc')
         if self.get_header_value(headers, 'bcc'):
-            header['recipients'].append(self.parse_recipients(self.get_header_value(headers, 'to'), type='bcc'))
+            header['recipients'] += self.parse_recipients(self.get_header_value(headers, 'to'), kind='bcc')
 
         if self.get_header_value(headers, 'date'):
             header['date'] = self.parse_date(self.get_header_value(headers, 'date'))
         elif self.get_header_value(headers, 'sent'):
             header['date'] = self.parse_date(self.get_header_value(headers, 'sent'))
         else:
-            header['date'] = re.search(r'\d{2}/\d{2}/\d{4}\s\d{2}:\d{2}(:\d{2})?\s(PM|AM)', headers[0]).group()
+            date = re.search(r'\d{2}/\d{2}/\d{2,4}\s\d{2}:\d{2}(:\d{2})?\s(am|pm)', headers[0][0])  # get date
+            if date is not None:
+                header['date'] = self.parse_date(date.group(0))
 
         if self.get_header_value(headers, 'subject'):
             header['subject'] = self.parse_subject(self.get_header_value(headers, 'subject'))
+
+        print(header)
 
         return header
 
