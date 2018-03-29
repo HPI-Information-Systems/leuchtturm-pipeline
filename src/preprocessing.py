@@ -110,7 +110,7 @@ class EmailSplitting(Pipe):
     Use of this pipe is discouraged since correspondent deduplication is not yet implemented.
     """
 
-    header = re.compile(r'((((\t)*)(((-+).*\n(.*-+))\n{0,4}(.*\n){0,3})?(.+\n))|(\S.*\n){0,2})((\t|>)* ?((\n*subject:)|(from:)|(reply-to:)|(sent by:)|(sent:)|(date:)|(to:)|(cc:))(\s.*\n)(.*(@|;|and).*\n)*){3,}', re.MULTILINE | re.IGNORECASE | re.UNICODE)  # NOQA
+    header = re.compile(r'((((\t)*)(((-+).*\n(.*-+))\n{0,4}(.*\n){0,3})?(.+\n))|(\S.*\n){0,2})((\t|>)* ?((\n*subject:)|(from:)|(reply-to:)|(sent by:)|(sent:)|(date:)|(to:)|(b?cc:))(\s.*\n)(.*(@|;|and).*\n)*){3,}', re.MULTILINE | re.IGNORECASE | re.UNICODE)  # NOQA
 
     def __init__(self):
         """Set params if needed here."""
@@ -266,8 +266,8 @@ class HeaderParsing(Pipe):
         """Normalize date from a string. If self.use_unix_time set return timestamp."""
         date = re.sub(r'\(\w+\)', '', date_string).strip(whitespace)  # remove additional tz in brackets
         date = dateparser.parse(date)
-        # TODO remove time zone
-        return date.isoformat() + 'Z' if not self.use_unix_time else date.timestamp()
+
+        return date.strftime('%Y-%m-%dT%H:%M:%S') + 'Z' if not self.use_unix_time else date.timestamp()
 
     def parse_subject(self, subject_string):
         """Clean subject line from RE:, AW: etc if self.clean_subject=True."""
@@ -291,14 +291,11 @@ class HeaderParsing(Pipe):
 
         delimiter = ',' if 'Original Message' not in header_string else ';'  # catch case 'to: lastname, firstname'
         if self.get_header_value(headers, 'to'):
-            header['recipients'] += self.parse_recipients(self.get_header_value(headers, 'to'),
-                                                          kind='to', delimiter=delimiter)
+            header['recipients'] += self.parse_recipients(self.get_header_value(headers, 'to'), kind='to', delimiter=delimiter)
         if self.get_header_value(headers, 'cc'):
-            header['recipients'] += self.parse_recipients(self.get_header_value(headers, 'cc'),
-                                                          kind='cc', delimiter=delimiter)
+            header['recipients'] += self.parse_recipients(self.get_header_value(headers, 'cc'), kind='cc', delimiter=delimiter)
         if self.get_header_value(headers, 'bcc'):
-            header['recipients'] += self.parse_recipients(self.get_header_value(headers, 'to'),
-                                                          kind='bcc', delimiter=delimiter)
+            header['recipients'] += self.parse_recipients(self.get_header_value(headers, 'to'), kind='bcc', delimiter=delimiter)
 
         if self.get_header_value(headers, 'date'):
             header['date'] = self.parse_date(self.get_header_value(headers, 'date'))
@@ -313,7 +310,9 @@ class HeaderParsing(Pipe):
         if self.get_header_value(headers, 'subject'):
             header['subject'] = self.parse_subject(self.get_header_value(headers, 'subject'))
 
-        print(header)
+        # print('======================================')
+        # print(header)
+        # print(header_string)
 
         return header
 
