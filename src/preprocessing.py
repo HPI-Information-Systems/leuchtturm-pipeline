@@ -155,11 +155,10 @@ class EmailSplitting(Pipe):
             obj['header'] = header if part.startswith(header) else None
             obj['body'] = part.replace(header, '')
 
-            # if there are multiple parts, add an identifier to the original document id
-            if len(parts) > 1:
+            if len(parts) > 1:  # if there are multiple parts, add an identifier to the original document id
                 obj['doc_id'] = original_doc_id + '_part_' + str(index + 1) + '_of_' + str(len(parts))
 
-            part_docs.append(dict(obj))
+            part_docs.append(obj.copy())
 
         for index, part in enumerate(part_docs):
             obj = part
@@ -177,8 +176,8 @@ class EmailSplitting(Pipe):
 class HeaderParsing(Pipe):
     """Parse metadata of an email and split main header from body.
 
-    Get sender, recipients, date, subject from emails in standard format.
-    Get body from a mime multipart email.
+    Given a splitted document (header/body).
+    Get sender, recipients, date, subject from emails even with (common) inline headers.
     """
 
     def __init__(self, clean_subject=False, use_unix_time=False):
@@ -201,9 +200,8 @@ class HeaderParsing(Pipe):
         """Split a string that is likely a header into its fields."""
         header_string = self.prepare_header_string(header_string)
 
-        separator_re = re.compile(r'\s((?=(x-)?from:\s)|(?=((x|reply)-)?to:\s)|(?=(x-)?b?cc:\s)|(?=date:\s)|(?=sent:\s)|(?=subject:\s))',
-                                  re.IGNORECASE)  # split into separate headers
-        header_fields = separator_re.split(header_string)
+        separator_re = re.compile(r'\s((?=(x-)?from:\s)|(?=((x|reply)-)?to:\s)|(?=(x-)?b?cc:\s)|(?=date:\s)|(?=sent:\s)|(?=subject:\s))', re.IGNORECASE)  # NOQA
+        header_fields = separator_re.split(header_string)  # split into separate headers
         header_fields = [header_field for header_field in header_fields if header_field]  # filter none and empty
         for index, header_field in enumerate(header_fields):
             if header_field[-1:] == ':':
@@ -233,10 +231,15 @@ class HeaderParsing(Pipe):
         name = re.sub(r'\[\w+\]', '', name)  # remove [FI] flags and similar
         name = name.replace('"', '').replace("'", '').split(',')
         name.reverse()
-        name = ' '.join(name).strip(whitespace).title()
+        name = ' '.join(name).strip(whitespace)
         name = re.sub(r'\s{2,}', ' ', name)
 
-        return name
+        email_without_domain = re.sub(r'@.+', '', self.clean_email(name_string))
+        if not name and '.' in email_without_domain:  # parse name from email address if else unavailable
+            name_parts = [part for part in email_without_domain.split('.') if part]
+            name = ' '.join(name_parts)
+
+        return name.title()
 
     def parse_correspondent(self, correspondent_string):
         """Given a string containig name and/or email, return a correspondent dict."""
@@ -291,11 +294,14 @@ class HeaderParsing(Pipe):
 
         delimiter = ',' if 'Original Message' not in header_string else ';'  # catch case 'to: lastname, firstname'
         if self.get_header_value(headers, 'to'):
-            header['recipients'] += self.parse_recipients(self.get_header_value(headers, 'to'), kind='to', delimiter=delimiter)
+            header['recipients'] += self.parse_recipients(self.get_header_value(headers, 'to'),
+                                                          kind='to', delimiter=delimiter)
         if self.get_header_value(headers, 'cc'):
-            header['recipients'] += self.parse_recipients(self.get_header_value(headers, 'cc'), kind='cc', delimiter=delimiter)
+            header['recipients'] += self.parse_recipients(self.get_header_value(headers, 'cc'),
+                                                          kind='cc', delimiter=delimiter)
         if self.get_header_value(headers, 'bcc'):
-            header['recipients'] += self.parse_recipients(self.get_header_value(headers, 'to'), kind='bcc', delimiter=delimiter)
+            header['recipients'] += self.parse_recipients(self.get_header_value(headers, 'to'),
+                                                          kind='bcc', delimiter=delimiter)
 
         if self.get_header_value(headers, 'date'):
             header['date'] = self.parse_date(self.get_header_value(headers, 'date'))
@@ -309,10 +315,6 @@ class HeaderParsing(Pipe):
 
         if self.get_header_value(headers, 'subject'):
             header['subject'] = self.parse_subject(self.get_header_value(headers, 'subject'))
-
-        # print('======================================')
-        # print(header)
-        # print(header_string)
 
         return header
 
