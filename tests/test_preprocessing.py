@@ -42,7 +42,7 @@ def test_email_splitting_on_fwd():
 
 
 def test_email_splitting_on_dnc():
-    """Emails should be splitted into their parts. Dnc headers should be recognised"""
+    """Emails should be splitted into their parts. Dnc headers should be recognised."""
     tool = EmailSplitting()
     assert len(tool.run_on_document(splitting_raw_dnc)) == 3
 
