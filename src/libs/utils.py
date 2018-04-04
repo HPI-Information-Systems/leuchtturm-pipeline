@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 import numpy as np
 import os
 import re
-import json
+import ujson as json
 
 denotation_types = [
     "Header",

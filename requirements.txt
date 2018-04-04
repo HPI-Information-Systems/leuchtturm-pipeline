@@ -1,18 +1,18 @@
 flake8
 flake8_docstrings
 pytest
-pytest-cov
-pytest-gitignore # excludes gitignored files from pytest scope
+pytest-gitignore  # excludes gitignored files from pytest scope
 pyspark
 html2text
 langdetect
 gensim
-https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-2.0.0/en_core_web_sm-2.0.0.tar.gz
+https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-2.0.0/en_core_web_sm-2.0.0.tar.gz  # spacy
+textacy
 # numpy
 # keras
 # git+https://www.github.com/keras-team/keras-contrib.git
 # sklearn
 pysolr
-neo4j-driver
+py2neo
 nltk
 talon

@@ -1,24 +1,22 @@
 #!/bin/bash
 
 EMAILS=emails
-FLISTER=temp/files_listed
-PRESULT=temp/pipeline_results
+PRESULT=tmp/pipeline_results
 
 set -e # exit script on first failure
 
-echo '[stage 1 of 3] Fetching data ...'
+echo '[stage 1 of 3] Building environment ...'
 pip install --quiet -r requirements.txt
 
+echo '[stage 2 of 3] Fetching data ...'
 # get requirements that are not stored in git
 cp ~/gitlab-runner/models/* models/
 cp ~/gitlab-runner/emails/* $EMAILS/
 
 # export SPARK_HOME=/usr/hdp/2.6.2.0-205/spark2/
-echo '[stage 2 of 3] Running file lister ...'
-python src/file_lister.py $EMAILS $FLISTER
-ls $FLISTER/_SUCCESS
-echo '[stage 3 of 3] Running leuchtturm pipeline ...'
-python src/run_pipeline.py $FLISTER $PRESULT
+echo '[stage 3 of 3] Running pipeline ...'
+export LEUCHTTURM_RUNNER=LOCAL
+python ./run_pipeline.py --read-from $EMAILS --write-to $PRESULT
 ls $PRESULT/_SUCCESS
 
 echo -e '\n[Done]\n\nHead of pipeline results:\n'

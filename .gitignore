@@ -25,6 +25,7 @@ results*.csv
 pyvenv.cfg
 .venv
 pip-selfcheck.json
+settings.json
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
