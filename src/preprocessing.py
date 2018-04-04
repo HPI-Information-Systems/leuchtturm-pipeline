@@ -21,10 +21,11 @@ class EmailDecoding(Pipe):
     Attachements may be considered in future.
     """
 
-    def __init__(self, get_attachment_names=True):
+    def __init__(self, get_attachment_names=True, split_header_body=False):
         """Set conf."""
         super().__init__()
         self.get_attachment_names = get_attachment_names
+        self.split_header_body = split_header_body
 
     def decode_part(self, text, encoding=None):
         """Decode a mime part from e.g. base64 encoding."""
@@ -71,7 +72,7 @@ class EmailDecoding(Pipe):
         for header in filtered_headers:
             headers += header[0] + ': ' + header[1] + '\n'
 
-        return headers + '\n\n'
+        return headers
 
     def get_attachments(self, message):
         """Return list of attachment file names."""
@@ -87,9 +88,14 @@ class EmailDecoding(Pipe):
         doc = json.loads(document)
         # try:
         message = message_from_string(doc['raw'])
-        doc['raw'] = self.get_main_header(message) + '\n\n'
-        doc['raw'] += self.get_body(message)
-        doc['raw'] = textacy.preprocess.fix_bad_unicode(doc['raw'])
+
+        minimal_header = textacy.preprocess.fix_bad_unicode(self.get_main_header(message))
+        body = textacy.preprocess.fix_bad_unicode(self.get_body(message))
+
+        doc['raw'] = minimal_header + '\n\n' + body
+        if self.split_header_body:
+            doc['header'] = minimal_header
+            doc['body'] = body
         if self.get_attachment_names:
             doc['attachments'] = self.get_attachments(message)
         # except Exception:
@@ -112,7 +118,7 @@ class EmailSplitting(Pipe):
     """
 
     header = re.compile(r'((((\t)*)(((-+).*\n(.*-+))\n{0,4}(.*\n){0,3})?(.+\n))|(\S.*\n){0,2})((\t|>)* ?((\n*subject:)|(from:)|(reply-to:)|(sent by:)|(sent:)|(date:)|(to:)|(b?cc:))(\s.*\n)(.*(@|;|and).*\n)*){3,}', re.MULTILINE | re.IGNORECASE | re.UNICODE)  # NOQA
-    # header = re.compile(r'', re.IGNORECASE | re.MULTILINE)
+    # header = re.compile(r'', re.IGNORECASE | re.MULTILINE) TODO rewrite
 
     def __init__(self):
         """Set params if needed here."""
@@ -325,11 +331,6 @@ class HeaderParsing(Pipe):
 
         if self.get_header_value(headers, 'subject'):
             header['subject'] = self.parse_subject(self.get_header_value(headers, 'subject'))
-
-        import pprint
-        print(header_string)
-        pprint.pprint(header)
-        print('=====================================')
 
         return header
 
