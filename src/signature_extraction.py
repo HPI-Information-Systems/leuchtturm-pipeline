@@ -48,7 +48,12 @@ class SignatureExtraction(Pipe):
                 'message, and then delete it from your system\.  Thank you\.\r?\n'
                 '\*{78}\r?\n'
                 '\*{7}\r?\n*'
-                'For more information on McDERMOTT, WILL & EMERY please visit our website at:\n'
+                'For more information on McDERMOTT, WILL & EMERY please visit our website at:\r?\n'
+                'http:\/\/www\.mwe\.com\/\s*'
+            ),
+            (
+                '\*{7}\r?\n*'
+                'For more information on McDERMOTT, WILL & EMERY please visit our website at:\r?\n'
                 'http:\/\/www\.mwe\.com\/\s*'
             )
         ]
@@ -116,10 +121,10 @@ class SignatureExtraction(Pipe):
         # factor these out of here
         document[self.write_body_without_signature_to] = document[self.read_from]
         # TODO: remove sent_from_mobile ?
-        document[self.write_body_without_signature_to], document['sent_from_mobile'] = \
-            self.remove_standard_signatures(document[self.write_body_without_signature_to])
         document[self.write_body_without_signature_to] = \
             self.remove_attachment_notices(document[self.write_body_without_signature_to])
+        document[self.write_body_without_signature_to], document['sent_from_mobile'] = \
+            self.remove_standard_signatures(document[self.write_body_without_signature_to])
 
         return json.dumps(document)
 

@@ -83,6 +83,7 @@ class CorrespondentDataExtraction(Pipe):
         phone_numbers = self.extract_phone_numbers_from(document['signature'])
         document.update(phone_numbers)
         document['email_addresses_from_signature'] = self.extract_email_addresses_from(document['signature'])
+        # first_email_address_characters =
         document['sender_aliases'] = self.extract_aliases_from(document['signature'], document['sender_email_address'][:3])
         document['writes_to'] = self.extract_writes_to_relationship(document['recipients'])
 
