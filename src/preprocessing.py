@@ -86,7 +86,6 @@ class EmailDecoding(Pipe):
     def run_on_document(self, document):
         """Get main body and extract attachement names on a leuchtturm doc."""
         doc = json.loads(document)
-        # try:
         message = message_from_string(doc['raw'])
 
         minimal_header = textacy.preprocess.fix_bad_unicode(self.get_main_header(message))
@@ -98,10 +97,6 @@ class EmailDecoding(Pipe):
             doc['body'] = body
         if self.get_attachment_names:
             doc['attachments'] = self.get_attachments(message)
-        # except Exception:
-        #     doc['raw'] = textacy.preprocess.fix_bad_unicode(doc['raw'])
-        #     if self.get_attachement_names:
-        #         doc['attachments'] = []
 
         return json.dumps(doc)
 
@@ -114,11 +109,10 @@ class EmailSplitting(Pipe):
     """Split emails at their inline headers.
 
     Maximize information by adding inline coversations as separate documents.
-    Use of this pipe is discouraged since correspondent deduplication is not yet implemented.
+    Pointers to context emails are being added.
     """
 
     header = re.compile(r'((((\t)*)(((-+).*\n(.*-+))\n{0,4}(.*\n){0,3})?(.+\n))|(\S.*\n){0,2})((\t|>)* ?((\n*subject:)|(from:)|(reply-to:)|(sent by:)|(sent:)|(date:)|(to:)|(b?cc:))(\s.*\n)(.*(@|;|and).*\n)*){3,}', re.MULTILINE | re.IGNORECASE | re.UNICODE)  # NOQA
-    # header = re.compile(r'', re.IGNORECASE | re.MULTILINE) TODO rewrite
 
     def __init__(self):
         """Set params if needed here."""
