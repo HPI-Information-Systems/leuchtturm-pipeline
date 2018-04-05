@@ -19,9 +19,9 @@ def run_email_pipeline(read_from='./emails', write_to='./pipeline_result',
 
     reader = EmlReader(read_from)
 
-    pipes = [EmailDecoding(),
+    pipes = [EmailDecoding(split_header_body=True),
              HeaderParsing(clean_subject=False, use_unix_time=False),
-             EmailDeduplication(use_metadata=True),
+             EmailDeduplication(),
              TextCleaning(read_from='body', write_to='text_clean'),
              TopicModelPrediction(),
              LanguageDetection(read_from='text_clean'),
