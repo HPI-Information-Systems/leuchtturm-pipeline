@@ -1,5 +1,6 @@
 import json
 import re
+import regex
 from .common import Pipe
 
 
@@ -36,10 +37,6 @@ class CorrespondentDataExtraction(Pipe):
         return self.phone_type_keys[0]  # set type to 'office' by default
 
     def filter_document_keys(self, document):
-        # unwanted = set(result) - set(
-        #     {'signature', 'header', 'phone_numbers', 'sender_alias', 'email_addresses_from_signature', 'phone_numbers'})
-        # for unwanted_key in unwanted: del result[unwanted_key]
-
         return {
             'signature': document['signature'],
             'sender_email_address': document['header']['sender']['email'],
@@ -69,7 +66,8 @@ class CorrespondentDataExtraction(Pipe):
 
     def extract_aliases_from(self, signature, first_email_address_characters):
         alias_name_pattern = r'(?:^|\n)\b(' + first_email_address_characters + r'[\w -.]*)\s?(?:\n|$)'
-        return re.findall(alias_name_pattern, signature, flags=re.IGNORECASE)
+        # note: using regex module (not re) so that matches can overlap (necessary because of shared \n between aliases)
+        return regex.findall(alias_name_pattern, signature, overlapped=True, flags=re.IGNORECASE)
 
     def extract_writes_to_relationship(self, recipients):
         return list(set([recipient['email'] for recipient in recipients]))
@@ -131,17 +129,17 @@ class CorrespondentDataAggregation(Pipe):
         splitting_keys = json.dumps(document['sender_email_address'])
         return splitting_keys, data
 
-    def select_email(self, data1, data2):
-        person1 = json.loads(data1)
-        person2 = json.loads(data2)
+    def merge_correspondents(self, data1, data2):
+        correspondent1 = json.loads(data1)
+        correspondent2 = json.loads(data2)
 
         unified_person = {
-            'sender_email_address': person1['sender_email_address'],
+            'sender_email_address': correspondent1['sender_email_address'],
         }
 
-        for key in person1:
+        for key in correspondent1:
             if key != 'sender_email_address':
-                unified_person[key] = list(set(person1[key] + person2[key]))
+                unified_person[key] = list(set(correspondent1[key] + correspondent2[key]))
         return json.dumps(unified_person)
 
     def revert_to_json(self, data):
@@ -151,5 +149,5 @@ class CorrespondentDataAggregation(Pipe):
         """Run pipe in spark context."""
         return rdd.map(self.prepare_for_reduction) \
                   .map(self.convert_to_tuple) \
-                  .reduceByKey(self.select_email) \
+                  .reduceByKey(self.merge_correspondents) \
                   .map(self.revert_to_json)

@@ -16,3 +16,4 @@ pysolr
 py2neo
 nltk
 talon
+regex
