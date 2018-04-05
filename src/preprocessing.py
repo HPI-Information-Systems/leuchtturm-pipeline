@@ -114,9 +114,10 @@ class EmailSplitting(Pipe):
 
     header = re.compile(r'((((\t)*)(((-+).*\n(.*-+))\n{0,4}(.*\n){0,3})?(.+\n))|(\S.*\n){0,2})((\t|>)* ?((\n*subject:)|(from:)|(reply-to:)|(sent by:)|(sent:)|(date:)|(to:)|(b?cc:))(\s.*\n)(.*(@|;|and).*\n)*){3,}', re.MULTILINE | re.IGNORECASE | re.UNICODE)  # NOQA
 
-    def __init__(self):
+    def __init__(self, keep_thread_connected=True):
         """Set params if needed here."""
         super().__init__()
+        self.keep_thread_connected = keep_thread_connected
 
     def detect_parts(self, email):
         """Split email into its parts and return list of parts."""
@@ -168,7 +169,11 @@ class EmailSplitting(Pipe):
             obj['predecessor'] = part_docs[index + 1]['doc_id'] if not index == len(part_docs) - 1 else None
             splitted_emails.append(json.dumps(obj))
 
-        return splitted_emails
+        if self.keep_thread_connected:
+            document['parts'] = splitted_emails
+            return json.dumps(document)
+        else:
+            return splitted_emails
 
     def run(self, rdd):
         """Run pipe in spark context."""
@@ -331,7 +336,12 @@ class HeaderParsing(Pipe):
     def run_on_document(self, raw_message):
         """Get body and header information for a leuchtturm document."""
         document = json.loads(raw_message)
-        document['header'] = self.parse_header(document['header'])
+
+        if 'parts' in document:
+            for part in document['parts']:
+                part['header'] = self.parse_header(part['header'])
+        else:
+            document['header'] = self.parse_header(document['header'])
 
         return json.dumps(document)
 

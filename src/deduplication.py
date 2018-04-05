@@ -12,17 +12,22 @@ class EmailDeduplication(Pipe):
     Based on logic in select_email(), duplicate will be dropped from rdd.
     """
 
-    def __init__(self, use_metadata=True):
+    def __init__(self, use_metadata=True, is_connected_thread=True):
         """Select deduplication method. We might offer more advaced options here."""
         super().__init__()
         self.use_metadata = use_metadata  # IMPLEMENT ME
+        self.is_connected_thread = is_connected_thread
 
     def convert_to_tupel(self, document):
         """Convert to tuple RDD where relevant metadata for deduplication are the keys."""
         document_norm = json.loads(document)
-        splitting_keys = json.dumps([document_norm['header']['sender']['email'],
-                                     document_norm['header']['date'],
-                                     document_norm['header']['subject']])
+        splitting_keys = ''
+        if self.is_connected_thread:
+            splitting_keys = document_norm['doc_id']
+        else:
+            splitting_keys = json.dumps([document_norm['header']['sender']['email'],
+                                         document_norm['header']['date'],
+                                         document_norm['header']['subject']])
 
         return (splitting_keys, document)
 
@@ -37,8 +42,33 @@ class EmailDeduplication(Pipe):
         """Convert tupel entry of rdd to usual format for pipeline."""
         return document_tupel[1]
 
+    def generate_doc_id_from_header(self, header):
+        """Generate a hash-like id from a header."""
+        return hash(json.dumps(header))
+
+    def split_thread(self, raw_message):
+        """Split a thread stores in parts into spearate docs."""
+        document = json.loads(raw_message)
+
+        parts = []
+        for part in document['parts']:
+            part['doc_id'] = self.generate_doc_id_from_header(part['header'])
+            parts.append(part.copy())
+
+        splitted_emails = []
+        for index, part in enumerate(parts):
+            obj = part
+            obj['successors'] = [parts[index - 1]['doc_id'] if not index == 0 else None]
+            obj['predecessor'] = parts[index + 1]['doc_id'] if not index == len(parts) - 1 else None
+            splitted_emails.append(json.dumps(obj))
+
+        return splitted_emails
+
     def run(self, rdd):
         """Run pipe in spark context."""
+        if self.is_connected_thread:
+            rdd = rdd.flatMap(lambda x: self.split_thread(x))
+
         return rdd.map(lambda x: self.convert_to_tupel(x)) \
                   .reduceByKey(lambda x, y: self.select_email(x, y)) \
                   .map(lambda x: self.convert_from_tupel(x))

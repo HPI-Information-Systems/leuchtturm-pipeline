@@ -5,7 +5,7 @@ import ujson as json
 
 from src.common import Pipeline, SparkProvider
 from src.reader import EmlReader
-from src.preprocessing import EmailDecoding, HeaderParsing, TextCleaning, LanguageDetection
+from src.preprocessing import EmailDecoding, HeaderParsing, TextCleaning, LanguageDetection, EmailSplitting
 from src.deduplication import EmailDeduplication
 from src.ner import SpacyNer
 from src.topics import TopicModelPrediction, TopicModelTraining
@@ -19,7 +19,8 @@ def run_email_pipeline(read_from='./emails', write_to='./pipeline_result',
 
     reader = EmlReader(read_from)
 
-    pipes = [EmailDecoding(split_header_body=True),
+    pipes = [EmailDecoding(split_header_body=False),
+             EmailSplitting(),
              HeaderParsing(clean_subject=False, use_unix_time=False),
              EmailDeduplication(),
              TextCleaning(read_from='body', write_to='text_clean'),
