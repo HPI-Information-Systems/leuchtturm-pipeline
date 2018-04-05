@@ -12,24 +12,23 @@ class EmailDeduplication(Pipe):
     Based on logic in select_email(), duplicate will be dropped from rdd.
     """
 
-    def __init__(self, use_metadata=True, is_connected_thread=True):
+    def __init__(self, is_connected_thread=False):
         """Select deduplication method. We might offer more advaced options here."""
         super().__init__()
-        self.use_metadata = use_metadata  # IMPLEMENT ME
         self.is_connected_thread = is_connected_thread
 
     def convert_to_tupel(self, document):
         """Convert to tuple RDD where relevant metadata for deduplication are the keys."""
         document_norm = json.loads(document)
-        splitting_keys = ''
+        splitting_key = ''
         if self.is_connected_thread:
-            splitting_keys = document_norm['doc_id']
+            splitting_key = document_norm['doc_id']
         else:
-            splitting_keys = json.dumps([document_norm['header']['sender']['email'],
-                                         document_norm['header']['date'],
-                                         document_norm['header']['subject']])
+            splitting_key = json.dumps([document_norm['header']['sender']['email'],
+                                        document_norm['header']['date'],
+                                        document_norm['header']['subject']])
 
-        return (splitting_keys, document)
+        return (splitting_key, document)
 
     def select_email(self, document1, document2):
         """Choose email that remains in corpus."""
@@ -56,9 +55,8 @@ class EmailDeduplication(Pipe):
             parts.append(part.copy())
 
         splitted_emails = []
-        for index, part in enumerate(parts):
-            obj = part
-            obj['successors'] = [parts[index - 1]['doc_id'] if not index == 0 else None]
+        for index, obj in enumerate(parts):
+            obj['successor'] = parts[index - 1]['doc_id'] if not index == 0 else None
             obj['predecessor'] = parts[index + 1]['doc_id'] if not index == len(parts) - 1 else None
             splitted_emails.append(json.dumps(obj))
 

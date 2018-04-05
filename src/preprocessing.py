@@ -114,7 +114,7 @@ class EmailSplitting(Pipe):
 
     header = re.compile(r'((((\t)*)(((-+).*\n(.*-+))\n{0,4}(.*\n){0,3})?(.+\n))|(\S.*\n){0,2})((\t|>)* ?((\n*subject:)|(from:)|(reply-to:)|(sent by:)|(sent:)|(date:)|(to:)|(b?cc:))(\s.*\n)(.*(@|;|and).*\n)*){3,}', re.MULTILINE | re.IGNORECASE | re.UNICODE)  # NOQA
 
-    def __init__(self, keep_thread_connected=True):
+    def __init__(self, keep_thread_connected=False):
         """Set params if needed here."""
         super().__init__()
         self.keep_thread_connected = keep_thread_connected
@@ -163,21 +163,23 @@ class EmailSplitting(Pipe):
 
             part_docs.append(obj.copy())
 
-        for index, part in enumerate(part_docs):
-            obj = part
-            obj['successors'] = [part_docs[index - 1]['doc_id'] if not index == 0 else None]
+        for index, obj in enumerate(part_docs):
+            obj['successor'] = part_docs[index - 1]['doc_id'] if not index == 0 else None
             obj['predecessor'] = part_docs[index + 1]['doc_id'] if not index == len(part_docs) - 1 else None
-            splitted_emails.append(json.dumps(obj))
+            splitted_emails.append(obj.copy())
 
         if self.keep_thread_connected:
             document['parts'] = splitted_emails
             return json.dumps(document)
         else:
-            return splitted_emails
+            return [json.dumps(email) for email in splitted_emails]
 
     def run(self, rdd):
         """Run pipe in spark context."""
-        return rdd.flatMap(lambda x: self.run_on_document(x))
+        if self.keep_thread_connected:
+            return rdd.map(lambda x: self.run_on_document(x))
+        else:
+            return rdd.flatMap(lambda x: self.run_on_document(x))
 
 
 class HeaderParsing(Pipe):
