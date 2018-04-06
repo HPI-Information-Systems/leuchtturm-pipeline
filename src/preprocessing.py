@@ -183,10 +183,10 @@ class EmailSplitting(Pipe):
 
             part_docs.append(obj.copy())
 
-        for index, obj in enumerate(part_docs):
-            obj['successor'] = part_docs[index - 1]['doc_id'] if not index == 0 else None
-            obj['predecessor'] = part_docs[index + 1]['doc_id'] if not index == len(part_docs) - 1 else None
-            splitted_emails.append(obj.copy())
+        for index, part in enumerate(part_docs):
+            part['successor'] = part_docs[index - 1]['doc_id'] if not index == 0 else None
+            part['predecessor'] = part_docs[index + 1]['doc_id'] if not index == len(part_docs) - 1 else None
+            splitted_emails.append(part.copy())
 
         if self.keep_thread_connected:
             document['parts'] = splitted_emails
@@ -244,7 +244,7 @@ class HeaderParsing(Pipe):
         field = [header for header in transformed_header if header[0].lower() == field.lower()]
         try:
             return field[0][1]
-        except Exception:
+        except IndexError:
             return ''
 
     def clean_email(self, email_string):

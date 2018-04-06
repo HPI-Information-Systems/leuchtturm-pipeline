@@ -53,13 +53,13 @@ class EmailDeduplication(Pipe):
         parts = []
         for part in document['parts']:
             part['doc_id'] = self.generate_doc_id_from_header(part['header'])
-            parts.append(part.copy())
+            parts.append(part)
 
         splitted_emails = []
-        for index, obj in enumerate(parts):
-            obj['successor'] = parts[index - 1]['doc_id'] if not index == 0 else None
-            obj['predecessor'] = parts[index + 1]['doc_id'] if not index == len(parts) - 1 else None
-            splitted_emails.append(json.dumps(obj))
+        for index, part in enumerate(parts):
+            part['successor'] = parts[index - 1]['doc_id'] if not index == 0 else None
+            part['predecessor'] = parts[index + 1]['doc_id'] if not index == len(parts) - 1 else None
+            splitted_emails.append(json.dumps(part))
 
         return splitted_emails
 
