@@ -19,14 +19,18 @@ def run_email_pipeline(read_from='./emails', write_to='./pipeline_result',
     """Run main email pipeline."""
     SparkProvider.spark_context()
 
-    reader = EmlReader(read_from)
+    reader = EmlReader(read_from, filename_is_doc_id=True)
     pipes = [
-        EmailDecoding(),
+        EmailDecoding(split_header_body=True),
         HeaderParsing(clean_subject=False, use_unix_time=False),
-        EmailDeduplication(use_metadata=True),
+        EmailDeduplication(),
         TextCleaning(read_from='body', write_to='text_clean'),
-        # extract signature information, also relies on document['header']['sender']['email']
-        SignatureExtraction(read_from='body', write_body_without_signature_to='body_without_signature', write_signature_to='signature')
+        # also relies on document['header']['sender']['email']
+        SignatureExtraction(
+            read_from='body',
+            write_body_without_signature_to='body_without_signature',
+            write_signature_to='signature'
+        ),
         # TopicModelPrediction(),
         # LanguageDetection(read_from='text_clean'),
         # SpacyNer(read_from='text_clean')
@@ -36,9 +40,7 @@ def run_email_pipeline(read_from='./emails', write_to='./pipeline_result',
 
     reader = TextFileReader(write_to)
     pipes = [
-        # extract correspondent data
         CorrespondentDataExtraction(),
-        # aggregate correspondent data
         CorrespondentDataAggregation(),
     ]
     writer = TextFileWriter(path=write_to + '_correspondent')

@@ -1,4 +1,4 @@
 [flake8]
-exclude = bin,include,libs,lib,man
+exclude = bin,include,libs,lib,man,mock_*
 max-line-length = 120
 ignore = E402, D413

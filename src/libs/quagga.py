@@ -107,6 +107,37 @@ def get_body(raw_email):
     body_text = ''
     for i in range(0, len(head_body_indicator)):
         if int(head_body_indicator[i][1][0]) == int(1.0):
-            body_text += head_body_indicator[i][0]
+            body_text += head_body_indicator[i][0] + '\n'
 
     return body_text
+
+
+def get_headers(raw_email):
+    """Actual method that extracts and returns the head of an email."""
+    text_lines = raw_email.splitlines()
+
+    func_b = enron_two_zone_line_b_func
+    model = enron_two_zone_model
+    # embedding_b = enron_two_zone_line_b
+
+    text_embedded = _embed(text_lines, [func_b])
+    head_body_predictions = model.predict(np.array([text_embedded])).tolist()[0]
+
+    head_body_indicator = list(zip(text_lines, head_body_predictions))
+
+    headers = {}
+    head_count = 0
+    at_head = False
+
+    for i in range(0, len(head_body_indicator)):
+        if int(head_body_indicator[i][1][0]) == int(0.0):
+            if not at_head:
+                at_head = True
+                head_count += 1
+                headers[head_count] = ''
+
+            headers[head_count] += head_body_indicator[i][0] + '\n'
+        else:
+            at_head = False
+
+    return headers

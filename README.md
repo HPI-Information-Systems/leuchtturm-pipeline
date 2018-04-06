@@ -22,21 +22,9 @@ And you're ready to go!
 
 ```bash
 # start the email pipeline
-(~/pipeline)$ python src/file_lister.py ./emails ./tmp/fl
-(~/pipeline)$ python src/run_leuchtturm.py ./tmp/fl ./tmp/pr
-(~/pipeline)$ python src/write_to_solr.py  ./tmp/pr http://0.0.0.0:8983/solr/emails  # if you have a running solr instance
+(~/pipeline)$ export LEUCHTTURM_RUNNER=LOCAL  # only if you're not on a cluster
+(~/pipeline)$ python run_pipeline.py  # this runs the pipeline with default params
+(~/pipeline)$ python run_pipeline.py --help  # to explore config options (such as solr upload, custom paths, ...)
 ```
 
-Check Solr or the `tmp` folder for the results! To deploy the pipeline on a yarn cluster, consult [this Guide](https://hpi.de/naumann/leuchtturm/gitlab/leuchtturm/meta/wikis/Pipeline/Pipeline-Architektur).
-
-## Pipeline tasks
-
-- read `.eml` compliant files
-- splitting
-- metadata extraction
-- deduplication
-- cleaning of text (for further text mining tasks)
-- language detection
-- entity extraction
-- write to solr db
-- write to neo4j db
+Check Solr or the `pipeline_result` folder for the results! To deploy the pipeline on a yarn cluster, consult [this Guide](https://hpi.de/naumann/leuchtturm/gitlab/leuchtturm/meta/wikis/Pipeline/Pipeline-Architektur).
