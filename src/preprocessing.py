@@ -112,7 +112,21 @@ class EmailSplitting(Pipe):
     Pointers to context emails are being added.
     """
 
-    header = re.compile(r'((((\t)*)(((-+).*\n(.*-+))\n{0,4}(.*\n){0,3})?(.+\n))|(\S.*\n){0,2})((\t|>)* ?((\n*subject:)|(from:)|(reply-to:)|(sent by:)|(sent:)|(date:)|(to:)|(b?cc:))(\s.*\n)(.*(@|;|and).*\n)*){3,}', re.MULTILINE | re.IGNORECASE | re.UNICODE)  # NOQA
+    forwarded_by_heuristic = r'(.*-{3}.*Forwarded by((\n|.)*?)Subject:.*)'
+    begin_forwarded_message_heuristic = r'(.*Begin forwarded message:((\n|.)*?)To:.*)'
+    original_message_heuristic = r'(.*-{3}.*Original Message((\n|.)*?)Subject:.*)'
+    reply_seperator_heuristic = r'(.*_{3}.*Reply Separator((\n|.)*?)Date.*)'
+    date_to_subject_heuristic = r'(.*\n.*(on )?\d{2}\/\d{2}\/\d{2,4}\s\d{2}:\d{2}(:\d{2})?\s?(AM|PM|am|pm)?.*\n.*(\n.*)?To: (\n|.)*?Subject: .*)' # NOQA
+    from_to_subject_heuristic = r'(.*From:((\n|.)*?)Subject:.*)'
+
+    header_regex = re.compile('(%s|%s|%s|%s|%s|%s)' % (
+        forwarded_by_heuristic,
+        begin_forwarded_message_heuristic,
+        original_message_heuristic,
+        reply_seperator_heuristic,
+        date_to_subject_heuristic,
+        from_to_subject_heuristic
+    ))
 
     def __init__(self, keep_thread_connected=False):
         """Set params if needed here."""
@@ -121,13 +135,18 @@ class EmailSplitting(Pipe):
 
     def detect_parts(self, email):
         """Split email into its parts and return list of parts."""
-        found_headers = list(EmailSplitting.header.finditer(email))
-        headers = [head.group() for head in found_headers]
+        original_header, original_body = email.split('\n\n', 1)
+
+        found_headers = list(EmailSplitting.header_regex.finditer(original_body))
+        headers = [header.group() for header in found_headers]
+        headers = [original_header] + headers
+
+        remaining_email = email
         parts = []
 
         # when no headers are found is the entire unsplit mail to be added
         if not headers:
-            parts.append(email)
+            parts.append(remaining_email)
         for index, found_header in enumerate(headers):
             current_header = found_header
             next_header = ''
@@ -135,11 +154,12 @@ class EmailSplitting(Pipe):
             if index < len(headers) - 1:
                 next_header = headers[index + 1]
 
-            current_parts = email.split(current_header)
+            current_parts = remaining_email.split(current_header, 1)
+
             if next_header:
-                parts.append((current_header + current_parts[1].split(next_header)[0], current_header))
+                parts.append((current_header, current_parts[1].split(next_header)[0]))
             else:
-                parts.append((current_header + current_parts[1], current_header))
+                parts.append((current_header, current_parts[1]))
 
         return parts
 
@@ -153,10 +173,10 @@ class EmailSplitting(Pipe):
         splitted_emails = []
 
         original_doc_id = document['doc_id']
-        for index, (part, header) in enumerate(parts):
+        for index, (header, body) in enumerate(parts):
             obj = document
-            obj['header'] = header if part.startswith(header) else None
-            obj['body'] = part.replace(header, '')
+            obj['header'] = header
+            obj['body'] = body
 
             if len(parts) > 1:  # if there are multiple parts, add an identifier to the original document id
                 obj['doc_id'] = original_doc_id + '_part_' + str(index + 1) + '_of_' + str(len(parts))

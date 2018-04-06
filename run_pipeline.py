@@ -5,7 +5,7 @@ import ujson as json
 
 from src.common import Pipeline, SparkProvider
 from src.reader import EmlReader
-from src.preprocessing import EmailDecoding, HeaderParsing, TextCleaning, LanguageDetection, EmailSplitting
+from src.preprocessing import EmailDecoding, EmailSplitting, HeaderParsing, TextCleaning, LanguageDetection
 from src.deduplication import EmailDeduplication
 from src.ner import SpacyNer
 from src.topics import TopicModelPrediction, TopicModelTraining
