@@ -42,6 +42,7 @@ lint_python:
     
 deploy-sopedu-master:
   stage: deploy
+  when: manual
   only:
     - master
   tags:
@@ -52,10 +53,11 @@ deploy-sopedu-master:
     - ./deploy_sopedu_pipeline.sh master
   environment:
     name: sopedu_pipeline_master
-    url: http://sopedu.hpi.uni-potsdam.de:8983/solr/#/pipeline_master
+    url: http://sopedu.hpi.uni-potsdam.de:8983/solr/#/enron
 
 deploy-sopedu-dev:
   stage: deploy
+  when: manual
   only:
     - dev
   tags:
@@ -66,18 +68,18 @@ deploy-sopedu-dev:
     - ./deploy_sopedu_pipeline.sh dev
   environment:
     name: sopedu_pipeline_dev
-    url: http://sopedu.hpi.uni-potsdam.de:8983/solr/#/pipeline_dev
+    url: http://sopedu.hpi.uni-potsdam.de:8983/solr/#/enron_dev
 
-deploy-sopedu-mr:
-  stage: deploy
-  only:
-    - web
-  tags:
-    - deploy-sopedu-cluster
-  script:
-    - export PATH=~/anaconda2/bin:$PATH
-    - export SPARK_HOME=/usr/hdp/2.6.2.0-205/spark2/
-    - ./deploy_sopedu_pipeline.sh mr
-  environment:
-    name: sopedu_pipeline_mr
-    url: http://sopedu.hpi.uni-potsdam.de:8983/solr/#/pipeline_mr
+# deploy-sopedu-mr:
+#   stage: deploy
+#   only:
+#     - web
+#   tags:
+#     - deploy-sopedu-cluster
+#   script:
+#     - export PATH=~/anaconda2/bin:$PATH
+#     - export SPARK_HOME=/usr/hdp/2.6.2.0-205/spark2/
+#     - ./deploy_sopedu_pipeline.sh mr
+#   environment:
+#     name: sopedu_pipeline_mr
+#     url: http://sopedu.hpi.uni-potsdam.de:8983/solr/#/pipeline_mr
