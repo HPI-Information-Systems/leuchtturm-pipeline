@@ -1,6 +1,7 @@
 """Deduplication pipes for leuchtturm pipelines."""
 
 import ujson as json
+import hashlib
 
 from .common import Pipe
 
@@ -43,7 +44,7 @@ class EmailDeduplication(Pipe):
 
     def generate_doc_id_from_header(self, header):
         """Generate a hash-like id from a header."""
-        return hash(json.dumps(header))
+        return hashlib.md5(json.dumps(header).encode()).hexdigest()
 
     def split_thread(self, raw_message):
         """Split a thread stores in parts into spearate docs."""

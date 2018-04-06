@@ -297,7 +297,7 @@ class HeaderParsing(Pipe):
         """Given a message object, parse all relevant metadata and return them in a header dict."""
         header = {'sender': {'name': '', 'email': ''},
                   'recipients': [],
-                  'date': '',
+                  'date': None,
                   'subject': ''}
 
         headers = self.transform_header_string(header_string)
