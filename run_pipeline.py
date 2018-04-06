@@ -26,7 +26,7 @@ def run_email_pipeline(read_from='./emails', write_to='./pipeline_result',
         EmailDeduplication(use_metadata=True),
         TextCleaning(read_from='body', write_to='text_clean'),
         # extract signature information, also relies on document['header']['sender']['email']
-        SignatureExtraction(read_from='text_clean', write_body_without_signature_to='body_without_signature', write_signature_to='signature')
+        SignatureExtraction(read_from='body', write_body_without_signature_to='body_without_signature', write_signature_to='signature')
         # TopicModelPrediction(),
         # LanguageDetection(read_from='text_clean'),
         # SpacyNer(read_from='text_clean')

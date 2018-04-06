@@ -1,13 +1,10 @@
 """Test the signature extraction script against an annotated dataset."""
-from leuchtturm import extract_signature_information
-import os
 import json
 import re
-from pprint import pprint
 
 # directory that only contains the '*.txt.ann' files
 annotated_mails_path = "/Users/j/Uni/BP/code/pipeline/raw_quagga_annotated_detailled_train_curated_ann"
-results_path = "/Users/j/Uni/BP/code/pipeline/results_quagga/part-00000"
+results_path = "/Users/j/Uni/BP/code/pipeline/results/part-00000"
 
 existent_signatures_recognized = 0
 existent_signatures_recognized_correctly = 0
@@ -28,7 +25,8 @@ with open(results_path) as results:
 
 
     for result in results:
-        with open(annotated_mails_path + '/' + result['doc_id'] + '.txt.ann') as annotated_res:
+        # make sure EmlReader is initalized with filename_is_doc_id=True set
+        with open(annotated_mails_path + '/' + result['doc_id'][0] + '.txt.ann') as annotated_res:
             annotated_res = json.loads(annotated_res.read())
             signature_denotation_text = \
                 [den['text'] for den in annotated_res['denotations'] if den['type'] == "Body/Signature"]
@@ -41,7 +39,7 @@ with open(results_path) as results:
                     else:
                         print('\n\n\n\n\n')
                         print('incorrectly recognized')
-                        print(annotated_mails_path + '/' + result['doc_id'] + '.txt')
+                        print(annotated_mails_path + '/' + result['doc_id'][0] + '.txt')
                         print('----------------quagga signature(s)--------------------------------------------------------')
                         print(signature_denotation_text)
                         print('----------------from email address---------------------------------------------------------')
@@ -56,7 +54,7 @@ with open(results_path) as results:
                 else:
                     print('\n\n\n\n\n')
                     print('unrecognized')
-                    print(annotated_mails_path + '/' + result['doc_id'] + '.txt')
+                    print(annotated_mails_path + '/' + result['doc_id'][0] + '.txt')
                     print('----------------quagga signature(s)--------------------------------------------------------')
                     print(signature_denotation_text)
                     print('----------------from email address---------------------------------------------------------')
