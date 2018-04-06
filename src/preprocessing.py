@@ -243,7 +243,7 @@ class HeaderParsing(Pipe):
         """Get value from a transformed header list."""
         field = [header for header in transformed_header if header[0].lower() == field.lower()]
         try:
-            return field[0][1] 
+            return field[0][1]
         except Exception:
             return ''
 
