@@ -1,8 +1,8 @@
+# flake8: noqa
 """Test preprocessing module."""
 
 from src.correspondent_extraction_aggregation import CorrespondentDataExtraction, CorrespondentDataAggregation
 from .data import shackleton_emails, aggregated_shackleton_correspondent_object
-from pprint import pprint
 import json
 
 signature_email_1 = {
@@ -34,12 +34,14 @@ two_aliases = {
     'signature': "Thanks,\nDana\nDana Perino\ndana@gablegroup.com\n619-234-1300 ext. 238"
 }
 
+
 def test_extract_phone_numbers_from_signature_1():
     phone_numbers = CorrespondentDataExtraction().extract_phone_numbers_from(signature_email_1['signature'])
     assert phone_numbers['phone_numbers_office'] == ['(777) 777-7777']
     assert phone_numbers['phone_numbers_cell'] == []
     assert phone_numbers['phone_numbers_fax'] == ['(713) 646-3490']
     assert phone_numbers['phone_numbers_home'] == []
+
 
 def test_extract_phone_numbers_from_signature_2():
     phone_numbers = CorrespondentDataExtraction().extract_phone_numbers_from(mcdermott_email['signature'])
@@ -48,12 +50,14 @@ def test_extract_phone_numbers_from_signature_2():
     assert phone_numbers['phone_numbers_fax'] == ['312-984-7700']
     assert phone_numbers['phone_numbers_home'] == []
 
+
 def test_extract_phone_numbers_from_signature_3():
     phone_numbers = CorrespondentDataExtraction().extract_phone_numbers_from(phone_numbers_1['signature'])
     assert phone_numbers['phone_numbers_office'] == ['713/345-7723']
     assert phone_numbers['phone_numbers_cell'] == []
     assert phone_numbers['phone_numbers_fax'] == ['713/853-9252']
     assert phone_numbers['phone_numbers_home'] == ['713/864-1175']
+
 
 def test_extract_phone_numbers_from_signature_4():
     phone_numbers = CorrespondentDataExtraction().extract_phone_numbers_from(phone_numbers_email_addresses['signature'])
@@ -62,9 +66,13 @@ def test_extract_phone_numbers_from_signature_4():
     assert phone_numbers['phone_numbers_fax'] == ['(770) 886-8202']
     assert phone_numbers['phone_numbers_home'] == []
 
+
 def test_extract_email_addresses_from_signature():
-    email_addresses = CorrespondentDataExtraction().extract_email_addresses_from(phone_numbers_email_addresses['signature'])
+    email_addresses = CorrespondentDataExtraction().extract_email_addresses_from(
+        phone_numbers_email_addresses['signature']
+    )
     assert email_addresses == ['brinconsult@aol.com', 'mbmconsult@adelphia.net']
+
 
 def test_extract_aliases_from_signature():
     emails_with_aliases_in_signature = [
@@ -79,13 +87,18 @@ def test_extract_aliases_from_signature():
     ]
     correspondentDataExtraction = CorrespondentDataExtraction()
     for i, email in enumerate(emails_with_aliases_in_signature):
-        assert aliases[i] == correspondentDataExtraction.extract_aliases_from(email['signature'], email['sender_email_address'][:3])
+        assert aliases[i] == correspondentDataExtraction.extract_aliases_from(
+            email['signature'],
+            email['sender_email_address'][:3]
+        )
+
 
 correspondent_object_keys = {
     'sender_aliases', 'phone_numbers_cell', 'phone_numbers_fax', 'phone_numbers_office',
     'phone_numbers_home', 'signatures', 'writes_to', 'email_addresses_from_signature',
     'sender_email_address'
 }
+
 
 def test_preparation_for_aggregation():
     for email in shackleton_emails:
@@ -98,6 +111,7 @@ def test_preparation_for_aggregation():
                 assert type(prepared_email[key]) == str
             else:
                 assert type(prepared_email[key]) == list
+
 
 def test_aggregation_of_correspondent_data():
     prepared_emails = []

@@ -32,7 +32,7 @@ test_integration:
       - result.txt
     expire_in: 2 weeks
 
-.lint_python:
+lint_python:
   stage: lint
   script:
     - mkdir -p .pip

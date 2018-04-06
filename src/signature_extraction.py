@@ -1,3 +1,5 @@
+"""Extract signatures from emails."""
+
 import json
 import re
 import talon
@@ -6,15 +8,20 @@ from .common import Pipe
 
 
 class SignatureExtraction(Pipe):
-    # TODO: update this
-    """Split emails at their inline headers.
+    """Extract signatures from emails.
 
-    Maximize information by adding inline coversations as separate documents.
-    Use of this pipe is discouraged since correspondent deduplication is not yet implemented.
+    - uses talon library for main work
+    - preprocess emails to improve talon results by removing standard signatures, email attachment notices etc.
+    - saves the signature as well as the body without the signature (also doesn't include removal due to preprocessing)
     """
-    """Extract the signature from the bottom of an email."""
 
-    def __init__(self, read_from='body', write_body_without_signature_to='body_without_signature', write_signature_to='signature', write_sent_from_mobile_to='sent_from_mobile'):
+    def __init__(
+            self,
+            read_from='body',
+            write_body_without_signature_to='body_without_signature',
+            write_signature_to='signature',
+            write_sent_from_mobile_to='sent_from_mobile'
+    ):
         """Set params."""
         super().__init__()
         self.read_from = read_from
@@ -60,7 +67,11 @@ class SignatureExtraction(Pipe):
         ]
 
     def remove_standard_signatures(self, body):
-        # remove blank lines from EOF
+        """Remove standard signatures from an email body.
+
+        - generic signatures from email providers
+        - mobile signatures (this information might be useful later for classification of emails)
+        """
         body = re.sub('\s*$', '', body)
 
         for standard_signature in self._get_standard_signatures():
@@ -75,9 +86,9 @@ class SignatureExtraction(Pipe):
         return body, sent_from_mobile
 
     def remove_attachment_notices(self, body):
-        """Improve the results of the signature extraction by Talon.
+        """Remove strings that hint at attached files.
 
-        Remove strings that hint at attached files and occur after the signature in an email.
+        These strings often occur just before, in the middle of, or right after the signature and irritate Talon
         """
         file_formats_pattern = r'(\w{2,4})'
         attached_files_patterns = [r'(\(See attached\s{,3}file: (.+)\.' + file_formats_pattern + '?\)\s*)+',
@@ -90,8 +101,11 @@ class SignatureExtraction(Pipe):
 
         return body
 
-
     def extract_signature(self, body, sender_email_address):
+        """Apply talon to the preprocessed body.
+
+        Uses the email address of the sending correspondent to improve extraction results.
+        """
         body, signature = talon_signature.extract(
             body,
             sender=sender_email_address
@@ -100,8 +114,8 @@ class SignatureExtraction(Pipe):
             signature = ''
         return body, signature
 
-
     def run_on_partition(self, data_items):
+        """Apply pure extraction task partition-wise so that talon models don't have to be reloaded for each email."""
         talon.init()
         for data_item in data_items:
             document = json.loads(data_item)
@@ -112,10 +126,8 @@ class SignatureExtraction(Pipe):
             )
             yield json.dumps(document)
 
-
     def run_on_document(self, data_item):
-        # TODO: update comment
-        """Apply email splitting to a leuchtturm document. Return list of leuchtturm documents."""
+        """Apply signature-specific preprocessing tasks to a leuchtturm document."""
         document = json.loads(data_item)
 
         # factor these out of here
@@ -126,7 +138,6 @@ class SignatureExtraction(Pipe):
             self.remove_standard_signatures(document[self.write_body_without_signature_to])
 
         return json.dumps(document)
-
 
     def run(self, rdd):
         """Run pipe in spark context."""

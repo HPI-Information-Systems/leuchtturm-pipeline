@@ -1,3 +1,6 @@
+# flake8: noqa
+"""Data to test the aggregation of correspondent information."""
+
 # after correspondent data extraction
 shackleton_emails = [
   {

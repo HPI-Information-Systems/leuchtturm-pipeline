@@ -16,14 +16,6 @@ with open(results_path) as results:
     results = '[' + results + ']'
     results = json.loads(results)
 
-    # for result in results:
-    #     if result['signature']:
-    #         unwanted = set(result) - set({'signature', 'header', 'phone_numbers', 'sender_alias', 'email_addresses_from_signature', 'phone_numbers'})
-    #         for unwanted_key in unwanted: del result[unwanted_key]
-    #         print('\n\n\n\n---------------------------------------------------------------------------------------------')
-    #         pprint(result)
-
-
     for result in results:
         # make sure EmlReader is initalized with filename_is_doc_id=True set
         with open(annotated_mails_path + '/' + result['doc_id'][0] + '.txt.ann') as annotated_res:
@@ -40,15 +32,15 @@ with open(results_path) as results:
                         print('\n\n\n\n\n')
                         print('incorrectly recognized')
                         print(annotated_mails_path + '/' + result['doc_id'][0] + '.txt')
-                        print('----------------quagga signature(s)--------------------------------------------------------')
+                        print('----------------quagga signature(s)----------------------------------------------------')
                         print(signature_denotation_text)
-                        print('----------------from email address---------------------------------------------------------')
+                        print('----------------from email address-----------------------------------------------------')
                         print(annotated_res['meta']['header']['From'])
-                        print('----------------my signature--------------------------------------------------------')
+                        print('----------------my signature-----------------------------------------------------------')
                         print(result['signature'])
-                        print('----------------body without signature-----------------------------------------------------')
+                        print('----------------body without signature-------------------------------------------------')
                         print(result['body_without_signature'])
-                        print('----------------body-----------------------------------------------------------------------')
+                        print('----------------body-------------------------------------------------------------------')
                         print(result['body'])
 
                 else:
