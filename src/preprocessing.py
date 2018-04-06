@@ -242,8 +242,10 @@ class HeaderParsing(Pipe):
     def get_header_value(self, transformed_header, field):
         """Get value from a transformed header list."""
         field = [header for header in transformed_header if header[0].lower() == field.lower()]
-
-        return field[0][1] if field else ''
+        try:
+            return field[0][1] 
+        except Exception:
+            return ''
 
     def clean_email(self, email_string):
         """Clean email address."""

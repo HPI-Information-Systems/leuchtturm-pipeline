@@ -33,7 +33,7 @@ build-and-run-pipeline:
       - result.txt
     expire_in: 2 weeks
     
-deploy-sopedu-master:
+deploy-sopedu-enron:
   stage: deploy
   when: manual
   tags:
@@ -41,12 +41,12 @@ deploy-sopedu-master:
   script:
     - export PATH=~/anaconda2/bin:$PATH
     - export SPARK_HOME=/usr/hdp/2.6.2.0-205/spark2/
-    - ./deploy_sopedu_pipeline.sh master
+    - ./deploy_sopedu_pipeline.sh enron
   environment:
     name: sopedu_pipeline_master
     url: http://sopedu.hpi.uni-potsdam.de:8983/solr/#/enron
 
-deploy-sopedu-dev:
+deploy-sopedu-enron-dev:
   stage: deploy
   when: manual
   tags:
@@ -54,21 +54,20 @@ deploy-sopedu-dev:
   script:
     - export PATH=~/anaconda2/bin:$PATH
     - export SPARK_HOME=/usr/hdp/2.6.2.0-205/spark2/
-    - ./deploy_sopedu_pipeline.sh dev
+    - ./deploy_sopedu_pipeline.sh enron-dev
   environment:
     name: sopedu_pipeline_dev
     url: http://sopedu.hpi.uni-potsdam.de:8983/solr/#/enron_dev
 
-# deploy-sopedu-mr:
-#   stage: deploy
-#   only:
-#     - web
-#   tags:
-#     - deploy-sopedu-cluster
-#   script:
-#     - export PATH=~/anaconda2/bin:$PATH
-#     - export SPARK_HOME=/usr/hdp/2.6.2.0-205/spark2/
-#     - ./deploy_sopedu_pipeline.sh mr
-#   environment:
-#     name: sopedu_pipeline_mr
-#     url: http://sopedu.hpi.uni-potsdam.de:8983/solr/#/pipeline_mr
+deploy-sopedu-dnc:
+  stage: deploy
+  when: manual
+  tags:
+    - deploy-sopedu-cluster
+  script:
+    - export PATH=~/anaconda2/bin:$PATH
+    - export SPARK_HOME=/usr/hdp/2.6.2.0-205/spark2/
+    - ./deploy_sopedu_pipeline.sh dnc
+  environment:
+    name: sopedu_pipeline_mr
+    url: http://sopedu.hpi.uni-potsdam.de:8983/solr/#/dnc
