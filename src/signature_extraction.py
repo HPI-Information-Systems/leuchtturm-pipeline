@@ -130,7 +130,6 @@ class SignatureExtraction(Pipe):
         """Apply signature-specific preprocessing tasks to a leuchtturm document."""
         document = json.loads(data_item)
 
-        # factor these out of here
         document[self.write_body_without_signature_to] = document[self.read_from]
         document[self.write_body_without_signature_to] = \
             self.remove_attachment_notices(document[self.write_body_without_signature_to])
