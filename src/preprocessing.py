@@ -104,11 +104,6 @@ class EmailSplitting(Pipe):
     Use of this pipe is discouraged since correspondent deduplication is not yet implemented.
     """
 
-    # TODO: can this be left out?
-    def __init__(self):
-        """Set params if needed here."""
-        super().__init__()
-
     def detect_parts(self, email):
         """Split email into its parts and return list of parts."""
         header = r'^(((subject:)|(from:)|(sent:)|(date:)|(to:)|(cc:))(\s.*\n)){4,}\s+'

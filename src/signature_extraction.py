@@ -14,12 +14,13 @@ class SignatureExtraction(Pipe):
     """
     """Extract the signature from the bottom of an email."""
 
-    def __init__(self, read_from='text_clean', write_body_without_signature_to='body_without_signature', write_signature_to='signature'):
+    def __init__(self, read_from='body', write_body_without_signature_to='body_without_signature', write_signature_to='signature', write_sent_from_mobile_to='sent_from_mobile'):
         """Set params."""
         super().__init__()
         self.read_from = read_from
         self.write_body_without_signature_to = write_body_without_signature_to
         self.write_signature_to = write_signature_to
+        self.write_sent_from_mobile_to = write_sent_from_mobile_to
 
     def _get_mobile_signature_patterns(self):
         return [
@@ -104,7 +105,6 @@ class SignatureExtraction(Pipe):
         talon.init()
         for data_item in data_items:
             document = json.loads(data_item)
-            # TODO: remove header-sender-email ?
             document[self.write_body_without_signature_to], document[self.write_signature_to] = \
                 self.extract_signature(
                     document[self.write_body_without_signature_to],
@@ -120,10 +120,9 @@ class SignatureExtraction(Pipe):
 
         # factor these out of here
         document[self.write_body_without_signature_to] = document[self.read_from]
-        # TODO: remove sent_from_mobile ?
         document[self.write_body_without_signature_to] = \
             self.remove_attachment_notices(document[self.write_body_without_signature_to])
-        document[self.write_body_without_signature_to], document['sent_from_mobile'] = \
+        document[self.write_body_without_signature_to], document[self.write_sent_from_mobile_to] = \
             self.remove_standard_signatures(document[self.write_body_without_signature_to])
 
         return json.dumps(document)

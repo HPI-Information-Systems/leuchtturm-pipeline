@@ -13,9 +13,8 @@ class CorrespondentDataExtraction(Pipe):
     """
     """Extract single pieces of information about correspondents from emails."""
 
-    # TODO: remove this enterely?
     def __init__(self):
-        """Set params."""
+        """Set constant regex patterns for class access."""
         super().__init__()
         self.phone_pattern = r'(\(?\b[0-9]{3}\)?(?:-|\.|/| {1,2}| - )?[0-9]{3}(?:-|\.|/| {1,2}| - )?[0-9]{4,5}\b)'
         self.phone_type_patterns = [r'(off|ph|tel|dir|voice)',
@@ -101,11 +100,6 @@ class CorrespondentDataAggregation(Pipe):
     Use of this pipe is discouraged since correspondent deduplication is not yet implemented.
     """
     """Extract single pieces of information about correspondents from emails."""
-
-    # TODO: remove this enterely?
-    def __init__(self):
-        """Set params."""
-        super().__init__()
 
     def _remove_irrelevant_key_values(self, document):
         irrelevant_keys = ['recipients']
