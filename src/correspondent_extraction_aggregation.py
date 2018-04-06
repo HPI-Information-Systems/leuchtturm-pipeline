@@ -145,9 +145,18 @@ class CorrespondentDataAggregation(Pipe):
     def revert_to_json(self, data):
         return data[1]
 
+    def rename_keys(self, data):
+        document = json.loads(data)
+        document['email_address'] = document['sender_email_address']
+        del document['sender_email_address']
+        document['aliases'] = document['sender_aliases']
+        del document['sender_aliases']
+        return json.dumps(document)
+
     def run(self, rdd):
         """Run pipe in spark context."""
         return rdd.map(self.prepare_for_reduction) \
                   .map(self.convert_to_tuple) \
                   .reduceByKey(self.merge_correspondents) \
-                  .map(self.revert_to_json)
+                  .map(self.revert_to_json) \
+                  .map(self.rename_keys)
