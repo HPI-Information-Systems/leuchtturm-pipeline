@@ -5,20 +5,21 @@ cache:
     - .pip
 
 stages:
-  - test
-  - lint
+  - test_lint
+  - build
   - deploy
 
-test_unit:
-  stage: test
+test-unit-and-lint:
+  stage: test_lint
   script:
     - mkdir -p .pip
     - pip install -U pip
     - pip --cache-dir=.pip install -r requirements.txt
     - pytest .
+    - flake8 .
 
-test_integration:
-  stage: test
+build-and-run-pipeline:
+  stage: build
   tags:
     - deploy-leuchtturm-cluster
   script:
@@ -31,20 +32,10 @@ test_integration:
     paths:
       - result.txt
     expire_in: 2 weeks
-
-lint_python:
-  stage: lint
-  script:
-    - mkdir -p .pip
-    - pip install -U pip
-    - pip --cache-dir=.pip install -r requirements.txt
-    - flake8 .
     
 deploy-sopedu-master:
   stage: deploy
   when: manual
-  only:
-    - master
   tags:
     - deploy-sopedu-cluster
   script:
@@ -58,8 +49,6 @@ deploy-sopedu-master:
 deploy-sopedu-dev:
   stage: deploy
   when: manual
-  only:
-    - dev
   tags:
     - deploy-sopedu-cluster
   script:
