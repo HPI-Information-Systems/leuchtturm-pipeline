@@ -1,6 +1,6 @@
 """Extract signatures from emails."""
 
-import json
+import ujson as json
 import re
 import talon
 from talon import signature as talon_signature

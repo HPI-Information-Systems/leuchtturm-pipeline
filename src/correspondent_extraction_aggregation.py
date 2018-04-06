@@ -4,7 +4,7 @@ Information is mostly drawn from extracted signatures.
 "Aggregation" means collecting all information about a correspondent.
 """
 
-import json
+import ujson as json
 import re
 import regex
 from .common import Pipe
@@ -21,15 +21,16 @@ class CorrespondentDataExtraction(Pipe):
     def __init__(self):
         """Set constant regex patterns for class access."""
         super().__init__()
-        self.phone_pattern = r'(\(?\b[0-9]{3}\)?(?:-|\.|/| {1,2}| - )?[0-9]{3}(?:-|\.|/| {1,2}| - )?[0-9]{4,5}\b)'
-        self.phone_type_patterns = [r'(off|ph|tel|dir|voice)',
-                                    r'(cell|mobile|mob)',
-                                    r'(fax|fx|facs|facsimile|facsim)',
-                                    r'home']
-        self.phone_type_keys = ['phone_numbers_office',  # this will be default
-                                'phone_numbers_cell',
-                                'phone_numbers_fax',
-                                'phone_numbers_home']
+
+    phone_pattern = r'(\(?\b[0-9]{3}\)?(?:-|\.|/| {1,2}| - )?[0-9]{3}(?:-|\.|/| {1,2}| - )?[0-9]{4,5}\b)'
+    phone_type_patterns = [r'(off|ph|tel|dir|voice)',
+                           r'(cell|mobile|mob)',
+                           r'(fax|fx|facs|facsimile|facsim)',
+                           r'home']
+    phone_type_keys = ['phone_numbers_office',  # this will be default
+                       'phone_numbers_cell',
+                       'phone_numbers_fax',
+                       'phone_numbers_home']
 
     def _split_on_phone_numbers(self, signature):
         return re.split(self.phone_pattern, signature, flags=re.IGNORECASE)
