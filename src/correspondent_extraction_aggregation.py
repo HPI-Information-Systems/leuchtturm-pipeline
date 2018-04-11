@@ -127,6 +127,7 @@ class CorrespondentDataAggregation(Pipe):
     def prepare_for_reduction(self, data):
         """Remove irrelevant key-values, make all fields lists except for identifying sender_email_address."""
         document = json.loads(data)
+        document['source_count'] = 1
         document = self._remove_irrelevant_key_values(document)
         document = self._convert_fields_to_list_type(document)
         return json.dumps(document)
@@ -144,10 +145,11 @@ class CorrespondentDataAggregation(Pipe):
 
         unified_person = {
             'sender_email_address': correspondent1['sender_email_address'],
+            'source_count': correspondent1['source_count'] + correspondent2['source_count'],
         }
 
         for key in correspondent1:
-            if key != 'sender_email_address':
+            if key not in ['sender_email_address', 'source_count']:
                 unified_person[key] = list(set(correspondent1[key] + correspondent2[key]))
         return json.dumps(unified_person)
 
