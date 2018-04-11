@@ -11,6 +11,9 @@ from .mock_preprocessing import (header_raw_indent, header_parsed_indent, header
 from .mock_preprocessing import lang_en_raw, lang_de_raw  # lang detection
 from .mock_preprocessing import clean_raw
 
+config = dict()
+config["PERIOD"] = ''
+
 
 def test_email_decoding_simple():
     """Simple emails should be decoded correctly."""
@@ -49,19 +52,19 @@ def test_email_splitting_on_dnc():
 
 def test_header_parsing_on_indented():
     """Headers should be parsed correctly for visually indented headers (>>)."""
-    tool = HeaderParsing(clean_subject=False, use_unix_time=False)
+    tool = HeaderParsing(config, clean_subject=False, use_unix_time=False)
     assert tool.run_on_document(header_raw_indent) == header_parsed_indent
 
 
 def test_header_parsing_on_fwd():
     """Headers should be parsed correctly for inline fwds."""
-    tool = HeaderParsing(clean_subject=False, use_unix_time=False)
+    tool = HeaderParsing(config, clean_subject=False, use_unix_time=False)
     assert tool.run_on_document(header_raw_fwd) == header_parsed_fwd
 
 
 def test_header_parsing_on_regular():
     """Standard headers should be parsed correctly."""
-    tool = HeaderParsing(clean_subject=False, use_unix_time=False)
+    tool = HeaderParsing(config, clean_subject=False, use_unix_time=False)
     assert tool.run_on_document(header_raw_regular) == header_parsed_regular
 
 
