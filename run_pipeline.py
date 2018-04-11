@@ -2,6 +2,8 @@
 
 import argparse
 import ujson as json
+import configparser
+from pathlib import PurePath
 
 from src.common import Pipeline, SparkProvider
 from src.reader import EmlReader
@@ -12,20 +14,30 @@ from src.topics import TopicModelPrediction, TopicModelTraining
 from src.writer import TextFileWriter, SolrFileWriter
 
 
+def get_config(dataset):
+    config_file = 'config-' + dataset + '.ini'
+    configpath =  PurePath('.') / 'config' / config_file
+    config = configparser.ConfigParser()
+    config.read(str(configpath))
+    return config
+
+
 def run_email_pipeline(read_from='./emails', write_to='./pipeline_result',
-                       solr=False, solr_url='http://sopedu.hpi.uni-potsdam.de:8983/solr/enron'):
+                       solr=False, solr_url='http://sopedu.hpi.uni-potsdam.de:8983/solr/enron',
+                       dataset='enron'):
     """Run main email pipeline."""
+    config = get_config(dataset)
     SparkProvider.spark_context()
 
     reader = EmlReader(read_from)
 
     pipes = [EmailDecoding(split_header_body=True),
-             HeaderParsing(clean_subject=False, use_unix_time=False),
+             HeaderParsing(config, clean_subject=False, use_unix_time=False),
              EmailDeduplication(),
              TextCleaning(read_from='body', write_to='text_clean'),
-             TopicModelPrediction(),
-             LanguageDetection(read_from='text_clean'),
-             SpacyNer(read_from='text_clean')]
+             #TopicModelPrediction(),
+             LanguageDetection(read_from='text_clean')]
+             #SpacyNer(read_from='text_clean')]
 
     writer = TextFileWriter(path=write_to)
 
@@ -59,6 +71,13 @@ if __name__ == '__main__':
     parser.add_argument('--solr-url',
                         help='Url to running solr instance (core/collection specified).',
                         default='http://sopedu.hpi.uni-potsdam.de:8983/solr/enron')
+    parser.add_argument('--dataset',
+                        help='Dataset to run on.',
+                        default='enron')
     args = parser.parse_args()
 
-    run_email_pipeline(read_from=args.read_from, write_to=args.write_to, solr=args.solr, solr_url=args.solr_url)
+    run_email_pipeline(read_from=args.read_from,
+                       write_to=args.write_to,
+                       solr=args.solr,
+                       solr_url=args.solr_url,
+                       dataset=args.dataset)
