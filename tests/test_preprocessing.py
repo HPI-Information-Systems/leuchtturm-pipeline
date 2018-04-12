@@ -70,13 +70,13 @@ def test_header_parsing_on_regular():
 
 def test_header_parsing_on_dnc():
     """Dnc headers should be parsed correctly."""
-    tool = HeaderParsing(clean_subject=False, use_unix_time=False)
+    tool = HeaderParsing(config, clean_subject=False, use_unix_time=False)
     assert tool.run_on_document(header_raw_dnc) == header_parsed_dnc
 
 
 def test_header_parsing_on_deformed():
     """Deformed headers should be parsed correctly (e.g. no from field, instead startig with name)."""
-    tool = HeaderParsing(clean_subject=False, use_unix_time=False)
+    tool = HeaderParsing(config, clean_subject=False, use_unix_time=False)
     assert tool.run_on_document(header_raw_deformed) == header_parsed_deformed
 
 
