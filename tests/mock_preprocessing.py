@@ -28,6 +28,11 @@ header_parsed_dnc = r"""{"header":{"sender":{"name":"Contribution","email":"post
 header_raw_deformed = r"""{"header":"Mark Elliott\n04\/23\/99 05:49 AM\nTo: Martin Rosell\/OSL\/ECT@ECT\ncc: Mark - ECT Legal Taylor\/HOU\/ECT@ECT \nSubject: Re: OMnet, etc.  \n"}"""
 header_parsed_deformed = r"""{"header":{"sender":{"name":"Mark Elliott","email":""},"recipients":[{"name":"Martin Rosell","email":"","type":"to"},{"name":"Mark - Ect Legal Taylor","email":"","type":"cc"}],"date":"1999-04-23T05:49:00Z","date_changed":false,"subject":"Re: OMnet, etc."}}"""
 
+header_raw_low_date = r"""{"header": "Date: Fri, 15 Feb 1991 09:07:17 -0800\nFrom: susan.bailey@enron.com\nTo: sara.shackleton@enron.com\nSubject: RE: Thiele Kaolin Company\nX-From: Bailey, Susan </O=ENRON/OU=NA/CN=RECIPIENTS/CN=SBAILE2>\nX-To: Shackleton, Sara </O=ENRON/OU=NA/CN=RECIPIENTS/CN=Sshackl>\nX-cc: \nX-bcc: "}"""
+header_parsed_low_date = r"""{"header":{"sender":{"name":"Susan Bailey","email":"susan.bailey@enron.com"},"recipients":[{"name":"Sara Shackleton","email":"sara.shackleton@enron.com","type":"to"}],"date":"1997-12-01T00:00:00Z","date_changed":true,"subject":"RE: Thiele Kaolin Company"}}"""
+
+header_raw_high_date = r"""{"header": "Date: Fri, 15 Feb 2041 09:07:17 -0800\nFrom: susan.bailey@enron.com\nTo: sara.shackleton@enron.com\nSubject: RE: Thiele Kaolin Company\nX-From: Bailey, Susan </O=ENRON/OU=NA/CN=RECIPIENTS/CN=SBAILE2>\nX-To: Shackleton, Sara </O=ENRON/OU=NA/CN=RECIPIENTS/CN=Sshackl>\nX-cc: \nX-bcc: "}"""
+header_parsed_high_date = r"""{"header":{"sender":{"name":"Susan Bailey","email":"susan.bailey@enron.com"},"recipients":[{"name":"Sara Shackleton","email":"sara.shackleton@enron.com","type":"to"}],"date":"2002-12-31T23:59:59Z","date_changed":true,"subject":"RE: Thiele Kaolin Company"}}"""
 
 # language detection
 lang_en_raw = r"""{"body":"This is a text written in one of the most spoken languages and it contains a speling error."}"""
