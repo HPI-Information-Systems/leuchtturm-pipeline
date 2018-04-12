@@ -191,10 +191,11 @@ class HeaderParsing(Pipe):
         self.start_date = None
         self.end_date = None
 
-        if 'start' in config['PERIOD']:
-            self.start_date = int(config['PERIOD']['start'])
-        if 'end' in config['PERIOD']:
-            self.end_date = int(config['PERIOD']['end'])
+        if 'PERIOD' in config:
+            if 'start' in config['PERIOD']:
+                self.start_date = datetime.datetime.fromtimestamp(int(config['PERIOD']['start']))
+            if 'end' in config['PERIOD']:
+                self.end_date = datetime.datetime.fromtimestamp(int(config['PERIOD']['end']))
 
     def prepare_header_string(self, text):
         """Remove whitespace, newlines and other noise."""
@@ -290,20 +291,18 @@ class HeaderParsing(Pipe):
         return date.strftime('%Y-%m-%dT%H:%M:%S') + 'Z' if not self.use_unix_time else date.timestamp(), changed
 
     def normalize_date(self, original_date):
+        """Normalize date to given period of time."""
         date = original_date.replace(tzinfo=None)
 
-        if self.start_date is not None:
-            lower_bound = datetime.datetime.fromtimestamp(self.start_date)
-            if date < lower_bound:
-                return lower_bound, True
+        if self.start_date:
+            if date < self.start_date:
+                return self.start_date, True
 
-        if self.end_date is not None:
-            higher_bound = datetime.datetime.fromtimestamp(self.end_date)
-            if date > higher_bound:
-                return higher_bound, True
+        if self.end_date:
+            if date > self.end_date:
+                return self.end_date, True
 
         return original_date, False
-
 
     def parse_subject(self, subject_string):
         """Clean subject line from RE:, AW: etc if self.clean_subject=True."""

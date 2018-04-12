@@ -2,9 +2,8 @@
 
 import argparse
 import ujson as json
-import configparser
-from pathlib import PurePath
 
+from src.util import get_config
 from src.common import Pipeline, SparkProvider
 from src.reader import EmlReader
 from src.preprocessing import EmailDecoding, HeaderParsing, TextCleaning, LanguageDetection
@@ -12,14 +11,6 @@ from src.deduplication import EmailDeduplication
 from src.ner import SpacyNer
 from src.topics import TopicModelPrediction, TopicModelTraining
 from src.writer import TextFileWriter, SolrFileWriter
-
-
-def get_config(dataset):
-    config_file = 'config-' + dataset + '.ini'
-    configpath =  PurePath('.') / 'config' / config_file
-    config = configparser.ConfigParser()
-    config.read(str(configpath))
-    return config
 
 
 def run_email_pipeline(read_from='./emails', write_to='./pipeline_result',
@@ -35,9 +26,9 @@ def run_email_pipeline(read_from='./emails', write_to='./pipeline_result',
              HeaderParsing(config, clean_subject=False, use_unix_time=False),
              EmailDeduplication(),
              TextCleaning(read_from='body', write_to='text_clean'),
-             #TopicModelPrediction(),
-             LanguageDetection(read_from='text_clean')]
-             #SpacyNer(read_from='text_clean')]
+             TopicModelPrediction(),
+             LanguageDetection(read_from='text_clean'),
+             SpacyNer(read_from='text_clean')]
 
     writer = TextFileWriter(path=write_to)
 
@@ -72,7 +63,7 @@ if __name__ == '__main__':
                         help='Url to running solr instance (core/collection specified).',
                         default='http://sopedu.hpi.uni-potsdam.de:8983/solr/enron')
     parser.add_argument('--dataset',
-                        help='Dataset to run on.',
+                        help='Dataset config to read.',
                         default='enron')
     args = parser.parse_args()
 
