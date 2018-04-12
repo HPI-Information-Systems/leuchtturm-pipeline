@@ -11,16 +11,10 @@ from .mock_preprocessing import (header_raw_indent, header_parsed_indent, header
                                  header_raw_high_date, header_parsed_high_date)  # header parsing
 from .mock_preprocessing import lang_en_raw, lang_de_raw  # lang detection
 from .mock_preprocessing import clean_raw
+from src.util import get_config
 
-config_enron = dict()
-config_enron['PERIOD'] = dict()
-config_enron['PERIOD']['start'] = 880930800
-config_enron['PERIOD']['end'] = 1041375599
-
-config_dnc = dict()
-config_dnc['PERIOD'] = dict()
-config_dnc['PERIOD']['start'] = 1377990000
-config_dnc['PERIOD']['end'] = 1464735599
+config_enron = get_config('enron')
+config_dnc = get_config('dnc')
 
 
 def test_email_decoding_simple():
@@ -92,7 +86,7 @@ def test_header_parsing_low_date():
     tool = HeaderParsing(config_enron, clean_subject=False, use_unix_time=False)
     assert tool.run_on_document(header_raw_low_date) == header_parsed_low_date
 
-def test_header_parsing_low_date():
+def test_header_parsing_high_date():
     """Date greater than specified should be parsed to maximal date."""
     tool = HeaderParsing(config_enron, clean_subject=False, use_unix_time=False)
     assert tool.run_on_document(header_raw_high_date) == header_parsed_high_date
