@@ -301,7 +301,10 @@ class HeaderParsing(Pipe):
     def parse_date(self, date_string):
         """Normalize date from a string. If self.use_unix_time set return timestamp."""
         date = re.sub(r'\(\w+\)', '', date_string).strip(whitespace)  # remove additional tz in brackets
-        date = dateparser.parse(date)
+        try:
+            date = dateparser.parse(date)
+        except Exception:
+            return ''
 
         if date is None:
             return ''
