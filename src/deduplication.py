@@ -2,6 +2,7 @@
 
 import ujson as json
 import hashlib
+import uuid
 
 from .common import Pipe
 
@@ -25,7 +26,7 @@ class EmailDeduplication(Pipe):
         if self.is_connected_thread:
             splitting_key = document_norm['doc_id']
         else:
-            splitting_key = json.dumps([document_norm['header']['sender']['email'],
+            splitting_key = json.dumps([document_norm['header']['sender']['name'],
                                         document_norm['header']['date'],
                                         document_norm['header']['subject']])
 
@@ -44,7 +45,13 @@ class EmailDeduplication(Pipe):
 
     def generate_doc_id_from_header(self, header):
         """Generate a hash-like id from a header."""
-        return hashlib.md5(json.dumps(header).encode()).hexdigest()
+        sender = header['sender']['name'] if header['sender']['name'] else header['sender']['email']
+        date = header['date'] if header['date'] else str(uuid.uuid4())
+        subject = header['subject']
+
+        key = sender + date + subject
+
+        return hashlib.md5(key.encode()).hexdigest()
 
     def split_thread(self, raw_message):
         """Split a thread stores in parts into spearate docs."""
