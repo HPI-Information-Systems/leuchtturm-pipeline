@@ -83,6 +83,7 @@ class Neo4JWriter(Pipe):
                 sender = {"name": "", "email": ""}
                 recipients = []
                 mail_id = ""
+                mail_timestamp = ""
                 mail = json.loads(document)
                 if 'sender' in mail['header'].keys():
                     sender = mail['header']['sender']
@@ -90,6 +91,9 @@ class Neo4JWriter(Pipe):
                     recipients = mail['header']['recipients']
                 if 'doc_id' in mail.keys():
                     mail_id = mail['doc_id']
+                if 'header' in mail.keys():
+                    if "date" in mail["header"]:
+                        mail_timestamp = mail['header']["date"]
 
                 for recipient in recipients:
                     session.run("MERGE (sender:Person {email: $email_sender}) "
@@ -105,16 +109,21 @@ class Neo4JWriter(Pipe):
                                 "THEN recipient.name + $name_recipient "
                                 "ELSE recipient.name END "
                                 "MERGE (sender)-[w:WRITESTO]->(recipient) "
-                                "ON CREATE SET w.mail_list = [$mail_id] "
+                                "ON CREATE SET w.mail_list = [$mail_id], w.time_list = [$mail_timestamp] "
                                 "ON MATCH SET w.mail_list = "
                                 "CASE WHEN NOT $mail_id IN w.mail_list "
                                 "THEN w.mail_list + $mail_id "
-                                "ELSE w.mail_list END",
+                                "ELSE w.mail_list END, "
+                                "w.time_list = "
+                                "CASE WHEN NOT $mail_timestamp IN w.time_list "
+                                "THEN w.time_list + $mail_timestamp "
+                                "ELSE w.time_list END",
                                 name_sender=sender['name'],
                                 email_sender=sender['email'],
                                 name_recipient=recipient['name'],
                                 email_recipient=recipient['email'],
-                                mail_id=mail_id)
+                                mail_id=mail_id,
+                                mail_timestamp=mail_timestamp)
 
     def run(self, rdd):
         """Run task in spark context."""
