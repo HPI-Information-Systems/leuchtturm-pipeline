@@ -75,6 +75,8 @@ class CorrespondentDataExtraction(Pipe):
 
     def extract_aliases_from(self, signature, first_email_address_characters):
         """Extract aliases of the correspondent's name from signature that are similar to their email address."""
+        if not first_email_address_characters:
+            return []
         alias_name_pattern = r'(?:^|\n)\b(' + first_email_address_characters + r'[\w -.]*)\s?(?:\n|$)'
         # note: using regex module (not re) so that matches can overlap (necessary because of shared \n between aliases)
         return regex.findall(alias_name_pattern, signature, overlapped=True, flags=re.IGNORECASE)
