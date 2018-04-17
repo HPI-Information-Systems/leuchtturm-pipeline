@@ -2,20 +2,20 @@
 
 set -e # exit script on first failure
 
-if [ $1 == 'master' ]; then
+if [ $1 == 'enron' ]; then
     EMAILS=enron_calo
-    PRESULT=tmp/pipeline_results_master
-    SOLR=http://sopedu.hpi.uni-potsdam.de:8983/solr/pipeline_master
-elif [ $1 == 'dev' ]; then
+    PRESULT=tmp/enron_result
+    SOLR=http://sopedu.hpi.uni-potsdam.de:8983/solr/enron
+elif [ $1 == 'enron-dev' ]; then
     EMAILS=enron_calo
-    PRESULT=tmp/pipeline_results_dev
-    SOLR=http://sopedu.hpi.uni-potsdam.de:8983/solr/pipeline_dev
-elif [ $1 == 'mr' ]; then
-    EMAILS=enron_calo
-    PRESULT=tmp/pipeline_results_mr
-    SOLR=http://sopedu.hpi.uni-potsdam.de:8983/solr/pipeline_mr
+    PRESULT=tmp/enron_dev_result
+    SOLR=http://sopedu.hpi.uni-potsdam.de:8983/solr/enron_dev
+elif [ $1 == 'dnc' ]; then
+    EMAILS=dnc
+    PRESULT=tmp/dnc_result
+    SOLR=http://sopedu.hpi.uni-potsdam.de:8983/solr/dnc
 else
-    echo 'No deployment config selected. master, dev or mr possible.'
+    echo 'No deployment config selected. enron, enron-dev or dnc possible.'
     exit 1
 fi
 

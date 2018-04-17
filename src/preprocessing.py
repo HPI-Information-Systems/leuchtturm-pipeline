@@ -112,21 +112,41 @@ class EmailSplitting(Pipe):
     Pointers to context emails are being added.
     """
 
-    header = re.compile(r'((((\t)*)(((-+).*\n(.*-+))\n{0,4}(.*\n){0,3})?(.+\n))|(\S.*\n){0,2})((\t|>)* ?((\n*subject:)|(from:)|(reply-to:)|(sent by:)|(sent:)|(date:)|(to:)|(b?cc:))(\s.*\n)(.*(@|;|and).*\n)*){3,}', re.MULTILINE | re.IGNORECASE | re.UNICODE)  # NOQA
+    forwarded_by_heuristic = r'(.*-{3}.*Forwarded by((\n|.)*?)Subject:.*)'
+    begin_forwarded_message_heuristic = r'(.*Begin forwarded message:((\n|.)*?)To:.*)'
+    original_message_heuristic = r'(.*-{3}.*Original Message((\n|.)*?)Subject:.*)'
+    reply_seperator_heuristic = r'(.*_{3}.*Reply Separator((\n|.)*?)Date.*)'
+    date_to_subject_heuristic = r'(.*\n.*(on )?\d{2}\/\d{2}\/\d{2,4}\s\d{2}:\d{2}(:\d{2})?\s?(AM|PM|am|pm)?.*\n.*(\n.*)?To: (\n|.)*?Subject: .*)' # NOQA
+    from_to_subject_heuristic = r'(.*From:((\n|.)*?)Subject:.*)'
 
-    def __init__(self):
+    header_regex = re.compile('(%s|%s|%s|%s|%s|%s)' % (
+        forwarded_by_heuristic,
+        begin_forwarded_message_heuristic,
+        original_message_heuristic,
+        reply_seperator_heuristic,
+        date_to_subject_heuristic,
+        from_to_subject_heuristic
+    ))
+
+    def __init__(self, keep_thread_connected=False):
         """Set params if needed here."""
         super().__init__()
+        self.keep_thread_connected = keep_thread_connected
 
     def detect_parts(self, email):
         """Split email into its parts and return list of parts."""
-        found_headers = list(EmailSplitting.header.finditer(email))
-        headers = [head.group() for head in found_headers]
+        original_header, original_body = email.split('\n\n', 1)
+
+        found_headers = list(EmailSplitting.header_regex.finditer(original_body))
+        headers = [header.group() for header in found_headers]
+        headers = [original_header] + headers
+
+        remaining_email = email
         parts = []
 
         # when no headers are found is the entire unsplit mail to be added
         if not headers:
-            parts.append(email)
+            parts.append(remaining_email)
         for index, found_header in enumerate(headers):
             current_header = found_header
             next_header = ''
@@ -134,11 +154,12 @@ class EmailSplitting(Pipe):
             if index < len(headers) - 1:
                 next_header = headers[index + 1]
 
-            current_parts = email.split(current_header)
+            current_parts = remaining_email.split(current_header, 1)
+
             if next_header:
-                parts.append((current_header + current_parts[1].split(next_header)[0], current_header))
+                parts.append((current_header, current_parts[1].split(next_header)[0]))
             else:
-                parts.append((current_header + current_parts[1], current_header))
+                parts.append((current_header, current_parts[1]))
 
         return parts
 
@@ -152,10 +173,10 @@ class EmailSplitting(Pipe):
         splitted_emails = []
 
         original_doc_id = document['doc_id']
-        for index, (part, header) in enumerate(parts):
+        for index, (header, body) in enumerate(parts):
             obj = document
-            obj['header'] = header if part.startswith(header) else None
-            obj['body'] = part.replace(header, '')
+            obj['header'] = header
+            obj['body'] = body
 
             if len(parts) > 1:  # if there are multiple parts, add an identifier to the original document id
                 obj['doc_id'] = original_doc_id + '_part_' + str(index + 1) + '_of_' + str(len(parts))
@@ -163,16 +184,22 @@ class EmailSplitting(Pipe):
             part_docs.append(obj.copy())
 
         for index, part in enumerate(part_docs):
-            obj = part
-            obj['successors'] = [part_docs[index - 1]['doc_id'] if not index == 0 else None]
-            obj['predecessor'] = part_docs[index + 1]['doc_id'] if not index == len(part_docs) - 1 else None
-            splitted_emails.append(json.dumps(obj))
+            part['successor'] = part_docs[index - 1]['doc_id'] if not index == 0 else None
+            part['predecessor'] = part_docs[index + 1]['doc_id'] if not index == len(part_docs) - 1 else None
+            splitted_emails.append(part.copy())
 
-        return splitted_emails
+        if self.keep_thread_connected:
+            document['parts'] = splitted_emails
+            return json.dumps(document)
+        else:
+            return [json.dumps(email) for email in splitted_emails]
 
     def run(self, rdd):
         """Run pipe in spark context."""
-        return rdd.flatMap(lambda x: self.run_on_document(x))
+        if self.keep_thread_connected:
+            return rdd.map(lambda x: self.run_on_document(x))
+        else:
+            return rdd.flatMap(lambda x: self.run_on_document(x))
 
 
 class HeaderParsing(Pipe):
@@ -215,8 +242,10 @@ class HeaderParsing(Pipe):
     def get_header_value(self, transformed_header, field):
         """Get value from a transformed header list."""
         field = [header for header in transformed_header if header[0].lower() == field.lower()]
-
-        return field[0][1] if field else ''
+        try:
+            return field[0][1]
+        except IndexError:
+            return ''
 
     def clean_email(self, email_string):
         """Clean email address."""
@@ -272,7 +301,10 @@ class HeaderParsing(Pipe):
     def parse_date(self, date_string):
         """Normalize date from a string. If self.use_unix_time set return timestamp."""
         date = re.sub(r'\(\w+\)', '', date_string).strip(whitespace)  # remove additional tz in brackets
-        date = dateparser.parse(date)
+        try:
+            date = dateparser.parse(date)
+        except Exception:
+            return ''
 
         if date is None:
             return ''
@@ -290,7 +322,7 @@ class HeaderParsing(Pipe):
         """Given a message object, parse all relevant metadata and return them in a header dict."""
         header = {'sender': {'name': '', 'email': ''},
                   'recipients': [],
-                  'date': '',
+                  'date': None,
                   'subject': ''}
 
         headers = self.transform_header_string(header_string)
@@ -331,7 +363,12 @@ class HeaderParsing(Pipe):
     def run_on_document(self, raw_message):
         """Get body and header information for a leuchtturm document."""
         document = json.loads(raw_message)
-        document['header'] = self.parse_header(document['header'])
+
+        if 'parts' in document:
+            for part in document['parts']:
+                part['header'] = self.parse_header(part['header'])
+        else:
+            document['header'] = self.parse_header(document['header'])
 
         return json.dumps(document)
 
