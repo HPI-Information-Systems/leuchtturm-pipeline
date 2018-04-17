@@ -46,6 +46,7 @@ class CorrespondentDataExtraction(Pipe):
         return {
             'signature': document['signature'],
             'sender_email_address': document['header']['sender']['email'],
+            'sender_name': document['header']['sender']['name'],
             'recipients': document['header']['recipients']
         }
 
@@ -119,9 +120,13 @@ class CorrespondentDataAggregation(Pipe):
             del document[key]
         return document
 
-    def _convert_fields_to_list_type(self, document):
+    def _convert_fields_and_rename(self, document):
         document['signatures'] = [document['signature']]
-        del document['signature']
+        document['email_addresses'] = [document['sender_email_address']]
+        document['identifying_name'] = document['sender_name']
+        document['aliases'] = document['sender_aliases']
+        for key in ['signature', 'sender_email_address', 'sender_name', 'sender_aliases']:
+            del document[key]
         return document
 
     def prepare_for_reduction(self, data):
@@ -129,13 +134,13 @@ class CorrespondentDataAggregation(Pipe):
         document = json.loads(data)
         document['source_count'] = 1
         document = self._remove_irrelevant_key_values(document)
-        document = self._convert_fields_to_list_type(document)
+        document = self._convert_fields_and_rename(document)
         return json.dumps(document)
 
     def convert_to_tuple(self, data):
         """Convert to tuple as preparation for reduceByKey to work right."""
         document = json.loads(data)
-        splitting_keys = json.dumps(document['sender_email_address'])
+        splitting_keys = json.dumps(document['identifying_name'])
         return splitting_keys, data
 
     def merge_correspondents(self, data1, data2):
@@ -144,12 +149,12 @@ class CorrespondentDataAggregation(Pipe):
         correspondent2 = json.loads(data2)
 
         unified_person = {
-            'sender_email_address': correspondent1['sender_email_address'],
+            'identifying_name': correspondent1['identifying_name'],
             'source_count': correspondent1['source_count'] + correspondent2['source_count'],
         }
 
         for key in correspondent1:
-            if key not in ['sender_email_address', 'source_count']:
+            if key not in ['identifying_name', 'source_count']:
                 unified_person[key] = list(set(correspondent1[key] + correspondent2[key]))
         return json.dumps(unified_person)
 
@@ -157,19 +162,9 @@ class CorrespondentDataAggregation(Pipe):
         """Transform the generated tuple back into leuchtturm document."""
         return data[1]
 
-    def rename_keys(self, data):
-        """Rename some keys purposefully; the resulting object is a "correspondent object", not an "email object"."""
-        document = json.loads(data)
-        document['email_address'] = document['sender_email_address']
-        del document['sender_email_address']
-        document['aliases'] = document['sender_aliases']
-        del document['sender_aliases']
-        return json.dumps(document)
-
     def run(self, rdd):
         """Run pipe in spark context."""
         return rdd.map(self.prepare_for_reduction) \
                   .map(self.convert_to_tuple) \
                   .reduceByKey(self.merge_correspondents) \
-                  .map(self.revert_to_json) \
-                  .map(self.rename_keys)
+                  .map(self.revert_to_json)

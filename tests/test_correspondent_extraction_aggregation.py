@@ -94,9 +94,9 @@ def test_extract_aliases_from_signature():
 
 
 correspondent_object_keys = {
-    'sender_aliases', 'phone_numbers_cell', 'phone_numbers_fax', 'phone_numbers_office',
+    'aliases', 'phone_numbers_cell', 'phone_numbers_fax', 'phone_numbers_office',
     'phone_numbers_home', 'signatures', 'writes_to', 'email_addresses_from_signature',
-    'sender_email_address'
+    'email_addresses', 'identifying_name', 'source_count'
 }
 
 
@@ -107,8 +107,10 @@ def test_preparation_for_aggregation():
         keys = prepared_email.keys()
         assert set(keys) == correspondent_object_keys
         for key in keys:
-            if key == 'sender_email_address':
+            if key == 'identifying_name':
                 assert type(prepared_email[key]) == str
+            elif key == 'source_count':
+                assert type(prepared_email[key]) == int
             else:
                 assert type(prepared_email[key]) == list
 
@@ -126,4 +128,7 @@ def test_aggregation_of_correspondent_data():
     assert set(keys) == correspondent_object_keys
 
     for key in keys:
-        assert set(aggregated_correspondent[key]) == set(aggregated_shackleton_correspondent_object[key])
+        if key != 'source_count':
+            assert set(aggregated_correspondent[key]) == set(aggregated_shackleton_correspondent_object[key])
+        else:
+            assert aggregated_correspondent[key] == aggregated_shackleton_correspondent_object[key]

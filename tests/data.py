@@ -6,6 +6,7 @@ shackleton_emails = [
   {
     "signature": "Sara Shackleton\nEnron Wholesale Services\n1400 Smith Street, EB3801a\nHouston, TX 77002\nPh: (713) 853-5620\nFax: (713) 646-3490",
     "sender_email_address": "sara.shackleton@enron.com",
+    "sender_name": "Sara Shackleton",
     "recipients": [
       {
         "name": "",
@@ -31,6 +32,7 @@ shackleton_emails = [
   {
     "signature": "Sara\nEnron Wholesale Services\n1400 Smith Street, EB3801a\nHouston, TX 77002\nPh: (777) 777-7777\nFax: (713) 646-3490",
     "sender_email_address": "sara.shackleton@enron.com",
+    "sender_name": "Sara Shackleton",
     "recipients": [
       {
         "name": "",
@@ -88,7 +90,9 @@ shackleton_emails = [
 ]
 
 aggregated_shackleton_correspondent_object = {
-  "sender_email_address": "sara.shackleton@enron.com",
+  "email_addresses": ["sara.shackleton@enron.com"],
+  "identifying_name": "Sara Shackleton",
+  "source_count": 2,
   "phone_numbers_office": [
     "(777) 777-7777",
     "(713) 853-5620"
@@ -99,7 +103,7 @@ aggregated_shackleton_correspondent_object = {
   ],
   "phone_numbers_home": [],
   "email_addresses_from_signature": [],
-  "sender_aliases": [
+  "aliases": [
     "Sara Shackleton",
     "Sara"
   ],
