@@ -110,9 +110,9 @@ class CorrespondentDataExtraction(Pipe):
 class CorrespondentDataAggregation(Pipe):
     """Aggregate all the correspondent information found in different email to a single correspondent object.
 
-    - currently uses the email address to identify a correspondent
-    - input ocrrespondent objects are first stripped of irrelevant keys and non-list-type fields (except for identifying
-      email address field) are transformed to list-type fields
+    - uses the sender name extracted from email header to identify a correspondent
+    - input correspondent objects are first stripped of irrelevant keys and non-list-type fields (except for identifying
+      name field) are transformed to list-type fields
     - this allows for simple merging of correspondent objects into a single object afterwards
     """
 
@@ -132,7 +132,7 @@ class CorrespondentDataAggregation(Pipe):
         return document
 
     def prepare_for_reduction(self, data):
-        """Remove irrelevant key-values, make all fields lists except for identifying sender_email_address."""
+        """Remove irrelevant key-values, make all fields lists except for identifying name."""
         document = json.loads(data)
         document['source_count'] = 1
         document = self._remove_irrelevant_key_values(document)
