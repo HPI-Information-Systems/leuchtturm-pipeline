@@ -92,8 +92,8 @@ class Neo4JWriter(Pipe):
                 if 'doc_id' in mail.keys():
                     mail_id = mail['doc_id']
                 if 'header' in mail.keys():
-                    if "date" in mail["header"]:
-                        mail_timestamp = mail['header']["date"]
+                    if 'date' in mail['header']:
+                        mail_timestamp = mail['header']['date']
 
                 for recipient in recipients:
                     session.run("MERGE (sender:Person {email: $email_sender}) "
