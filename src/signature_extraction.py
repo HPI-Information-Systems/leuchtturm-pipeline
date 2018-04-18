@@ -2,8 +2,6 @@
 
 import ujson as json
 import re
-import talon
-from talon import signature as talon_signature
 from .common import Pipe
 
 
@@ -101,26 +99,29 @@ class SignatureExtraction(Pipe):
 
         return body
 
-    def extract_signature(self, body, sender_email_address):
-        """Apply talon to the preprocessed body.
-
-        Uses the email address of the sending correspondent to improve extraction results.
-        """
-        body, signature = talon_signature.extract(
-            body,
-            sender=sender_email_address
-        )
-        if not signature:
-            signature = ''
-        return body, signature
-
     def run_on_partition(self, data_items):
         """Apply pure extraction task partition-wise so that talon models don't have to be reloaded for each email."""
+        from talon import signature as talon_signature
+        import talon
         talon.init()
+
+        def extract_signature(body, sender_email_address):
+            """Apply talon to the preprocessed body.
+
+            Uses the email address of the sending correspondent to improve extraction results.
+            """
+            body, signature = talon_signature.extract(
+                body,
+                sender=sender_email_address
+            )
+            if not signature:
+                signature = ''
+            return body, signature
+
         for data_item in data_items:
             document = json.loads(data_item)
             document[self.write_body_without_signature_to], document[self.write_signature_to] = \
-                self.extract_signature(
+                extract_signature(
                     document[self.write_body_without_signature_to],
                     document['header']['sender']['email']
             )
