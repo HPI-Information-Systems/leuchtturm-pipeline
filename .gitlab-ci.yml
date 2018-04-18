@@ -5,20 +5,21 @@ cache:
     - .pip
 
 stages:
-  - test
-  - lint
+  - test_lint
+  - build
   - deploy
 
-test_unit:
-  stage: test
+test-unit-and-lint:
+  stage: test_lint
   script:
     - mkdir -p .pip
     - pip install -U pip
     - pip --cache-dir=.pip install -r requirements.txt
     - pytest .
+    - flake8 .
 
-test_integration:
-  stage: test
+build-and-run-pipeline:
+  stage: build
   tags:
     - deploy-leuchtturm-cluster
   script:
@@ -31,53 +32,42 @@ test_integration:
     paths:
       - result.txt
     expire_in: 2 weeks
-
-lint_python:
-  stage: lint
-  script:
-    - mkdir -p .pip
-    - pip install -U pip
-    - pip --cache-dir=.pip install -r requirements.txt
-    - flake8 .
     
-deploy-sopedu-master:
+deploy-sopedu-enron:
   stage: deploy
-  only:
-    - master
+  when: manual
   tags:
     - deploy-sopedu-cluster
   script:
     - export PATH=~/anaconda2/bin:$PATH
     - export SPARK_HOME=/usr/hdp/2.6.2.0-205/spark2/
-    - ./deploy_sopedu_pipeline.sh master
+    - ./deploy_sopedu_pipeline.sh enron
   environment:
     name: sopedu_pipeline_master
-    url: http://sopedu.hpi.uni-potsdam.de:8983/solr/#/pipeline_master
+    url: http://sopedu.hpi.uni-potsdam.de:8983/solr/#/enron
 
-deploy-sopedu-dev:
+deploy-sopedu-enron-dev:
   stage: deploy
-  only:
-    - dev
+  when: manual
   tags:
     - deploy-sopedu-cluster
   script:
     - export PATH=~/anaconda2/bin:$PATH
     - export SPARK_HOME=/usr/hdp/2.6.2.0-205/spark2/
-    - ./deploy_sopedu_pipeline.sh dev
+    - ./deploy_sopedu_pipeline.sh enron-dev
   environment:
     name: sopedu_pipeline_dev
-    url: http://sopedu.hpi.uni-potsdam.de:8983/solr/#/pipeline_dev
+    url: http://sopedu.hpi.uni-potsdam.de:8983/solr/#/enron_dev
 
-deploy-sopedu-mr:
+deploy-sopedu-dnc:
   stage: deploy
-  only:
-    - web
+  when: manual
   tags:
     - deploy-sopedu-cluster
   script:
     - export PATH=~/anaconda2/bin:$PATH
     - export SPARK_HOME=/usr/hdp/2.6.2.0-205/spark2/
-    - ./deploy_sopedu_pipeline.sh mr
+    - ./deploy_sopedu_pipeline.sh dnc
   environment:
     name: sopedu_pipeline_mr
-    url: http://sopedu.hpi.uni-potsdam.de:8983/solr/#/pipeline_mr
+    url: http://sopedu.hpi.uni-potsdam.de:8983/solr/#/dnc
