@@ -6,6 +6,8 @@ from py2neo import Graph
 from pysolr import Solr
 
 from .common import Pipe, SparkProvider
+import time
+import datetime
 
 
 class SolrWriter(Pipe):
@@ -93,7 +95,8 @@ class Neo4JWriter(Pipe):
                     mail_id = mail['doc_id']
                 if 'header' in mail.keys():
                     if "date" in mail["header"]:
-                        mail_timestamp = mail['header']["date"]
+                        mail_timestamp = time.mktime(datetime.datetime.
+                                                     strptime(mail['header']["date"], "%Y-%m-%dT%H:%M:%SZ").timetuple())
 
                 for recipient in recipients:
                     session.run("MERGE (sender:Person {email: $email_sender}) "
