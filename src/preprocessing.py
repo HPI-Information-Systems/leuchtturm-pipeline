@@ -128,10 +128,17 @@ class EmailSplitting(Pipe):
         from_to_subject_heuristic
     ))
 
-    def __init__(self, keep_thread_connected=False):
+    def __init__(self, keep_thread_connected=False, use_quagga=False):
         """Set params if needed here."""
         super().__init__()
         self.keep_thread_connected = keep_thread_connected
+        self.use_quagga = use_quagga  # this is experimental
+
+    def detect_parts_quagga(self, email):
+        """Split email into its parts using quagga. This is experimental."""
+        from .libs.quagga import detect_parts
+
+        return detect_parts(email)
 
     def detect_parts(self, email):
         """Split email into its parts and return list of parts."""
@@ -167,7 +174,11 @@ class EmailSplitting(Pipe):
         """Apply email splitting to a leuchtturm document. Return list of leuchtturm documents."""
         document = json.loads(raw_message)
 
-        parts = self.detect_parts(document['raw'])
+        parts = []
+        if self.use_quagga:
+            parts = self.detect_parts_quagga(document['raw'])
+        else:
+            parts = self.detect_parts(document['raw'])
 
         part_docs = []
         splitted_emails = []
@@ -327,9 +338,11 @@ class HeaderParsing(Pipe):
 
         headers = self.transform_header_string(header_string)
 
+        print(headers)
+
         if self.get_header_value(headers, 'from'):
             header['sender'] = self.parse_correspondent(self.get_header_value(headers, 'from'))
-        elif len(headers[0]) == 1:  # special header, missing from key in first line
+        elif headers and len(headers[0]) == 1:  # special header, missing from key in first line
             sender = re.sub(r'(on )?\d{2}/\d{2}/\d{2,4}\s\d{2}:\d{2}(:\d{2})?\s?(am|pm)?', '',
                             headers[0][0], flags=re.IGNORECASE)  # rm date
             header['sender'] = self.parse_correspondent(sender)
@@ -349,7 +362,7 @@ class HeaderParsing(Pipe):
             header['date'] = self.parse_date(self.get_header_value(headers, 'date'))
         elif self.get_header_value(headers, 'sent'):
             header['date'] = self.parse_date(self.get_header_value(headers, 'sent'))
-        else:
+        elif headers:
             date = re.search(r'\d{2}/\d{2}/\d{2,4}\s\d{2}:\d{2}(:\d{2})?\s?(am|pm)?',
                              headers[0][0], flags=re.IGNORECASE)  # get date
             if date is not None:
