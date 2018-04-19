@@ -23,4 +23,7 @@ with open(results_path) as results:
 agg_counter_sorted = collections.OrderedDict(sorted(agg_counter.items()))
 
 for key in agg_counter_sorted.keys():
-    print(str(agg_counter_sorted[key]), 'correspondent objects were aggregated from', str(key), 'emails')
+    print(str(agg_counter_sorted[key]),
+          'correspondent objects were aggregated from',
+          str(key),
+          'single correspondent objects')

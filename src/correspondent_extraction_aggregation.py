@@ -85,6 +85,40 @@ class CorrespondentDataExtraction(Pipe):
         """Extract the email addresses of correspondents that the correspondent at hand writes emails to."""
         return list(set([recipient['email'] for recipient in recipients]))
 
+    def convert_and_rename_fields(self, document):
+        """Convert all fields to list types for easier two-phase merging, rename fields to correspondent-semantic."""
+        document['email_addresses'] = [document['sender_email_address']] if document['sender_email_address'] else []
+        document['identifying_names'] = [document['sender_name']] if document['sender_name'] else []
+        document['aliases_from_signature'] = document['sender_aliases']
+        document['signatures'] = [document['signature']]
+        for key in ['sender_email_address', 'sender_name', 'sender_aliases', 'signature']:
+            del document[key]
+        document['aliases'] = []
+        return document
+
+    def extract_receiving_correspondents(self, document):
+        """Set up correspondents for receiving correspondents from emails. Sending correspondents already exist."""
+        def build_correspondent(recipient_name, recipient_email_address):
+            return {
+                'signatures': [],
+                'email_addresses': [recipient_email_address] if recipient_email_address else [],
+                'identifying_names': [recipient_name] if recipient_name else [],
+                'aliases_from_signature': [],
+                'aliases': [],
+                "phone_numbers_office": [],
+                "phone_numbers_cell": [],
+                "phone_numbers_fax": [],
+                "phone_numbers_home": [],
+                "email_addresses_from_signature": [],
+                "writes_to": [],
+                'recipients': []
+            }
+
+        documents = []
+        for recipient in document['recipients']:
+            documents.append(build_correspondent(recipient['name'], recipient['email']))
+        return documents
+
     def run_on_document(self, data_item):
         """Apply correspondent data extraction to a leuchtturm document. Return list of leuchtturm documents."""
         document = json.loads(data_item)
@@ -99,12 +133,14 @@ class CorrespondentDataExtraction(Pipe):
             first_email_address_characters
         )
         document['writes_to'] = self.extract_writes_to_relationship(document['recipients'])
+        document = self.convert_and_rename_fields(document)
+        documents = [document] + self.extract_receiving_correspondents(document)
 
-        return json.dumps(document)
+        return [json.dumps(document) for document in documents]
 
     def run(self, rdd):
         """Run pipe in spark context."""
-        return rdd.map(self.run_on_document)
+        return rdd.flatMap(self.run_on_document)
 
 
 class CorrespondentDataAggregation(Pipe):
@@ -116,57 +152,96 @@ class CorrespondentDataAggregation(Pipe):
     - this allows for simple merging of correspondent objects into a single object afterwards
     """
 
-    def _remove_irrelevant_key_values(self, document):
-        irrelevant_keys = ['recipients']
-        for key in irrelevant_keys:
-            del document[key]
-        return document
-
-    def _convert_fields_and_rename(self, document):
-        document['signatures'] = [document['signature']]
-        document['email_addresses'] = [document['sender_email_address']]
-        document['identifying_name'] = document['sender_name']
-        document['aliases'] = document['sender_aliases']
-        for key in ['signature', 'sender_email_address', 'sender_name', 'sender_aliases']:
-            del document[key]
-        return document
-
     def prepare_for_reduction(self, data):
         """Remove irrelevant key-values, make all fields lists except for identifying name."""
         document = json.loads(data)
         document['source_count'] = 1
-        document = self._remove_irrelevant_key_values(document)
-        document = self._convert_fields_and_rename(document)
+        irrelevant_keys = ['recipients']
+        for key in irrelevant_keys:
+            del document[key]
+
         return json.dumps(document)
 
-    def convert_to_tuple(self, data):
+    def extract_data_from_tuple(self, data):
+        """Transform the generated tuple back into leuchtturm document."""
+        return data[1]
+
+    def convert_to_email_address_tuple(self, data):
         """Convert to tuple as preparation for reduceByKey to work right."""
         document = json.loads(data)
-        splitting_keys = json.dumps(document['identifying_name'])
+        # we know that there can only be one element in document['email_addresses']
+        splitting_keys = json.dumps(document['email_addresses'])
         return splitting_keys, data
 
-    def merge_correspondents(self, data1, data2):
+    def merge_correspondents_by_email_address(self, data1, data2):
         """Merge all information about a correspondent from two different objects, avoid duplicates."""
         correspondent1 = json.loads(data1)
         correspondent2 = json.loads(data2)
 
         unified_person = {
-            'identifying_name': correspondent1['identifying_name'],
+            'email_addresses': correspondent1['email_addresses'],
             'source_count': correspondent1['source_count'] + correspondent2['source_count'],
         }
 
         for key in correspondent1:
-            if key not in ['identifying_name', 'source_count']:
+            if key not in ['email_addresses', 'source_count']:
+                unified_person[key] = list(set(correspondent1[key] + correspondent2[key]))
+
+        if not unified_person['identifying_names'] and unified_person['aliases_from_signature']:
+            unified_person['identifying_names'] = max(unified_person['aliases_from_signature'])
+
+        if len(unified_person['identifying_names']) > 1:
+            identifying_name = max(unified_person['identifying_names'])
+            unified_person['aliases'] = unified_person['identifying_names']
+            unified_person['aliases'].remove(identifying_name)
+            unified_person['identifying_names'] = [identifying_name]
+
+        return json.dumps(unified_person)
+
+    def convert_to_name_tuple(self, data):
+        """Convert to tuple as preparation for reduceByKey to work right."""
+        document = json.loads(data)
+        splitting_keys = json.dumps(document['identifying_names'])
+        return splitting_keys, data
+
+    def merge_correspondents_by_name(self, data1, data2):
+        """Merge all information about a correspondent from two different objects, avoid duplicates."""
+        correspondent1 = json.loads(data1)
+        correspondent2 = json.loads(data2)
+
+        unified_person = {
+            'identifying_names': correspondent1['identifying_names'],
+            'source_count': correspondent1['source_count'] + correspondent2['source_count'],
+        }
+
+        for key in correspondent1:
+            if key not in ['identifying_names', 'source_count']:
                 unified_person[key] = list(set(correspondent1[key] + correspondent2[key]))
         return json.dumps(unified_person)
 
-    def revert_to_json(self, data):
-        """Transform the generated tuple back into leuchtturm document."""
-        return data[1]
+    def use_email_addresses_as_identifying_names(self, data):
+        """In case identifying_names is still empty at this point, use the email_addresses property as a backup."""
+        document = json.loads(data)
+        document['identifying_names'] = document['email_addresses']
+        return json.dumps(document)
 
     def run(self, rdd):
         """Run pipe in spark context."""
-        return rdd.map(self.prepare_for_reduction) \
-                  .map(self.convert_to_tuple) \
-                  .reduceByKey(self.merge_correspondents) \
-                  .map(self.revert_to_json)
+        rdd = rdd.map(self.prepare_for_reduction)
+
+        rdd_with_email_addresses = rdd.filter(lambda data: json.loads(data)['email_addresses']) \
+                                      .map(self.convert_to_email_address_tuple) \
+                                      .reduceByKey(self.merge_correspondents_by_email_address) \
+                                      .map(self.extract_data_from_tuple)
+        rdd_without_email_addresses = rdd.filter(lambda data: not json.loads(data)['email_addresses'])
+        rdd = rdd_with_email_addresses.union(rdd_without_email_addresses)
+
+        rdd_with_identifying_names = rdd.filter(lambda data: json.loads(data)['identifying_names']) \
+                                        .map(self.convert_to_name_tuple) \
+                                        .reduceByKey(self.merge_correspondents_by_name) \
+                                        .map(self.extract_data_from_tuple)
+        rdd_without_identifying_names = rdd.filter(lambda data: not json.loads(data)['identifying_names']) \
+                                           .map(self.use_email_addresses_as_identifying_names)
+        rdd = rdd_with_identifying_names.union(rdd_without_identifying_names)
+
+        return rdd
