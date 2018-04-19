@@ -29,6 +29,8 @@ cp -r ~/anaconda2/envs/leuchtturm_env . && cd leuchtturm_env && zip -r --quiet l
 cp ~/gitlab-runner/models/* models/ && cd models && zip --quiet models.zip * && mv models.zip .. && cd .. || return
 # zip src dir to ship it as py-files
 zip -r --quiet src.zip src || return
+# zip config dir to ship it as py-files
+zip -r --quiet config.zip config || return
 source deactivate
 
 echo '[stage 2 of 2] Running leuchtturm pipeline. This might take a while ...'
