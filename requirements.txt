@@ -13,6 +13,7 @@ numpy
 keras
 git+https://www.github.com/keras-team/keras-contrib.git
 sklearn
+tensorflow
 pysolr
 py2neo
 nltk
