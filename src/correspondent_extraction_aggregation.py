@@ -245,3 +245,68 @@ class CorrespondentDataAggregation(Pipe):
         rdd = rdd_with_identifying_names.union(rdd_without_identifying_names)
 
         return rdd
+
+
+class CorrespondentIdInjection(Pipe):
+    """Write the identifying_name back onto sender/recipient entries of each email to enable proper linking in FE."""
+
+    def __init__(self, correspondent_rdd):
+        """Set up class attributes."""
+        super().__init__()
+        self.correspondent_rdd = [json.loads(corr) for corr in correspondent_rdd.value]
+
+    def _find_matching_correspondent(self, original_name, original_email_address):
+        """Look up identifying_name of correspondent object inside broadcast.
+
+        First by email_addresses, then by identifying_names and then by aliases (in that order).
+        """
+        correspondent = None
+        if original_email_address:
+            correspondent = next(
+                (corr for corr in self.correspondent_rdd if original_email_address in corr['email_addresses']), None)
+        if not correspondent:
+            correspondent = next(
+                (corr for corr in self.correspondent_rdd if original_name in corr['identifying_names']), None)
+        if not correspondent:
+            correspondent = next(
+                (corr for corr in self.correspondent_rdd if original_name in corr['aliases']), None)
+        return correspondent
+
+    def assign_identifying_name_for_sender(self, document):
+        """Write identifying_name back onto sender of one email."""
+        original_name = document['header']['sender']['name']
+        original_email_address = document['header']['sender']['email']
+
+        correspondent = self._find_matching_correspondent(original_name, original_email_address)
+
+        if correspondent and correspondent['identifying_names']:
+            document['header']['sender']['identifying_name'] = correspondent['identifying_names'][0]
+        else:
+            document['header']['sender']['identifying_name'] = ''
+
+        return document
+
+    def assign_identifying_name_for_recipients(self, document):
+        """Write identifying_name back onto recipients of one email."""
+        for i in range(len(document['header']['recipients'])):
+            original_name = document['header']['recipients'][i]['name']
+            original_email_address = document['header']['recipients'][i]['email']
+
+            correspondent = self._find_matching_correspondent(original_name, original_email_address)
+
+            if correspondent and correspondent['identifying_names']:
+                document['header']['recipients'][i]['identifying_name'] = correspondent['identifying_names'][0]
+            else:
+                document['header']['recipients'][i]['identifying_name'] = ''
+        return document
+
+    def run_on_document(self, data):
+        """Wrap writing the identifying_name back onto sender and recipient entries for one email."""
+        document = json.loads(data)
+        document = self.assign_identifying_name_for_sender(document)
+        document = self.assign_identifying_name_for_recipients(document)
+        return json.dumps(document)
+
+    def run(self, rdd):
+        """Run on RDD."""
+        return rdd.map(self.run_on_document)

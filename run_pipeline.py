@@ -11,7 +11,8 @@ from src.ner import SpacyNer
 from src.topics import TopicModelPrediction, TopicModelTraining
 from src.writer import TextFileWriter, SolrFileWriter
 from src.signature_extraction import SignatureExtraction
-from src.correspondent_extraction_aggregation import CorrespondentDataExtraction, CorrespondentDataAggregation
+from src.correspondent_extraction_aggregation \
+    import CorrespondentDataExtraction, CorrespondentDataAggregation, CorrespondentIdInjection
 
 
 def run_email_pipeline(read_from='./emails', write_to='./pipeline_result',
@@ -45,6 +46,17 @@ def run_email_pipeline(read_from='./emails', write_to='./pipeline_result',
     ]
     writer = TextFileWriter(path=write_to + '_correspondent')
     Pipeline(reader, pipes, writer).run()
+
+    correspondent_rdd = SparkProvider.spark_context().broadcast(
+        TextFileReader(write_to + '_correspondent').run().collect()
+    )
+    pipes = [
+        CorrespondentIdInjection(correspondent_rdd),
+    ]
+    writer = TextFileWriter(path=write_to + '_injected')
+    Pipeline(reader, pipes, writer).run()
+
+    # Neo4JFileWriter(write_to + '_correspondent').run()
 
     if solr:
         SolrFileWriter(write_to, solr_url=solr_url).run()
