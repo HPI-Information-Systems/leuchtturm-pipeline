@@ -313,10 +313,10 @@ class HeaderParsing(Pipe):
         try:
             date = dateparser.parse(date)
         except Exception:
-            return ''
+            return '', False
 
         if date is None:
-            return ''
+            return '', False
 
         date, changed = self.normalize_date(date)
 
