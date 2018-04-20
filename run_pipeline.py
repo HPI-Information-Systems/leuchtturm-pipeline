@@ -10,6 +10,7 @@ from src.deduplication import EmailDeduplication
 from src.ner import SpacyNer
 from src.topics import TopicModelPrediction, TopicModelTraining
 from src.writer import TextFileWriter, SolrFileWriter
+from src.classification import EmailCategoryClassification
 
 
 def run_email_pipeline(read_from='./emails', write_to='./pipeline_result',
@@ -25,7 +26,8 @@ def run_email_pipeline(read_from='./emails', write_to='./pipeline_result',
              TextCleaning(read_from='body', write_to='text_clean'),
              TopicModelPrediction(),
              LanguageDetection(read_from='text_clean'),
-             SpacyNer(read_from='text_clean')]
+             SpacyNer(read_from='text_clean'),
+             EmailCategoryClassification()]
 
     writer = TextFileWriter(path=write_to)
 
