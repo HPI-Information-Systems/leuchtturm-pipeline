@@ -338,8 +338,6 @@ class HeaderParsing(Pipe):
 
         headers = self.transform_header_string(header_string)
 
-        print(headers)
-
         if self.get_header_value(headers, 'from'):
             header['sender'] = self.parse_correspondent(self.get_header_value(headers, 'from'))
         elif headers and len(headers[0]) == 1:  # special header, missing from key in first line

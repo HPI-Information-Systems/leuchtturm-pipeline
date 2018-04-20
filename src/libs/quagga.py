@@ -11,7 +11,6 @@ from keras.layers import Masking, GRU, Input, Bidirectional
 from keras_contrib.layers import CRF
 import numpy as np
 from sklearn.preprocessing import LabelEncoder
-import os
 import re
 
 
@@ -19,14 +18,14 @@ line_embedding_size = 32
 
 
 def _load_keras_model(path, model=None):
-    with open(os.path.abspath(os.path.dirname(__file__) + path + '.json'), 'r') as jf:
+    with open(path + '.json', 'r') as jf:
         json_model = jf.read()
     if model is None:
         model = model_from_json(json_model)
     try:
-        save_load_utils.load_all_weights(model, os.path.abspath(os.path.dirname(__file__) + path + '.hdf5'))
+        save_load_utils.load_all_weights(model, path + '.hdf5')
     except KeyError:
-        model.load_weights(os.path.abspath(os.path.dirname(__file__) + path + '.hdf5'))
+        model.load_weights(path + '.hdf5')
 
     return model
 
@@ -57,8 +56,8 @@ def _get_embedding_function(model):
     return lambdo
 
 
-enron_two_zone_line_b = _load_keras_model('./../../models/enron_line_model_b')
-enron_two_zone_model = _load_keras_model('./../../models/enron_model', model=_get_mail_model_two())
+enron_two_zone_line_b = _load_keras_model('.//models/enron_line_model_b')
+enron_two_zone_model = _load_keras_model('./models/enron_model', model=_get_mail_model_two())
 # asf_two_zone_line_b = load_keras_model('./emailbody/models/two_zones/asf_line_model_b')
 # asf_two_zone_model = load_keras_model('./emailbody/models/two_zones/asf_model', model=get_mail_model_two())
 enron_two_zone_line_b_func = _get_embedding_function(enron_two_zone_line_b)
@@ -373,7 +372,7 @@ def detect_parts(si):
     blocks = [{'raw_header': '\n'.join(part['raw_header']), 'text': '\n'.join(part['text'])} for part in blocks]
 
     # transform to same format as regex result
-    blocks = [(part['raw_header'], part['text']) for part in blocks]
+    blocks = [(part['raw_header'], part['text']) for part in blocks if part['raw_header']]
 
     return blocks
 
