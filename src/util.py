@@ -5,11 +5,11 @@ import configparser
 
 def get_config(dataset):
     """Get a config and parse it."""
-    if not dataset:
-        return configparser.ConfigParser()  # return empty conf if not specified
-
-    config_file = 'config-' + dataset + '.ini'
     config = configparser.ConfigParser()
-    config.read('./config/' + config_file)
+
+    if not dataset:
+        return config  # return empty conf if not specified
+
+    config.read('./config/config-' + dataset + '.ini')
 
     return config
