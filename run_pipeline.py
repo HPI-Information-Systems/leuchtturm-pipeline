@@ -64,8 +64,7 @@ if __name__ == '__main__':
                         help='Url to running solr instance (core/collection specified).',
                         default='http://sopedu.hpi.uni-potsdam.de:8983/solr/enron')
     parser.add_argument('--dataset',
-                        help='Dataset config to read.',
-                        default='enron')
+                        help='Dataset config to read.')
     args = parser.parse_args()
 
     run_email_pipeline(read_from=args.read_from,
