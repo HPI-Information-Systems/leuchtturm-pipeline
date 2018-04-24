@@ -95,11 +95,11 @@ class Neo4JWriter(Pipe):
                     mail_id = mail['doc_id']
                 if 'header' in mail.keys():
                     if "date" in mail["header"]:
-                        if isinstance(mail["header"]["date"], str):
+                        try:
                             mail_timestamp = time.mktime(datetime.datetime.
                                                          strptime(mail['header']["date"], "%Y-%m-%dT%H:%M:%SZ")
                                                          .timetuple())
-                        else:
+                        except Exception:
                             mail_timestamp = 0.0  # timestamp for 1970-01-01T00:00:00+00:00
 
                 for recipient in recipients:
