@@ -28,12 +28,14 @@ source activate leuchtturm_env
 pip install --quiet -r requirements.txt
 # zip py environment
 cp -r ~/anaconda2/envs/leuchtturm_env . && cd leuchtturm_env && zip -r --quiet leuchtturm_env.zip * && mv leuchtturm_env.zip .. && cd .. || return
+rm -r leuchtturm_env
 #zip requirements for tm...
 cp ~/gitlab-runner/models/* models/ && cd models && zip --quiet models.zip * && mv models.zip .. && cd .. || return
+rm models/*
 # zip src dir to ship it as py-files
 zip -r --quiet src.zip src || return
 # zip config dir to ship it as archives
-cd config && zip -r --quiet config.zip * && mv config.zip .. & cd .. || return
+cd config && zip -r --quiet config.zip * && mv config.zip .. && cd .. || return
 source deactivate
 
 echo '[stage 2 of 2] Running leuchtturm pipeline. This might take a while ...'
