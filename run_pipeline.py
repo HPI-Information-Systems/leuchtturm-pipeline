@@ -4,7 +4,7 @@ import argparse
 import ujson as json
 
 from src.common import Pipeline, SparkProvider
-from src.reader import EmlReader
+from src.reader import EmlReader, TextFileReader
 from src.preprocessing import EmailDecoding, EmailSplitting, HeaderParsing, TextCleaning, LanguageDetection
 from src.deduplication import EmailDeduplication
 from src.ner import SpacyNer
@@ -19,25 +19,30 @@ def run_email_pipeline(read_from='./emails', write_to='./pipeline_result',
     """Run main email pipeline."""
     SparkProvider.spark_context()
 
-    reader = EmlReader(read_from)
+    # reader = EmlReader(read_from)
+    # pipes = [EmailDecoding(split_header_body=True),
+    #          EmailSplitting(keep_thread_connected=True),
+    #          HeaderParsing(clean_subject=False, use_unix_time=False),
+    #          EmailDeduplication(is_connected_thread=True),
+    #          TextCleaning(read_from='body', write_to='text_clean'),
+    #          # TopicModelPrediction(),
+    #          # LanguageDetection(read_from='text_clean'),
+    #          # SpacyNer(read_from='text_clean'),
+    #          # EmailCategoryClassification(),
+    #          # EmailFolderClassification()
+    #          ]
+    # writer = TextFileWriter(path=write_to)
+    # Pipeline(reader, pipes, writer).run()
 
-    pipes = [EmailDecoding(split_header_body=True),
-             EmailSplitting(keep_thread_connected=True),
-             HeaderParsing(clean_subject=False, use_unix_time=False),
-             EmailDeduplication(is_connected_thread=True),
-             TextCleaning(read_from='body', write_to='text_clean'),
-             TopicModelPrediction(),
-             LanguageDetection(read_from='text_clean'),
-             SpacyNer(read_from='text_clean'),
-             EmailCategoryClassification(),
-             EmailFolderClassification()]
-
-    writer = TextFileWriter(path=write_to)
-
+    reader = TextFileReader(path=write_to)
+    pipes = [
+        TopicModelPrediction(),
+    ]
+    writer = TextFileWriter(path=write_to + '_topics')
     Pipeline(reader, pipes, writer).run()
 
-    if solr:
-        SolrFileWriter(write_to, solr_url=solr_url).run()
+    # if solr:
+    #     SolrFileWriter(write_to, solr_url=solr_url).run()
 
     SparkProvider.stop_spark_context()
 

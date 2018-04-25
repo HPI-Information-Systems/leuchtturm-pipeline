@@ -97,7 +97,6 @@ class TopicModelTraining(Pipe):
         with open('./models/pickled_lda_model.p', 'wb') as pfile:
             pickle.dump(lda, pfile)
 
-
 class TopicModelPrediction(Pipe):
     """Predict topics for a given text.
 
@@ -114,18 +113,6 @@ class TopicModelPrediction(Pipe):
         self.path_dict = path_dict
         # TODO add variable train_topic_model=Bool to trigger tm training within the main pipeline
 
-    def get_topics(self, text, model, dictionary):
-        """Predict topics for a text."""
-        bow = dictionary.doc2bow(text.split())
-
-        topic_terms = []
-        for topic in model.get_document_topics(bow):
-            terms = map(lambda xy: (dictionary[xy[0]], xy[1]), model.get_topic_terms(topic[0], topn=10))
-            # TODO refactor this
-            topic_terms.append(str((str(topic[1]), (list(terms)))))
-
-        return topic_terms
-
     def load_model(self):
         """Load lda model from defined path."""
         with open(self.path_model, mode='rb') as pfile:
@@ -140,6 +127,25 @@ class TopicModelPrediction(Pipe):
 
         return dictionary
 
+    def get_topics_for_doc(self, text, model, dictionary):
+        """Predict topics for a text."""
+        bow = dictionary.doc2bow(text.split())
+
+        doc_topics = []
+        for topic in model.get_document_topics(bow):
+            topic_obj = {}
+            topic_id = topic[0]
+            term_id_conf_tuples = model.get_topic_terms(topic_id, topn=10)
+            get_word_from_term_id_and_round = lambda xy: (dictionary[xy[0]], round(float(xy[1]), 8))
+
+            topic_obj['topic_id'] = topic_id
+            topic_obj['topic_conf'] = round(float(topic[1]), 8)
+            topic_obj['terms'] = str(list(map(get_word_from_term_id_and_round, term_id_conf_tuples)))
+
+            doc_topics.append(topic_obj)
+
+        return doc_topics
+
     def run_on_document(self, raw_message, model=None, dictionary=None):
         """Predict topics for a leuchtturm document."""
         model = model if model is not None else self.load_model()
@@ -147,9 +153,9 @@ class TopicModelPrediction(Pipe):
 
         document = json.loads(raw_message)
         # TODO srsly, this way the resulting 'list' isn't even a list...
-        document['topics'] = str(self.get_topics(document[self.read_from], model, dictionary))
+        doc_topics = self.get_topics_for_doc(document[self.read_from], model, dictionary)
 
-        return json.dumps(document)
+        return [json.dumps(topic) for topic in doc_topics]
 
     def run_on_partition(self, partition):
         """Run task in spark context. Partitionwise for performance reasosn."""
@@ -161,4 +167,5 @@ class TopicModelPrediction(Pipe):
 
     def run(self, rdd):
         """Run task in spark context."""
-        return rdd.mapPartitions(lambda x: self.run_on_partition(x))
+        return rdd.mapPartitions(lambda x: self.run_on_partition(x)) \
+                  .flatMap(lambda x: x)
