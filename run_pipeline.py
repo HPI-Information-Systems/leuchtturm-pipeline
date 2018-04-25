@@ -10,10 +10,11 @@ from src.deduplication import EmailDeduplication
 from src.ner import SpacyNer
 from src.topics import TopicModelPrediction, TopicModelTraining
 from src.writer import TextFileWriter, SolrFileWriter
+from src.graph_analysis import GraphAnalyser
 
 
 def run_email_pipeline(read_from='./emails', write_to='./pipeline_result',
-                       solr=False, solr_url='http://sopedu.hpi.uni-potsdam.de:8983/solr/enron'):
+                       solr=False, analyse_graph=False, solr_url='http://sopedu.hpi.uni-potsdam.de:8983/solr/enron'):
     """Run main email pipeline."""
     SparkProvider.spark_context()
 
@@ -36,6 +37,10 @@ def run_email_pipeline(read_from='./emails', write_to='./pipeline_result',
         SolrFileWriter(write_to, solr_url=solr_url).run()
 
     SparkProvider.stop_spark_context()
+
+    if analyse_graph:
+        graph_analyser = GraphAnalyser()
+        graph_analyser.analyse_graph()
 
 
 def run_topic_model_training():
