@@ -15,7 +15,7 @@ class SignatureExtraction(Pipe):
 
     def __init__(
             self,
-            read_from='body',
+            read_from='text_clean_original_ws',
             write_body_without_signature_to='body_without_signature',
             write_signature_to='signature',
             write_sent_from_mobile_to='sent_from_mobile'
@@ -125,6 +125,7 @@ class SignatureExtraction(Pipe):
                     document[self.write_body_without_signature_to],
                     document['header']['sender']['email']
             )
+            del document[self.read_from]
             yield json.dumps(document)
 
     def run_on_document(self, data_item):
