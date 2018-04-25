@@ -97,6 +97,7 @@ class TopicModelTraining(Pipe):
         with open('./models/pickled_lda_model.p', 'wb') as pfile:
             pickle.dump(lda, pfile)
 
+
 class TopicModelPrediction(Pipe):
     """Predict topics for a given text.
 
@@ -127,20 +128,25 @@ class TopicModelPrediction(Pipe):
 
         return dictionary
 
-    def get_topics_for_doc(self, text, model, dictionary):
+    def get_topics_for_doc(self, doc_id, text, model, dictionary):
         """Predict topics for a text."""
-        bow = dictionary.doc2bow(text.split())
+        def get_word_from_term_id_and_round(tuple):
+            term = dictionary[tuple[0]]
+            term_conf = round(float(tuple[1]), 8)
+            return (term, term_conf)
 
+        bow = dictionary.doc2bow(text.split())
         doc_topics = []
+
         for topic in model.get_document_topics(bow):
             topic_obj = {}
             topic_id = topic[0]
             term_id_conf_tuples = model.get_topic_terms(topic_id, topn=10)
-            get_word_from_term_id_and_round = lambda xy: (dictionary[xy[0]], round(float(xy[1]), 8))
 
             topic_obj['topic_id'] = topic_id
             topic_obj['topic_conf'] = round(float(topic[1]), 8)
-            topic_obj['terms'] = str(list(map(get_word_from_term_id_and_round, term_id_conf_tuples)))
+            topic_obj['terms'] = list(map(get_word_from_term_id_and_round, term_id_conf_tuples))
+            topic_obj['doc_id'] = doc_id
 
             doc_topics.append(topic_obj)
 
@@ -152,8 +158,7 @@ class TopicModelPrediction(Pipe):
         dictionary = dictionary if dictionary is not None else self.load_dictionary()
 
         document = json.loads(raw_message)
-        # TODO srsly, this way the resulting 'list' isn't even a list...
-        doc_topics = self.get_topics_for_doc(document[self.read_from], model, dictionary)
+        doc_topics = self.get_topics_for_doc(document['doc_id'], document[self.read_from], model, dictionary)
 
         return [json.dumps(topic) for topic in doc_topics]
 
