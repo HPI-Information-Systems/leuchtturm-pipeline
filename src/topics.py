@@ -145,7 +145,7 @@ class TopicModelPrediction(Pipe):
 
             topic_obj['topic_id'] = topic_id
             topic_obj['topic_conf'] = round(float(topic[1]), 8)
-            topic_obj['terms'] = list(map(get_word_from_term_id_and_round, term_id_conf_tuples))
+            topic_obj['terms'] = str(list(map(get_word_from_term_id_and_round, term_id_conf_tuples)))
             topic_obj['doc_id'] = doc_id
 
             doc_topics.append(topic_obj)

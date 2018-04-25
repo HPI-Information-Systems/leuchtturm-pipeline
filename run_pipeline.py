@@ -19,30 +19,26 @@ def run_email_pipeline(read_from='./emails', write_to='./pipeline_result',
     """Run main email pipeline."""
     SparkProvider.spark_context()
 
-    # reader = EmlReader(read_from)
-    # pipes = [EmailDecoding(split_header_body=True),
-    #          EmailSplitting(keep_thread_connected=True),
-    #          HeaderParsing(clean_subject=False, use_unix_time=False),
-    #          EmailDeduplication(is_connected_thread=True),
-    #          TextCleaning(read_from='body', write_to='text_clean'),
-    #          # TopicModelPrediction(),
-    #          # LanguageDetection(read_from='text_clean'),
-    #          # SpacyNer(read_from='text_clean'),
-    #          # EmailCategoryClassification(),
-    #          # EmailFolderClassification()
-    #          ]
-    # writer = TextFileWriter(path=write_to)
-    # Pipeline(reader, pipes, writer).run()
-
-    reader = TextFileReader(path=write_to)
-    pipes = [
-        TopicModelPrediction(),
-    ]
-    writer = TextFileWriter(path=write_to + '_topics')
+    reader = EmlReader(read_from)
+    pipes = [EmailDecoding(split_header_body=True),
+             EmailSplitting(keep_thread_connected=True),
+             HeaderParsing(clean_subject=False, use_unix_time=False),
+             EmailDeduplication(is_connected_thread=True),
+             TextCleaning(read_from='body', write_to='text_clean'),
+             LanguageDetection(read_from='text_clean'),
+             SpacyNer(read_from='text_clean'),
+             EmailCategoryClassification(),
+             EmailFolderClassification()]
+    writer = TextFileWriter(path=write_to)
     Pipeline(reader, pipes, writer).run()
 
-    # if solr:
-    #     SolrFileWriter(write_to, solr_url=solr_url).run()
+    reader = TextFileReader(path=write_to)
+    writer = TextFileWriter(path=write_to + '_topics')
+    Pipeline(reader, [TopicModelPrediction()], writer).run()
+
+    if solr:
+        SolrFileWriter(write_to, solr_url=solr_url).run()
+        SolrFileWriter(write_to + '_topics', solr_url=solr_url + '_topics').run()
 
     SparkProvider.stop_spark_context()
 
