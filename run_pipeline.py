@@ -13,23 +13,23 @@ from src.topics import TopicModelPrediction, TopicModelTraining
 from src.writer import TextFileWriter, SolrFileWriter
 
 
-def run_email_pipeline(read_from='./emails', write_to='./pipeline_result',
-                       solr=False, solr_url='http://sopedu.hpi.uni-potsdam.de:8983/solr/enron',
-                       dataset='enron'):
+def run_email_pipeline(read_from, write_to, solr, solr_url, dataset):
     """Run main email pipeline."""
     config = get_config(dataset)
     SparkProvider.spark_context()
 
     reader = EmlReader(read_from)
 
-    pipes = [EmailDecoding(split_header_body=True),
-             EmailSplitting(keep_thread_connected=True),
-             HeaderParsing(config, clean_subject=False, use_unix_time=False),
-             EmailDeduplication(is_connected_thread=True),
-             TextCleaning(read_from='body', write_to='text_clean'),
-             TopicModelPrediction(),
-             LanguageDetection(read_from='text_clean'),
-             SpacyNer(read_from='text_clean')]
+    pipes = [
+        EmailDecoding(split_header_body=False),
+        EmailSplitting(keep_thread_connected=True),
+        HeaderParsing(config=config, use_unix_time=False),
+        EmailDeduplication(is_connected_thread=True),
+        TextCleaning(read_from='body', write_to='text_clean'),
+        TopicModelPrediction(),
+        LanguageDetection(read_from='text_clean'),
+        SpacyNer(read_from='text_clean')
+    ]
 
     writer = TextFileWriter(path=write_to)
 
@@ -59,16 +59,16 @@ if __name__ == '__main__':
                         default='./pipeline_result')
     parser.add_argument('--solr',
                         action='store_true',
-                        help='Set if results should be written to solr.')
+                        help='Set this flag if results should be written to solr.')
     parser.add_argument('--solr-url',
-                        help='Url to running solr instance (core/collection specified).',
+                        help='Url to running solr instance (with core/collection specified).',
                         default='http://sopedu.hpi.uni-potsdam.de:8983/solr/enron')
     parser.add_argument('--dataset',
                         help='Dataset config to read.')
     args = parser.parse_args()
 
-    run_email_pipeline(read_from=args.read_from,
-                       write_to=args.write_to,
-                       solr=args.solr,
-                       solr_url=args.solr_url,
-                       dataset=args.dataset)
+    run_email_pipeline(args.read_from,
+                       args.write_to,
+                       args.solr,
+                       args.solr_url,
+                       args.dataset)

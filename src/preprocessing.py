@@ -210,7 +210,7 @@ class HeaderParsing(Pipe):
     Get sender, recipients, date, subject from emails even with (common) inline headers.
     """
 
-    def __init__(self, config, clean_subject=False, use_unix_time=False):
+    def __init__(self, config=None, clean_subject=False, use_unix_time=False):
         """Set parsing rules."""
         super().__init__()
         self.clean_subject = clean_subject  # TODO is not implemented
@@ -218,7 +218,7 @@ class HeaderParsing(Pipe):
         self.start_date = None
         self.end_date = None
 
-        if 'PERIOD' in config:
+        if config and 'PERIOD' in config:
             if 'start' in config['PERIOD']:
                 self.start_date = datetime.datetime.fromtimestamp(int(config['PERIOD']['start']))
             if 'end' in config['PERIOD']:
