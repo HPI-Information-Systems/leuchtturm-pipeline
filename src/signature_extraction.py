@@ -3,6 +3,7 @@
 import ujson as json
 import re
 from .common import Pipe
+from .utils.logger import YarnLogger
 
 
 class SignatureExtraction(Pipe):
@@ -26,6 +27,7 @@ class SignatureExtraction(Pipe):
         self.write_body_without_signature_to = write_body_without_signature_to
         self.write_signature_to = write_signature_to
         self.write_sent_from_mobile_to = write_sent_from_mobile_to
+        self.logger = YarnLogger()
 
     def _get_mobile_signature_patterns(self):
         return [
@@ -105,11 +107,14 @@ class SignatureExtraction(Pipe):
         import talon
         talon.init()
 
-        def extract_signature(body, sender_email_address):
+        def extract_signature(body, sender_email_address, path):
             """Apply talon to the preprocessed body.
 
             Uses the email address of the sending correspondent to improve extraction results.
             """
+            self.logger.warn(path)
+            self.logger.warn(sender_email_address)
+            self.logger.warn(len(body))
             body, signature = talon_signature.extract(
                 body,
                 sender=sender_email_address
@@ -123,7 +128,8 @@ class SignatureExtraction(Pipe):
             document[self.write_body_without_signature_to], document[self.write_signature_to] = \
                 extract_signature(
                     document[self.write_body_without_signature_to],
-                    document['header']['sender']['email']
+                    document['header']['sender']['email'],
+                    document['path']
             )
             del document[self.read_from]
             yield json.dumps(document)
