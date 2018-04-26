@@ -1,5 +1,4 @@
 import py2neo
-import networkx as nx
 from .community_detection import CommunityDetector
 from .social_hierarchy_detection import SocialHierarchyDetector
 

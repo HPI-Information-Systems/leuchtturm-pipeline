@@ -1,4 +1,3 @@
-import py2neo
 import networkx as nx
 
 
