@@ -10,6 +10,7 @@ from html2text import HTML2Text
 from langdetect import detect
 import textacy
 import dateparser
+import datetime
 
 from .common import Pipe
 
@@ -209,11 +210,19 @@ class HeaderParsing(Pipe):
     Get sender, recipients, date, subject from emails even with (common) inline headers.
     """
 
-    def __init__(self, clean_subject=False, use_unix_time=False):
+    def __init__(self, config=None, clean_subject=False, use_unix_time=False):
         """Set parsing rules."""
         super().__init__()
         self.clean_subject = clean_subject  # TODO is not implemented
         self.use_unix_time = use_unix_time
+        self.start_date = None
+        self.end_date = None
+
+        if config and 'PERIOD' in config:
+            if 'start' in config['PERIOD']:
+                self.start_date = datetime.datetime.fromtimestamp(int(config['PERIOD']['start']))
+            if 'end' in config['PERIOD']:
+                self.end_date = datetime.datetime.fromtimestamp(int(config['PERIOD']['end']))
 
     def prepare_header_string(self, text):
         """Remove whitespace, newlines and other noise."""
@@ -304,12 +313,28 @@ class HeaderParsing(Pipe):
         try:
             date = dateparser.parse(date)
         except Exception:
-            return ''
+            return '', False
 
         if date is None:
-            return ''
+            return '', False
 
-        return date.strftime('%Y-%m-%dT%H:%M:%S') + 'Z' if not self.use_unix_time else date.timestamp()
+        date, changed = self.normalize_date(date)
+
+        return date.strftime('%Y-%m-%dT%H:%M:%S') + 'Z' if not self.use_unix_time else date.timestamp(), changed
+
+    def normalize_date(self, original_date):
+        """Normalize date to given period of time."""
+        date = original_date.replace(tzinfo=None)
+
+        if self.start_date:
+            if date < self.start_date:
+                return self.start_date, True
+
+        if self.end_date:
+            if date > self.end_date:
+                return self.end_date, True
+
+        return original_date, False
 
     def parse_subject(self, subject_string):
         """Clean subject line from RE:, AW: etc if self.clean_subject=True."""
@@ -323,6 +348,7 @@ class HeaderParsing(Pipe):
         header = {'sender': {'name': '', 'email': ''},
                   'recipients': [],
                   'date': None,
+                  'date_changed': '',
                   'subject': ''}
 
         headers = self.transform_header_string(header_string)
@@ -346,14 +372,14 @@ class HeaderParsing(Pipe):
                                                           kind='bcc', delimiter=delimiter)
 
         if self.get_header_value(headers, 'date'):
-            header['date'] = self.parse_date(self.get_header_value(headers, 'date'))
+            header['date'], header['date_changed'] = self.parse_date(self.get_header_value(headers, 'date'))
         elif self.get_header_value(headers, 'sent'):
-            header['date'] = self.parse_date(self.get_header_value(headers, 'sent'))
+            header['date'], header['date_changed'] = self.parse_date(self.get_header_value(headers, 'sent'))
         else:
             date = re.search(r'\d{2}/\d{2}/\d{2,4}\s\d{2}:\d{2}(:\d{2})?\s?(am|pm)?',
                              headers[0][0], flags=re.IGNORECASE)  # get date
             if date is not None:
-                header['date'] = self.parse_date(date.group(0))
+                header['date'], header['date_changed'] = self.parse_date(date.group(0))
 
         if self.get_header_value(headers, 'subject'):
             header['subject'] = self.parse_subject(self.get_header_value(headers, 'subject'))
