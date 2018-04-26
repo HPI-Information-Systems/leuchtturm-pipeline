@@ -94,15 +94,17 @@ def test_extract_aliases_from_signature():
 
 
 correspondent_object_keys = {
-    'aliases', 'phone_numbers_cell', 'phone_numbers_fax', 'phone_numbers_office',
+    'aliases_from_signature', 'aliases', 'phone_numbers_cell', 'phone_numbers_fax', 'phone_numbers_office',
     'phone_numbers_home', 'signatures', 'writes_to', 'email_addresses_from_signature',
-    'email_addresses', 'identifying_name', 'source_count'
+    'email_addresses', 'identifying_names', 'source_count'
 }
 
 
 def test_preparation_for_aggregation():
     for email in shackleton_emails:
-        prepared_email = CorrespondentDataAggregation().prepare_for_reduction(json.dumps(email))
+        email = email.copy()
+        prepared_email = CorrespondentDataExtraction().convert_and_rename_fields(email)
+        prepared_email = CorrespondentDataAggregation().prepare_for_reduction(json.dumps(prepared_email))
         prepared_email = json.loads(prepared_email)
         keys = prepared_email.keys()
         assert set(keys) == correspondent_object_keys
@@ -117,11 +119,14 @@ def test_preparation_for_aggregation():
 
 def test_aggregation_of_correspondent_data():
     prepared_emails = []
+
     for email in shackleton_emails:
-        prepared_email = CorrespondentDataAggregation().prepare_for_reduction(json.dumps(email))
+        email = email.copy()
+        prepared_email = CorrespondentDataExtraction().convert_and_rename_fields(email)
+        prepared_email = CorrespondentDataAggregation().prepare_for_reduction(json.dumps(prepared_email))
         prepared_emails.append(prepared_email)
 
-    aggregated_correspondent = CorrespondentDataAggregation().merge_correspondents(*prepared_emails)
+    aggregated_correspondent = CorrespondentDataAggregation().merge_correspondents_by_email_address(*prepared_emails)
     aggregated_correspondent = json.loads(aggregated_correspondent)
     keys = aggregated_correspondent.keys()
 

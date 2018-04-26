@@ -91,7 +91,7 @@ shackleton_emails = [
 
 aggregated_shackleton_correspondent_object = {
   "email_addresses": ["sara.shackleton@enron.com"],
-  "identifying_name": "Sara Shackleton",
+  "identifying_names": ["Sara Shackleton"],
   "source_count": 2,
   "phone_numbers_office": [
     "(777) 777-7777",
@@ -103,7 +103,8 @@ aggregated_shackleton_correspondent_object = {
   ],
   "phone_numbers_home": [],
   "email_addresses_from_signature": [],
-  "aliases": [
+  "aliases": [],
+  "aliases_from_signature": [
     "Sara Shackleton",
     "Sara"
   ],
