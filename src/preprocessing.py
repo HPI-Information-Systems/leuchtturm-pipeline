@@ -176,9 +176,10 @@ class EmailSplitting(Pipe):
         document = json.loads(raw_message)
 
         document['headers_regex'] = [part[0] for part in self.detect_parts(document['raw'])]
-        document['headers_quagga'] = [part[0] for part in self.detect_parts_quagga(document['raw'])]
+        parts = []
         if self.use_quagga:
             parts = self.detect_parts_quagga(document['raw'])
+            document['headers_quagga'] = [part[0] for part in parts]
         else:
             parts = self.detect_parts(document['raw'])
 
