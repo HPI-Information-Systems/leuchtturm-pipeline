@@ -16,7 +16,8 @@ from src.graph_analysis import GraphAnalyser
 
 
 def run_email_pipeline(read_from='./emails', write_to='./pipeline_result',
-                       solr=False, analyse_graph=False, solr_url='http://sopedu.hpi.uni-potsdam.de:8983/solr/enron'):
+                       solr=False, solr_url='http://sopedu.hpi.uni-potsdam.de:8983/solr/enron',
+                       neo4j_host='sopedu.hpi.uni-potsdam.de', neo4j_http_port='7474', neo4j_bolt_port='7687', analyse_graph=False):
     """Run main email pipeline."""
     SparkProvider.spark_context()
 
@@ -43,7 +44,7 @@ def run_email_pipeline(read_from='./emails', write_to='./pipeline_result',
     SparkProvider.stop_spark_context()
 
     if analyse_graph:
-        graph_analyser = GraphAnalyser()
+        graph_analyser = GraphAnalyser(host=neo4j_host, http_port=neo4j_http_port, bolt_port=neo4j_bolt_port)
         graph_analyser.analyse_graph()
 
 
@@ -69,6 +70,18 @@ if __name__ == '__main__':
     parser.add_argument('--solr-url',
                         help='Url to running solr instance (core/collection specified).',
                         default='http://sopedu.hpi.uni-potsdam.de:8983/solr/enron')
+    parser.add_argument('--neo4j-host',
+                        help='Neo4j host to get graph data from.',
+                        default='sopedu.hpi.uni-potsdam.de')
+    parser.add_argument('--neo4j_http_port',
+                        help='Neo4j http port to use for http connections.',
+                        default='7474')
+    parser.add_argument('--neo4j_bolt_port',
+                        help='Neo4j bolt port to use for bolt connections.',
+                        default='7687')
+    parser.add_argument('--analyse_graph',
+                        action='store_true',
+                        help='Set if the graph data should be analysed.')
     args = parser.parse_args()
 
-    run_email_pipeline(read_from=args.read_from, write_to=args.write_to, solr=args.solr, solr_url=args.solr_url)
+    run_email_pipeline(read_from=args.read_from, write_to=args.write_to, solr=args.solr, solr_url=args.solr_url, analyse_graph=args.analyse_graph)
