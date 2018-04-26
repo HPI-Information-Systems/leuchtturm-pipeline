@@ -152,6 +152,25 @@ def detect_parts(si):
 
     pred = two(si)  # , trained_on='asf')
 
+    def not_empty(var):
+        return var is not None and len(var) > 0
+
+
+    def simple_clean(s):
+        # remove known common rubbish
+        s = s.replace('=\n', '').replace('=20', '').replace('=09', '').replace('=01\&', '') \
+            .replace('=01&', '').replace('=18', '').replace('=018', '')
+
+        # remove indentation
+        # s = re.sub(r"^(\s*>)+","", s)
+
+        # remove attachments
+        s = re.sub(r"\s*\[IMAGE\]\s*", "", s, flags=re.I)
+        s = re.sub(r"<<.{3,50}\.(xls|xlsx|png|gif|jpg|jpeg|doc|docx|ppt|pptx|pst)>>%?", "", s, flags=re.I)
+        s = re.sub(r"^\s*-.{3,50}\.(xls|xlsx|png|gif|jpg|jpeg|doc|docx|ppt|pptx|pst)%?", "", s, flags=re.I)
+
+        return s
+
     # blockss = []
     blocks = []
     # pre-filled info comes from email protocol header
@@ -177,31 +196,41 @@ def detect_parts(si):
                 blocks.append(curr_block)
                 next_mode = 1 if 'forward' in line_low else 2
                 curr_block = {'from': None, 'to': None, 'cc': None, 'sent': None, 'subject': None,
-                              'type': 'forward' if next_mode == 1 else 'reply',
-                              'raw_header': [],
-                              'text': []}
+                                'type': 'forward' if next_mode == 1 else 'reply',
+                                'raw_header': [],
+                                'text': []}
                 mode = next_mode
 
             # stop eating forward header when seeing "-----Original Message-----"
             if mode == 1 and 'original' in line_low:
                 blocks.append(curr_block)
-                curr_block = {'from': None, 'to': None, 'sent': None, 'subject': None,
-                              'type': 'reply', 'raw_header': [line['text']], 'text': []}
+                curr_block = {'from': None, 'to': None, 'cc': None, 'sent': None, 'subject': None,
+                                'type': 'reply', 'raw_header': [line['text']], 'text': []}
                 mode = 2
                 # nothing else to expect from this line, carry on!
                 # note: there are cases where newlines are missing, ...
                 continue
 
+            if mode != 1 and '-- forward' in line_low:
+                blocks.append(curr_block)
+                curr_block = {'from': None, 'to': None, 'cc': None, 'sent': None, 'subject': None,
+                                'type': 'reply', 'raw_header': [], 'text': []}
+                mode = 1
+
             # forward header in one line
             # ---------------------- Forwarded by Sherri Sera/Corp/Enron on 04/20/2001 12:21 PM --------------------
-            if mode == 1 and re.match(r"-+ ?forward.+?-+", line_low):
+            if re.match(r"-+ ?forward.+?-+", line_low):
+                # save current
+                # new block
+                # fill block
+
                 curr_block['raw_header'].append(line['text'])
 
                 grps = re.search(r"-+ Forward(?:ed)? by (.+?) on (.+?)-+", line['text'], flags=re.IGNORECASE)
                 try:
                     curr_block['from'] = grps.group(1)
                     curr_block['sent'] = grps.group(2)
-                except Exception:
+                except AttributeError:
                     curr_block['from'] = ''
                     curr_block['sent'] = ''
 
@@ -237,25 +266,24 @@ def detect_parts(si):
                 except AttributeError:
                     # must then be the second line?
                     grps = re.search(r"(?:on )?(.+?)-+", line['text'], flags=re.IGNORECASE)
-                    # FIXME: this is not save to use, exceptions expected!
-                    curr_block['sent'] = ('' if curr_block['sent'] is None else curr_block['sent']) + grps.group(1)
+                    try:
+                        curr_block['sent'] = ('' if curr_block['sent'] is None else curr_block['sent']) + grps.group(1)
+                    except AttributeError:
+                        curr_block['sent'] = ''
                     mode = 0
                 continue
 
             # eating a header and stumbled upon next one...
             if mode >= 2 and ('-- original' in line_low or '-- forward' in line_low):
-                # TODO implement
-                pass
-
-            # TODO check if all fields are filled, potentially switch to new header
-            # but how to distinguish new header from previous one? could just be a long list of recipients...
+                # not elegant, but works (the "original message" is stuck with the previous block)
+                mode = 0
+                continue
 
             # ended up here, so it's a normal reply header
             # TODO: figure out what to do with headers missing newlines
             # TODO: keep track of what you are eating (from, to, cc, ...) and append!
             # TODO: how to deal with multi-language?
             # TODO: how to deal with broken layouts?
-            curr_block['raw_header'].append(line['text'])
 
             # On Tue, Jan 17, 2017 at 8:14 PM, Deepak Sharma <deepakmca05@gmail.com>
             # wrote:
@@ -268,30 +296,58 @@ def detect_parts(si):
                 r"on (?:[a-z]+, ?)?([a-z]+ \d\d?, ?\d{2,4} (?:at )?\d\d?:\d\d ?(?:am|pm)),(.+?)(?:wrote|$)",
                 line['text'], flags=re.IGNORECASE)
             if on_match:
-                curr_block['sent'] = on_match.group(1)
-                curr_block['type'] = 'unknown'  # this kind of header exists in both cases (or does it?)
-                curr_block['from'] = on_match.group(2)
-                curr_block['to'] = blocks[-1]['from']
-                curr_block['subject'] = blocks[-1]['subject']
+                # new block
+                blocks.append(curr_block)
+                curr_block = {
+                    'from': on_match.group(2),
+                    'to': blocks[-1]['from'],
+                    'sent': on_match.group(1),
+                    'subject': blocks[-1]['subject'],
+                    'type': 'unknown',
+                    'raw_header': [], 'text': []
+                }
+                # in the next line, there might be the rest of the "from"
                 mode = 3
                 continue
 
-            # attempt eating a from line (easy catch)
+            # Am I running into the next header?
+            # if it looks that way -> new block!
+            if ('from:' in line_low and not_empty(curr_block['from'])) or \
+               ('to:' in line_low and 'mailto:' not in line_low and not_empty(curr_block['to'])) or \
+               ('cc:' in line_low and not_empty(curr_block['cc'])):
+                # don't check date and subject, they may have been set before (which might be valid)
+                # (('sent:' in line_low or 'date' in line_low) and curr_block['sent'] is not None) or \
+                # ('subject:' in line_low and curr_block['cc'] is not None):
+                blocks.append(curr_block)
+                curr_block = {'from': None, 'to': None, 'cc': None, 'sent': None, 'subject': None,
+                              'type': 'reply', 'raw_header': [], 'text': []}
+
+            line_text = re.sub(r"^( |>)+", "", line['text']).strip()
+            if len(line_text) > 0:
+                curr_block['raw_header'].append(line_text)
+
+            # attempt eating a "from" line (easy catch)
             # From: Charlotte Hawkins 03/30/2000 11:33 AM
             # From:	Michael Brown/ENRON@enronXgate on 04/19/2001 05:54 PM
-            line_text = line['text']
             if 'from:' in line_low:
                 mode = 3
                 line_text = line_text.replace('From:', '').replace('from:', '')
-            elif 'to:' in line_low and 'mailto:' not in line_low:
+            # attempt eating a "to" line (easy catch)
+            elif ('to:' in line_low and 'mailto:' not in line_low) or \
+                    (re.match(r"^to:", line_text, flags=re.IGNORECASE) and 'mailto:' in line_low):
+                # FIXME: what if there is "To: John Doe [mailto:jon.doe@enron.com]"
                 mode = 4
                 line_text = line_text.replace('To:', '').replace('to:', '')
+            # attempt eating a "cc" line (easy catch)
             elif 'cc:' in line_low:
                 mode = 5
                 line_text = line_text.replace('Cc:', '').replace('cc:', '')
+            # attempt eating a "sent" line (easy catch)
             elif 'sent:' in line_low or 'date:' in line_low:
                 mode = 6
-                line_text = line_text.replace('Sent:', '').replace('sent:', '')
+                line_text = line_text.replace('Sent:', '').replace('sent:', '') \
+                    .replace('Date:', '').replace('date:', '')
+            # attempt eating a "subject" line (easy catch)
             elif 'subject:' in line_low:
                 mode = 7
                 line_text = line_text.replace('Subject:', '').replace('subject:', '')
@@ -302,23 +358,25 @@ def detect_parts(si):
                 # '05/30/2001', 'May 29, 2001'
                 date_match = re.search(r"((?:[a-z]+ \d{1,2}, ?\d{2,4})|(?:\d{1,2}/\d{1,2}/\d{2,4}))", line_low)
                 if date_match:
-                    curr_block['sent'] = ('' if curr_block['sent'] is None else curr_block[
-                        'sent']) + ' ' + date_match.group(1)
+                    curr_block['sent'] = ('' if curr_block['sent'] is None
+                                          else curr_block['sent']) + ' ' + date_match.group(1)
 
                 # time pattern
                 # '09:43:45 AM',  '7:58 AM', '04:56 PM',
                 time_match = re.search(r"(\d{1,2}:\d\d(?::\d\d)?(?: ?(?:pm|am))?)", line_low)
                 if time_match:
-                    curr_block['sent'] = ('' if curr_block['sent'] is None else curr_block[
-                        'sent']) + ' ' + time_match.group(1)
+                    curr_block['sent'] = ('' if curr_block['sent'] is None
+                                          else curr_block['sent']) + ' ' + time_match.group(1)
 
             if mode > 2:
                 field = ['', '', '', 'from', 'to', 'cc', 'sent', 'subject'][mode]
-                curr_block[field] = ('' if curr_block[field] is None else curr_block[field]) + ' ' + line_text
+                curr_block[field] = (curr_block[field] + ' ' if not_empty(curr_block[field]) else '') + line_text
                 continue
 
             # last resort: might just be a leading from field with no prefix
-            curr_block['from'] = ('' if curr_block['from'] is None else curr_block['from']) + ' ' + line_text
+            if len(line_text) > 0:
+                curr_block['from'] = (curr_block['from'] + ' ' if not_empty(
+                    curr_block['from']) else '') + ' ' + line_text
 
             # Sara Shackleton
             # 03/01/2000 07:43 AM
