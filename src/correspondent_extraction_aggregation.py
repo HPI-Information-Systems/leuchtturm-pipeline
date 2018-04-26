@@ -8,6 +8,7 @@ import ujson as json
 import re
 import regex
 from .common import Pipe
+from .utils.logger import YarnLogger
 
 
 class CorrespondentDataExtraction(Pipe):
@@ -152,6 +153,11 @@ class CorrespondentDataAggregation(Pipe):
     - this allows for simple merging of correspondent objects into a single object afterwards
     """
 
+    def __init__(self):
+        """Set params."""
+        super().__init__()
+        self.logger = YarnLogger()
+
     def prepare_for_reduction(self, data):
         """Remove irrelevant key-values, make all fields lists except for identifying name."""
         document = json.loads(data)
@@ -188,11 +194,14 @@ class CorrespondentDataAggregation(Pipe):
                 unified_person[key] = list(set(correspondent1[key] + correspondent2[key]))
 
         if not unified_person['identifying_names'] and unified_person['aliases_from_signature']:
-            unified_person['identifying_names'] = max(unified_person['aliases_from_signature'])
+            unified_person['identifying_names'] = [max(unified_person['aliases_from_signature'])]
 
         if len(unified_person['identifying_names']) > 1:
             identifying_name = max(unified_person['identifying_names'])
             unified_person['aliases'] = unified_person['identifying_names']
+            self.logger.warn(unified_person['email_addresses'])
+            self.logger.warn(unified_person['aliases'])
+            self.logger.warn(type(unified_person['aliases']))
             unified_person['aliases'].remove(identifying_name)
             unified_person['identifying_names'] = [identifying_name]
 
