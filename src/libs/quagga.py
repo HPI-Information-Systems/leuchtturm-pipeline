@@ -56,7 +56,7 @@ def _get_embedding_function(model):
     return lambdo
 
 
-enron_two_zone_line_b = _load_keras_model('.//models/enron_line_model_b')
+enron_two_zone_line_b = _load_keras_model('./models/enron_line_model_b')
 enron_two_zone_model = _load_keras_model('./models/enron_model', model=_get_mail_model_two())
 # asf_two_zone_line_b = load_keras_model('./emailbody/models/two_zones/asf_line_model_b')
 # asf_two_zone_model = load_keras_model('./emailbody/models/two_zones/asf_model', model=get_mail_model_two())
