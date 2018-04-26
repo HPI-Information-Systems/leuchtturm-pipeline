@@ -1,6 +1,7 @@
 import py2neo
-from .community_detection import CommunityDetector
-from .social_hierarchy_detection import SocialHierarchyDetector
+import networkx as nx
+from community_detection import CommunityDetector
+# from social_hierarchy_detection import SocialHierarchyDetector
 
 
 class NetworkAnalyser:
@@ -25,10 +26,10 @@ class NetworkAnalyser:
         for edge in edges:
             graph.add_edge(edge['id(source)'], edge['id(target)'])
 
-        #  community_detector = CommunityDetector()
-        # graph = community_detector.detect_communities(graph)
-        social_hierarchy_detector = SocialHierarchyDetector(self.solr_url)
-        graph = social_hierarchy_detector.detect_social_hierarchy(graph)
+        community_detector = CommunityDetector()
+        graph = community_detector.detect_communities(graph)
+        # social_hierarchy_detector = SocialHierarchyDetector(self.solr_url)
+        # graph = social_hierarchy_detector.detect_social_hierarchy(graph)
         self.upload_network(graph)
 
     def upload_network(self, graph):
