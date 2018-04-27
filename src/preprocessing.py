@@ -65,7 +65,7 @@ class EmailDecoding(Pipe):
 
     def get_main_header(self, message):
         """Return main header of email."""
-        keys = re.compile(r'((x-)?from)|(((x-)|reply-)?to)|((x-)?b?cc)|(subject)|(date)|(sent)', re.IGNORECASE)
+        keys = re.compile(r'(from)|((reply-)?to)|(b?cc)|(subject)|(date)|(sent)', re.IGNORECASE)
 
         # filter headers for following splitting task
         filtered_headers = [header for header in message.items() if keys.match(header[0])]
@@ -180,6 +180,7 @@ class EmailSplitting(Pipe):
         if self.use_quagga:
             parts = self.detect_parts_quagga(document['raw'])
             document['headers_quagga'] = [part[0] for part in parts]
+            document['quaggavsre'] = len(document['headers_regex']) == len(document['headers_quagga'])
         else:
             parts = self.detect_parts(document['raw'])
 
