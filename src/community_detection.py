@@ -6,11 +6,19 @@ class CommunityDetector:
         print('starting community detection using asynchronous label propagation:')
         start = time.time()
         communities = nxcom.asyn_lpa_communities(graph)
-        diff = time.time() - start
-        print('community detection took:' + diff)
         n = 0
+        print_communities = []
         for community in communities:
             n += 1
-        print('found ' + n + ' communities')
+            print_communities.append(community)
+        diff = time.time() - start
+        print('community detection took: ' + str(diff))
+
+        print('found ' + str(n) + ' communities')
+        print('')
+        print('following communities: ')
+
+        for community in print_communities:
+            print(str(community))
 
         return graph

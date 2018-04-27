@@ -8,8 +8,8 @@ class NetworkAnalyser:
     def __init__(self,
                  solr_url='http://sopedu.hpi.uni-potsdam.de:8983/solr/emails',
                  neo4j_host='http://sopedu.hpi.uni-potsdam.de',
-                 http_port=60100,
-                 bolt_port=60000):
+                 http_port=61100,
+                 bolt_port=61000):
         """Set solr config and path where rdd is read from."""
         self.solr_url = solr_url
         # querybuilder
@@ -26,6 +26,9 @@ class NetworkAnalyser:
         for edge in edges:
             graph.add_edge(edge['id(source)'], edge['id(target)'])
 
+        # nx.readwrite.graphml.write_graphml(graph, 'dnc.graphml')
+        print(graph.number_of_nodes())
+        print(graph.number_of_edges())
         community_detector = CommunityDetector()
         graph = community_detector.detect_communities(graph)
         # social_hierarchy_detector = SocialHierarchyDetector(self.solr_url)
