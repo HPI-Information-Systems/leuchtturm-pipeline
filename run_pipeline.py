@@ -64,7 +64,7 @@ def run_email_pipeline(read_from, write_to, solr, solr_url, dataset):
     # Neo4JFileWriter(write_to + '_correspondent').run()
 
     if solr:
-        SolrFileWriter(write_to, solr_url=solr_url).run()
+        SolrFileWriter(write_to + '_injected', solr_url=solr_url).run()
 
     SparkProvider.stop_spark_context()
 
