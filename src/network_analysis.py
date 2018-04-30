@@ -1,5 +1,7 @@
 import py2neo
 import networkx as nx
+import json
+
 from community_detection import CommunityDetector
 # from social_hierarchy_detection import SocialHierarchyDetector
 
@@ -35,9 +37,13 @@ class NetworkAnalyser:
         # graph = social_hierarchy_detector.detect_social_hierarchy(graph)
         self.upload_network(graph)
 
-    def upload_network(self, graph):
-        print(graph.number_of_nodes())
-        print(graph.number_of_edges())
+    def upload_network(self):
+        # with open('test_communities.json') as tc:
+        #     testfile = json.load(tc)
+        #     neo_connection = py2neo.Graph(self.neo4j_host, http_port=self.http_port, bolt_port=self.bolt_port)
+        #     neo_connection.run('UNWIND $testcommunities AS tc '
+        #                        'MATCH (node) WHERE ID(node) = tc.id '
+        #                        'SET node.community = tc.community', testcommunities=testfile['communities'])
 
 na = NetworkAnalyser()
-na.analyse_network()
+na.upload_network()
