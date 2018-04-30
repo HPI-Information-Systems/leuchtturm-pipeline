@@ -1,9 +1,9 @@
 import py2neo
 import networkx as nx
 import json
-
 from community_detection import CommunityDetector
-# from social_hierarchy_detection import SocialHierarchyDetector
+from social_hierarchy_detection import SocialHierarchyDetector
+import networkx as nx
 
 
 class NetworkAnalyser:
@@ -22,20 +22,24 @@ class NetworkAnalyser:
     def analyse_network(self):
         print(self.neo4j_host)
         neo_connection = py2neo.Graph(self.neo4j_host, http_port=self.http_port, bolt_port=self.bolt_port)
-        edges = neo_connection.run('MATCH (source)-[r]->(target) RETURN id(source), id(target)')
+        edges = neo_connection.run('MATCH (source)-[r]->(target) RETURN id(source), id(target), size(r.mail_list) as cnt')
+        #nodes = neo_connection.run('MATCH (p:Person) RETURN id(p), p.name, p.email')
 
         graph = nx.Graph()
         for edge in edges:
-            graph.add_edge(edge['id(source)'], edge['id(target)'])
+            graph.add_edge(edge['id(source)'], edge['id(target)']) # , weight=edge['cnt'])
 
         # nx.readwrite.graphml.write_graphml(graph, 'dnc.graphml')
         print(graph.number_of_nodes())
         print(graph.number_of_edges())
-        community_detector = CommunityDetector()
-        graph = community_detector.detect_communities(graph)
-        # social_hierarchy_detector = SocialHierarchyDetector(self.solr_url)
-        # graph = social_hierarchy_detector.detect_social_hierarchy(graph)
+        # community_detector = CommunityDetector()
+        # graph = community_detector.detect_communities(graph)
+        # for node in nodes:
+        #     graph.add_node(node['id(p)'], name='|T|I|M|'.join(node['p.name']), email=node['p.email'])
+        social_hierarchy_detector = SocialHierarchyDetector(self.solr_url)
+        graph = social_hierarchy_detector.detect_social_hierarchy(graph)
         self.upload_network(graph)
+        # nx.write_graphml(graph, "enron.graphml")
 
     def upload_network(self):
         # with open('test_communities.json') as tc:
