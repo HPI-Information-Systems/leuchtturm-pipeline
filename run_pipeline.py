@@ -35,7 +35,6 @@ def run_email_pipeline(read_from, write_to, solr, solr_url, dataset):
             write_body_without_signature_to='body_without_signature',
             write_signature_to='signature'
         ),
-        TopicModelPrediction(),
         LanguageDetection(read_from='text_clean'),
         SpacyNer(read_from='text_clean'),
         EmailCategoryClassification(),
@@ -43,6 +42,10 @@ def run_email_pipeline(read_from, write_to, solr, solr_url, dataset):
     ]
     writer = TextFileWriter(path=write_to)
     Pipeline(reader, pipes, writer).run()
+
+    reader = TextFileReader(path=write_to)
+    writer = TextFileWriter(path=write_to + '_topics')
+    Pipeline(reader, [TopicModelPrediction()], writer).run()
 
     reader = TextFileReader(write_to)
     pipes = [
@@ -65,6 +68,7 @@ def run_email_pipeline(read_from, write_to, solr, solr_url, dataset):
 
     if solr:
         SolrFileWriter(write_to + '_injected', solr_url=solr_url).run()
+        SolrFileWriter(write_to + '_topics', solr_url=solr_url + '_topics').run()
 
     SparkProvider.stop_spark_context()
 
