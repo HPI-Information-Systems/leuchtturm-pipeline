@@ -11,6 +11,7 @@ from langdetect import detect
 import textacy
 import dateparser
 import datetime
+from .utils.logger import YarnLogger
 
 from .common import Pipe
 
@@ -199,6 +200,7 @@ class EmailSplitting(Pipe):
         """Run pipe in spark context."""
         if self.keep_thread_connected:
             return rdd.map(lambda x: self.run_on_document(x))
+
         else:
             return rdd.flatMap(lambda x: self.run_on_document(x))
 
@@ -454,6 +456,7 @@ class TextCleaning(Pipe):
         self.write_to = write_to
         self.write_to_original_ws = write_to_original_ws
         self.readable = readable
+        self.logger = YarnLogger()
 
     def convert_to_ascii(self, text):
         """Replace unicode chars with their closest ascii char."""
@@ -506,4 +509,6 @@ class TextCleaning(Pipe):
 
     def run(self, rdd):
         """Run pipe in spark context."""
-        return rdd.map(lambda x: self.run_on_document(x))
+        self.logger.warn("At the beginning of text cleaning task, # partitions: " + str(rdd.getNumPartitions()))
+        return rdd.map(lambda x: self.run_on_document(x)) \
+                  .repartition(rdd.getNumPartitions())

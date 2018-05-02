@@ -107,14 +107,19 @@ class SignatureExtraction(Pipe):
         import talon
         talon.init()
 
+        self.logger.warn("Starting to run signature extraction on partition...")
+
         def extract_signature(body, sender_email_address, path):
             """Apply talon to the preprocessed body.
 
             Uses the email address of the sending correspondent to improve extraction results.
             """
-            self.logger.warn(path)
-            self.logger.warn(sender_email_address)
-            self.logger.warn(len(body))
+            self.logger.warn(path + " " + sender_email_address)
+            self.logger.warn(
+                "LENGTH: " + str(len(body)) +
+                "\nSTART: " + body[:10] +
+                "\nEND: " + body[-10:]
+            )
             body, signature = talon_signature.extract(
                 body,
                 sender=sender_email_address
@@ -134,6 +139,8 @@ class SignatureExtraction(Pipe):
             del document[self.read_from]
             yield json.dumps(document)
 
+        self.logger.warn("Finished running signature extraction on partition.")
+
     def run_on_document(self, data_item):
         """Apply signature-specific preprocessing tasks to a leuchtturm document."""
         document = json.loads(data_item)
@@ -148,5 +155,6 @@ class SignatureExtraction(Pipe):
 
     def run(self, rdd):
         """Run pipe in spark context."""
+        self.logger.warn("At the beginning of signature extraction task, # partitions: " + str(rdd.getNumPartitions()))
         return rdd.map(self.run_on_document) \
             .mapPartitions(self.run_on_partition)
