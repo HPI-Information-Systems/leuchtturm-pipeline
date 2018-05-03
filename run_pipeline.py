@@ -16,7 +16,9 @@ from src.folder_classification import EmailFolderClassification
 from src.graph_analysis import GraphAnalyser
 
 
-def run_email_pipeline(read_from, write_to, solr, solr_url, neo4j_host, neo4j_http_port, neo4j_bolt_port, analyse_graph, dataset):
+def run_email_pipeline(read_from, write_to, solr, solr_url,
+                       neo4j_host, neo4j_http_port, neo4j_bolt_port, analyse_graph,
+                       dataset):
     """Run main email pipeline."""
     config = get_config(dataset)
     SparkProvider.spark_context()

@@ -1,7 +1,12 @@
+"""This module wraps cpp snap binaries and makes their execution available from python."""
+
 import os
 import subprocess
 
+
 class Snap:
+    """This class contains the information about the snap binaries and holds the functionality to execute them."""
+
     BIN_BIGCLAM = os.path.abspath('./libs/snap/bigclam')
     BIN_CENTRALITY = os.path.abspath('./libs/snap/centrality')
     BIN_COMMUNITY = os.path.abspath('./libs/snap/community')
@@ -11,6 +16,10 @@ class Snap:
     TMP_FILE_OUTPUT = 'out'
 
     def __init__(self, graph, quiet=False):
+        """Initialize the Snap Interface. Input data has to be networkX's Graph format.
+
+        Param 'quiet' toggles printing.
+        """
         self.graph = graph
         self.quiet = quiet
 
@@ -50,6 +59,7 @@ class Snap:
         assert not process.returncode, 'ERROR: non-zero exit code ({})!'.format(process.returncode)
 
     def centrality(self):
+        """Execute snap's centrality detection."""
         self._write_input()
         self._exec(self.BIN_CENTRALITY)
 
@@ -68,8 +78,8 @@ class Snap:
             }
 
     def communities(self, algorithm=2):
-        """
-        :param algorithm: 1:Girvan-Newman, 2:Clauset-Newman-Moore, 3:Infomap (-a:)=2
+        """:param algorithm: 1:Girvan-Newman, 2:Clauset-Newman-Moore, 3:Infomap (-a:)=2.
+
         :return:
         """
         self._write_input()
@@ -82,11 +92,16 @@ class Snap:
             }
 
     def bigclam(self):
+        """Execute bigclam."""
         self._write_input()
         self._exec(self.BIN_BIGCLAM)
 
-        for result in self._read_result():
-            yield result
+        # for result in self._read_result():
+        #     yield result
 
-    # snap._exec('../Snap-4.0/examples/netstat/netstat', use_default_args=False, args=['-i:' + snap.TMP_FILE_EDGES, '-o:' + 'netstat','-d:F', '-t:DNC'])
-    # snap._exec('../Snap-4.0/examples/ncpplot/ncpplot', use_default_args=False, args=['-i:' + snap.TMP_FILE_EDGES, '-o:' + 'ncpplot', '-v:F', '-d:DNC'])
+    # snap._exec('../Snap-4.0/examples/netstat/netstat',
+    #            use_default_args=False,
+    #            args=['-i:' + snap.TMP_FILE_EDGES,'-o:' + 'netstat','-d:F', '-t:DNC'])
+    # snap._exec('../Snap-4.0/examples/ncpplot/ncpplot',
+    #            use_default_args=False,
+    #            args=['-i:' + snap.TMP_FILE_EDGES, '-o:' + 'ncpplot', '-v:F', '-d:DNC'])
