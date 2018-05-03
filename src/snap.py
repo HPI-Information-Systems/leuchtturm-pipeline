@@ -91,17 +91,10 @@ class Snap:
                 'community': int(result[1])
             }
 
-    def bigclam(self):
-        """Execute bigclam."""
-        self._write_input()
-        self._exec(self.BIN_BIGCLAM)
+    # def bigclam(self):
+    #     """Execute bigclam."""
+    #     self._write_input()
+    #     self._exec(self.BIN_BIGCLAM)
 
-        # for result in self._read_result():
-        #     yield result
-
-    # snap._exec('../Snap-4.0/examples/netstat/netstat',
-    #            use_default_args=False,
-    #            args=['-i:' + snap.TMP_FILE_EDGES,'-o:' + 'netstat','-d:F', '-t:DNC'])
-    # snap._exec('../Snap-4.0/examples/ncpplot/ncpplot',
-    #            use_default_args=False,
-    #            args=['-i:' + snap.TMP_FILE_EDGES, '-o:' + 'ncpplot', '-v:F', '-d:DNC'])
+    #     for result in self._read_result():
+    #          yield result
