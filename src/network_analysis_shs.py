@@ -14,8 +14,8 @@ class NetworkAnalyser:
     def __init__(self,
                  solr_url='http://sopedu.hpi.uni-potsdam.de:8983/solr/emails',
                  neo4j_host='http://sopedu.hpi.uni-potsdam.de',
-                 http_port=61100,
-                 bolt_port=61000):
+                 http_port=60100,
+                 bolt_port=60000):
         """Set solr config and path where rdd is read from."""
         self.solr_url = solr_url
         # querybuilder
@@ -27,13 +27,12 @@ class NetworkAnalyser:
         """Analyse the network. Needs no further parameters, will update data in neo4j."""
         print(self.neo4j_host)
         neo_connection = py2neo.Graph(self.neo4j_host, http_port=self.http_port, bolt_port=self.bolt_port)
-        edges = neo_connection.run('MATCH (source)-[r]->(target) '
-                                   'RETURN id(source), id(target), size(r.mail_list) as cnt')
+        edges = neo_connection.run('MATCH (source)-[r]->(target) RETURN id(source), id(target), size(r.mail_list) as cnt, r.time_list as tml')
         # nodes = neo_connection.run('MATCH (p:Person) RETURN id(p), p.name, p.email')
 
-        graph = nx.Graph()
+        graph = nx.DiGraph()
         for edge in edges:
-            graph.add_edge(edge['id(source)'], edge['id(target)'])  # , weight=edge['cnt'])
+            graph.add_edge(edge['id(source)'], edge['id(target)'], volume=edge['cnt'], timeline=edge['tml'])
 
         # for node in nodes:
         #     graph.add_node(node['id(p)'], name='|T|I|M|'.join(node['p.name']), email=node['p.email'])

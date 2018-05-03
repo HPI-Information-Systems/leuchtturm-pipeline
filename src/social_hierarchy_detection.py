@@ -1,6 +1,14 @@
 """Module for the social hierarchy score."""
 import networkx as nx
 import time
+import datetime
+import dateutil.relativedelta
+import pandas as pd
+from pandas.tseries.offsets import BDay
+
+
+def _three_business_days(timestamp):
+    return (pd.to_datetime(timestamp, unit='s') + BDay(3)).timestamp()
 
 
 class SocialHierarchyDetector:
@@ -18,8 +26,10 @@ class SocialHierarchyDetector:
         # betweenness_values = self._betweenness_centrality(graph)
         # degree_values = self._degree_centrality(graph)
         # hub_values, authority_values = self._hubs_and_authorities(graph)
-        number_of_emails = self._number_of_emails(graph)
+        # number_of_emails = self._number_of_emails(graph)
+        # clustering_coefficients = self._clustering_coefficient(graph)
         # mean_shortest_paths = self._mean_shortest_paths(graph)
+        response_scores = self._response_score(graph)
         return graph
 
     def _number_of_emails(self, graph):
@@ -37,6 +47,48 @@ class SocialHierarchyDetector:
         print('Found ' + str(len(graph.nodes)) + ' email volumes, took: ' + str(end - start) + 's')
         return metric
 
+    def _response_score(self, graph):
+        print('Start computing response scores')
+        # graph = graph.to_directed()
+        start = time.time()
+        metric = dict()
+        for node in graph.nodes:
+            responsed = 0
+            unresponsed = 0
+            neighbours = graph[node]
+            for neighbour in neighbours:
+                timestamps_to_neighbour = neighbours[neighbour]['timeline']
+                timestamps_from_neighbour = []
+                try:
+                    timestamps_from_neighbour = graph.edges[neighbour, node]['timeline']
+                except Exception:
+                    pass
+
+                if timestamps_from_neighbour and timestamps_to_neighbour[0] == timestamps_from_neighbour[0]:
+                    continue  # take out loops
+
+                for t1, t2 in zip(sorted(timestamps_to_neighbour)[:-1], sorted(timestamps_to_neighbour)[1:]):
+                    dt1 = datetime.datetime.fromtimestamp(t1)
+                    dt2 = datetime.datetime.fromtimestamp(t2)
+                    difference = dateutil.relativedelta.relativedelta (dt2, dt1)
+                    print(difference)
+
+                # print(timestamps_to_neighbour)
+                # print(timestamps_from_neighbour)
+                # print('')
+        end = time.time()
+        print(metric)
+        print('Found ' + str(len(graph.nodes)) + ' response scores, took: ' + str(end - start) + 's')
+        return metric
+
+    def _clustering_coefficient(self, graph):
+        print('Start calculating clustering coefficients')
+        start = time.time()
+        clustering_values = nx.clustering(graph)
+        n = len(clustering_values)
+        end = time.time()
+        print('Found ' + str(n) + ' clustering coefficients, took: ' + str(end - start) + 's')
+        return clustering_values
 
     def _number_of_cliques(self, graph):
         print('Start counting cliques')
