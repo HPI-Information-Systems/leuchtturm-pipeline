@@ -32,16 +32,19 @@ class NetworkAnalyser:
         # nx.readwrite.graphml.write_graphml(graph, 'dnc.graphml')
         print(graph.number_of_nodes())
         print(graph.number_of_edges())
-        # community_detector = CommunityDetector()
-        # graph = community_detector.detect_communities(graph)
+        community_detector = CommunityDetector()
+        community_labels = community_detector.bigclam(graph)
         # for node in nodes:
         #     graph.add_node(node['id(p)'], name='|T|I|M|'.join(node['p.name']), email=node['p.email'])
-        social_hierarchy_detector = SocialHierarchyDetector(self.solr_url)
-        graph = social_hierarchy_detector.detect_social_hierarchy(graph)
-        self.upload_network(graph)
+        # social_hierarchy_detector = SocialHierarchyDetector(self.solr_url)
+        # graph = social_hierarchy_detector.detect_social_hierarchy(graph)
+        self.update_nodelabels(community_labels)
         # nx.write_graphml(graph, "enron.graphml")
 
-    def upload_network(self):
+    def upload_network(self, graph):
+        if graph:
+            print('finished!!!!!')
+
         # with open('test_communities.json') as tc:
         #     testfile = json.load(tc)
         #     neo_connection = py2neo.Graph(self.neo4j_host, http_port=self.http_port, bolt_port=self.bolt_port)
@@ -50,4 +53,4 @@ class NetworkAnalyser:
         #                        'SET node.community = tc.community', testcommunities=testfile['communities'])
 
 na = NetworkAnalyser()
-na.upload_network()
+na.analyse_network()

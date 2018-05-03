@@ -1,24 +1,30 @@
 import networkx.algorithms.community as nxcom
 import time
+from snap import Snap
 
 class CommunityDetector:
-    def detect_communities(self, graph):
-        print('starting community detection using asynchronous label propagation:')
-        start = time.time()
-        communities = nxcom.asyn_lpa_communities(graph)
-        n = 0
-        print_communities = []
-        for community in communities:
-            n += 1
-            print_communities.append(community)
-        diff = time.time() - start
-        print('community detection took: ' + str(diff))
+    def clauset_newman_moore(self, graph):
+        print('starting community detection using clauset-newman-moore:')
+        # start = time.time()
+        snap = Snap(graph, quiet=False)
 
-        print('found ' + str(n) + ' communities')
-        print('')
-        print('following communities: ')
+        for labelled_node in snap.communities(algorithm=2):
+            yield labelled_node
 
-        for community in print_communities:
-            print(str(community))
+    def girvan_newman(self, graph):
+        print('starting community detection using girvan-newman:')
+        # start = time.time()
+        snap = Snap(graph, quiet=False)
+
+        for labelled_node in snap.communities(algorithm=1):
+            yield labelled_node
+
+    def bigclam(self, graph):
+        print('starting community detection using bigclam:')
+        # start = time.time()
+        snap = Snap(graph, quiet=False)
+
+        for labelled_node in snap.bigclam():
+            print(str(labelled_node))
 
         return graph
