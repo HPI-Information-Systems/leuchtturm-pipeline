@@ -40,8 +40,6 @@ class NetworkAnalyser:
         print(graph.number_of_edges())
         community_detector = CommunityDetector()
         community_labels = community_detector.clauset_newman_moore(graph)
-        for label in community_labels:
-            print(label)
         if upload:
             self.update_network(community_labels)
         # nx.write_graphml(graph, "dnc.graphml")
@@ -52,11 +50,11 @@ class NetworkAnalyser:
             print('---------------- finished network analysis ----------------')
 
         neo_connection = py2neo.Graph(self.neo4j_host, http_port=self.http_port, bolt_port=self.bolt_port)
-        neo_connection.run('UNWIND $communities AS community '
-                           'MATCH (node) WHERE ID(node) = community.id '
-                           'SET node.community = community.community', communities=community_labels)
+        neo_connection.run('UNWIND $communities AS comm '
+                           'MATCH (node) WHERE ID(node) = comm.node_id '
+                           'SET node.community = comm.community', communities=community_labels)
         print('- finished upload of community labels.')
 
 
 na = NetworkAnalyser()
-na.analyse_network()
+na.analyse_network(True)

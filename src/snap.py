@@ -65,16 +65,16 @@ class Snap:
 
         for result in self._read_result():
             yield {
-                'node_id': result[0],
-                'degree': result[1],
-                'closeness': result[2],
-                'betweenness': result[3],
-                'eigenvector': result[4],
-                'networkconstraint': result[5],
-                'clusterincoefficient': result[6],
-                'pagerank': result[7],
-                'hubscore': result[8],
-                'authorityscore': result[9]
+                'node_id': int(result[0]),
+                'degree': int(result[1]),
+                'closeness': int(result[2]),
+                'betweenness': int(result[3]),
+                'eigenvector': int(result[4]),
+                'networkconstraint': int(result[5]),
+                'clusterincoefficient': int(result[6]),
+                'pagerank': int(result[7]),
+                'hubscore': int(result[8]),
+                'authorityscore': int(result[9])
             }
 
     def communities(self, algorithm=2):
@@ -87,8 +87,8 @@ class Snap:
 
         for result in self._read_result():
             yield {
-                'node_id': result[0],
-                'community': result[1]
+                'node_id': int(result[0]),
+                'community': int(result[1])
             }
 
     def bigclam(self):
