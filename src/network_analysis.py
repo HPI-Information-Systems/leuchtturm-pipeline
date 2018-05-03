@@ -23,8 +23,8 @@ class NetworkAnalyser:
         self.http_port = http_port
         self.bolt_port = bolt_port
 
-    def analyse_network(self):
-        """Analyse the network. Needs no further parameters, will update data in neo4j."""
+    def analyse_network(self, upload=False):
+        """Analyse the network. Parameter upload decides if data in neo4j will be updated."""
         print(self.neo4j_host)
         neo_connection = py2neo.Graph(self.neo4j_host, http_port=self.http_port, bolt_port=self.bolt_port)
         edges = neo_connection.run('MATCH (source)-[r]->(target) '
@@ -39,10 +39,11 @@ class NetworkAnalyser:
         print(graph.number_of_nodes())
         print(graph.number_of_edges())
         community_detector = CommunityDetector()
-        community_labels = community_detector.girvan_newman(graph)
+        community_labels = community_detector.clauset_newman_moore(graph)
         for label in community_labels:
             print(label)
-        # self.update_network(community_labels)
+        if upload:
+            self.update_network(community_labels)
         # nx.write_graphml(graph, "dnc.graphml")
 
     def update_network(self, community_labels):
