@@ -2,7 +2,7 @@
 
 import py2neo
 import networkx as nx
-from community_detection import CommunityDetector
+from .community_detection import CommunityDetector
 
 
 class NetworkAnalyser:

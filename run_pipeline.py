@@ -48,7 +48,7 @@ def run_email_pipeline(read_from, write_to, solr, solr_url,
     SparkProvider.stop_spark_context()
 
     if analyse_network:
-        network_analyser = NetworkAnalyser(host=neo4j_host, http_port=neo4j_http_port, bolt_port=neo4j_bolt_port)
+        network_analyser = NetworkAnalyser(neo4j_host=neo4j_host, http_port=neo4j_http_port, bolt_port=neo4j_bolt_port)
         network_analyser.analyse_network(upload=False)
 
 
