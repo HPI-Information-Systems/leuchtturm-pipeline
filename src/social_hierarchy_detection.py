@@ -17,9 +17,26 @@ class SocialHierarchyDetector:
         # raw_clique_score = self._raw_clique_score(graph, cliques)
         # betweenness_values = self._betweenness_centrality(graph)
         # degree_values = self._degree_centrality(graph)
-        hub_values, authority_values = self._hubs_and_authorities(graph)
+        # hub_values, authority_values = self._hubs_and_authorities(graph)
+        number_of_emails = self._number_of_emails(graph)
         # mean_shortest_paths = self._mean_shortest_paths(graph)
         return graph
+
+    def _number_of_emails(self, graph):
+        print('Start counting emails')
+        start = time.time()
+        metric = dict()
+        for node in graph.nodes:
+            total_volume = 0
+            neighbours = graph[node]
+            for neighbour in neighbours:
+                total_volume += neighbours[neighbour]['volume']
+            metric[node] = total_volume
+        end = time.time()
+        print(metric)
+        print('Found ' + str(len(graph.nodes)) + ' email volumes, took: ' + str(end - start) + 's')
+        return metric
+
 
     def _number_of_cliques(self, graph):
         print('Start counting cliques')
