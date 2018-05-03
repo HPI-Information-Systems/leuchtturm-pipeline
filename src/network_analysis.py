@@ -39,7 +39,7 @@ class NetworkAnalyser:
         print(graph.number_of_nodes())
         print(graph.number_of_edges())
         community_detector = CommunityDetector()
-        community_labels = community_detector.clauset_newman_moore(graph)
+        community_labels = community_detector.girvan_newman(graph)
         for label in community_labels:
             print(label)
         # self.update_network(community_labels)
