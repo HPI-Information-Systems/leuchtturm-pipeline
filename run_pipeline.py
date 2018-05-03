@@ -13,11 +13,11 @@ from src.topics import TopicModelPrediction, TopicModelTraining
 from src.writer import TextFileWriter, SolrFileWriter
 from src.category_classification import EmailCategoryClassification
 from src.folder_classification import EmailFolderClassification
-from src.graph_analysis import GraphAnalyser
+from src.network_analysis import NetworkAnalyser
 
 
 def run_email_pipeline(read_from, write_to, solr, solr_url,
-                       neo4j_host, neo4j_http_port, neo4j_bolt_port, analyse_graph,
+                       neo4j_host, neo4j_http_port, neo4j_bolt_port, analyse_network,
                        dataset):
     """Run main email pipeline."""
     config = get_config(dataset)
@@ -47,9 +47,9 @@ def run_email_pipeline(read_from, write_to, solr, solr_url,
 
     SparkProvider.stop_spark_context()
 
-    if analyse_graph:
-        graph_analyser = GraphAnalyser(host=neo4j_host, http_port=neo4j_http_port, bolt_port=neo4j_bolt_port)
-        graph_analyser.analyse_graph()
+    if analyse_network:
+        network_analyser = NetworkAnalyser(host=neo4j_host, http_port=neo4j_http_port, bolt_port=neo4j_bolt_port)
+        network_analyser.analyse_network(upload=False)
 
 
 def run_topic_model_training():
@@ -75,7 +75,7 @@ if __name__ == '__main__':
                         help='Url to running solr instance (with core/collection specified).',
                         default='http://sopedu.hpi.uni-potsdam.de:8983/solr/enron')
     parser.add_argument('--neo4j-host',
-                        help='Neo4j host to get graph data from.',
+                        help='Neo4j host to get network data from.',
                         default='sopedu.hpi.uni-potsdam.de')
     parser.add_argument('--neo4j_http_port',
                         help='Neo4j http port to use for http connections.',
@@ -83,9 +83,9 @@ if __name__ == '__main__':
     parser.add_argument('--neo4j_bolt_port',
                         help='Neo4j bolt port to use for bolt connections.',
                         default='7687')
-    parser.add_argument('--analyse_graph',
+    parser.add_argument('--analyse_network',
                         action='store_true',
-                        help='Set if the graph data should be analysed.')
+                        help='Set if the network data should be analysed.')
     parser.add_argument('--dataset',
                         help='Dataset config to read.')
     args = parser.parse_args()
@@ -97,5 +97,5 @@ if __name__ == '__main__':
                        args.neo4j_host,
                        args.neo4j_http_port,
                        args.neo4j_bolt_port,
-                       args.analyse_graph,
+                       args.analyse_network,
                        args.dataset)
