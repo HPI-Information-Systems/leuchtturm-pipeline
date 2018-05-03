@@ -25,23 +25,18 @@ class CorrespondentDataExtraction(Pipe):
         self.logger = YarnLogger()
 
     phone_pattern = r'(\(?\b[0-9]{3}\)?(?:-|\.|/| {1,2}| - )?[0-9]{3}(?:-|\.|/| {1,2}| - )?[0-9]{4,5}\b)'
-    phone_type_patterns = [r'(off|ph|tel|dir|voice)',
-                           r'(cell|mobile|mob)',
-                           r'(fax|fx|facs|facsimile|facsim)',
-                           r'home']
-    phone_type_keys = ['phone_numbers_office',  # this will be default
-                       'phone_numbers_cell',
-                       'phone_numbers_fax',
-                       'phone_numbers_home']
-
-    def _split_on_phone_numbers(self, signature):
-        return re.split(self.phone_pattern, signature, flags=re.IGNORECASE)
+    phone_types = {
+        'phone_numbers_office': r'(off|ph|tel|dir|voice)',  # this will be default
+        'phone_numbers_cell': r'(cell|mobile|mob)',
+        'phone_numbers_fax': r'(fax|fx|facs|facsimile|facsim)',
+        'phone_numbers_home': r'home'
+    }
 
     def _get_phone_number_type(self, enclosing_line):
-        for i, pattern in enumerate(self.phone_type_patterns):
+        for pattern_type, pattern in self.phone_types.items():
             if re.search(pattern, enclosing_line, flags=re.IGNORECASE):
-                return self.phone_type_keys[i]
-        return self.phone_type_keys[0]  # set type to 'office' by default
+                return pattern_type
+        return list(self.phone_types.items())[0][0]  # set type to 'office' by default
 
     def filter_document_keys(self, document):
         """Remove key-values that are irrelevant to correspondent information extraction."""
@@ -54,20 +49,13 @@ class CorrespondentDataExtraction(Pipe):
 
     def extract_phone_numbers_from(self, signature):
         """Extract phone numbers and their type (office, cell, home, fax) from a signature."""
-        phone_numbers = dict()
-        for key in self.phone_type_keys:
-            phone_numbers[key] = []
-        split_signature = self._split_on_phone_numbers(signature)
+        phone_numbers = {key: [] for key in self.phone_types.keys()}
 
-        # iterate over all phone numbers found in the signature
-        # i is pointing to the current phone number string, i-1 and i+1 to strings before and after the phone number
-        for i in range(1, len(split_signature), 2):
-            # get the line on which the phone number occurs (without the phone number itself)
-            # '...\nFax: 123-4567-8910 ab\n...' => 'Fax:  ab'
-            enclosing_line = split_signature[i - 1].rpartition('\n')[-1] + \
-                split_signature[i + 1].partition('\n')[0]
-            type = self._get_phone_number_type(enclosing_line)
-            phone_numbers[type].append(split_signature[i])
+        for line in signature.split('\n'):
+            phone_number_match = re.search(self.phone_pattern, line, flags=re.IGNORECASE)
+            if phone_number_match:
+                phone_number_type = self._get_phone_number_type(line)
+                phone_numbers[phone_number_type].append(phone_number_match.group(1))
         return phone_numbers
 
     def extract_email_addresses_from(self, signature):
@@ -75,13 +63,28 @@ class CorrespondentDataExtraction(Pipe):
         email_address_pattern = r'\b[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+\b'
         return re.findall(email_address_pattern, signature)
 
-    def extract_aliases_from(self, signature, first_email_address_characters):
+    def extract_aliases_from(self, signature, email_address):
         """Extract aliases of the correspondent's name from signature that are similar to their email address."""
-        if not first_email_address_characters:
+        email_username = email_address.split('@')[0]
+        if len(email_username) < 3:
             return []
-        alias_name_pattern = r'(?:^|\n)\b(' + first_email_address_characters + r'[\w -.]*)\s?(?:\n|$)'
+
+        email_username_prefix = email_username[:3]
+        email_username_postfix = email_username[-3:]
+        alias_prefix_pattern = r'(?:^|\n)\b(' + email_username_prefix + r'[\w -.]*)\s?(?:\n|$)'
+        alias_postfix_pattern = r'(?:^|\n)([\w -.]*' + email_username_postfix + r')(?:$|\n)'
+        first_two_signature_lines = '\n'.join([line for line in signature.split('\n') if line != ''][:2])
+
         # note: using regex module (not re) so that matches can overlap (necessary because of shared \n between aliases)
-        return regex.findall(alias_name_pattern, signature, overlapped=True, flags=re.IGNORECASE)
+        aliases = set(
+            regex.findall(alias_prefix_pattern, signature, overlapped=True, flags=re.IGNORECASE)
+        )
+        aliases.update(set(
+            regex.findall(alias_postfix_pattern, first_two_signature_lines, overlapped=True, flags=re.IGNORECASE)
+        ))
+
+        aliases = [alias.strip() for alias in list(aliases)]
+        return aliases
 
     def extract_writes_to_relationship(self, recipients):
         """Extract the email addresses of correspondents that the correspondent at hand writes emails to."""
@@ -89,12 +92,10 @@ class CorrespondentDataExtraction(Pipe):
 
     def convert_and_rename_fields(self, document):
         """Convert all fields to list types for easier two-phase merging, rename fields to correspondent-semantic."""
-        document['email_addresses'] = [document['sender_email_address']] if document['sender_email_address'] else []
-        document['identifying_names'] = [document['sender_name']] if document['sender_name'] else []
-        document['aliases_from_signature'] = document['sender_aliases']
-        document['signatures'] = [document['signature']]
-        for key in ['sender_email_address', 'sender_name', 'sender_aliases', 'signature']:
-            del document[key]
+        document['email_addresses'] = [e for e in [document.pop('sender_email_address')] if e]
+        document['identifying_names'] = [e for e in [document.pop('sender_name')] if e]
+        document['aliases_from_signature'] = document.pop('sender_aliases')
+        document['signatures'] = [document.pop('signature')]
         document['aliases'] = []
         return document
 
@@ -107,19 +108,19 @@ class CorrespondentDataExtraction(Pipe):
                 'identifying_names': [recipient_name] if recipient_name else [],
                 'aliases_from_signature': [],
                 'aliases': [],
-                "phone_numbers_office": [],
-                "phone_numbers_cell": [],
-                "phone_numbers_fax": [],
-                "phone_numbers_home": [],
-                "email_addresses_from_signature": [],
-                "writes_to": [],
+                'phone_numbers_office': [],
+                'phone_numbers_cell': [],
+                'phone_numbers_fax': [],
+                'phone_numbers_home': [],
+                'email_addresses_from_signature': [],
+                'writes_to': [],
                 'recipients': []
             }
 
-        documents = []
+        correspondents = []
         for recipient in document['recipients']:
-            documents.append(build_correspondent(recipient['name'], recipient['email']))
-        return documents
+            correspondents.append(build_correspondent(recipient['name'], recipient['email']))
+        return correspondents
 
     def run_on_document(self, data_item):
         """Apply correspondent data extraction to a leuchtturm document. Return list of leuchtturm documents."""
@@ -138,10 +139,9 @@ class CorrespondentDataExtraction(Pipe):
         phone_numbers = self.extract_phone_numbers_from(document['signature'])
         document.update(phone_numbers)
         document['email_addresses_from_signature'] = self.extract_email_addresses_from(document['signature'])
-        first_email_address_characters = document['sender_email_address'][:3]
         document['sender_aliases'] = self.extract_aliases_from(
             document['signature'],
-            first_email_address_characters
+            document['sender_email_address']
         )
         document['writes_to'] = self.extract_writes_to_relationship(document['recipients'])
         document = self.convert_and_rename_fields(document)

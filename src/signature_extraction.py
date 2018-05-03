@@ -34,7 +34,7 @@ class SignatureExtraction(Pipe):
             r'--------------------------\r?\nSent from my BlackBerry Wireless Handheld \(www\.BlackBerry\.net\)\r?\s*$'
         ]
 
-    def _get_standard_signatures(self):
+    def _get_corporate_and_provider_signature_patterns(self):
         return [
             (
                 r'_________________________________________________________________\r?\n'
@@ -74,7 +74,7 @@ class SignatureExtraction(Pipe):
         """
         body = re.sub('\s*$', '', body)
 
-        for standard_signature in self._get_standard_signatures():
+        for standard_signature in self._get_corporate_and_provider_signature_patterns():
             body = re.sub(standard_signature, '\n', body)
 
         sent_from_mobile = None
@@ -93,8 +93,8 @@ class SignatureExtraction(Pipe):
         file_formats_pattern = r'(\w{2,4})'
         attached_files_patterns = [r'(\(See attached\s{,3}file: (.+)\.' + file_formats_pattern + '?\)\s*)+',
                                    r'(<<(.+)\.' + file_formats_pattern + r'?\s*>>\s*(=20)?\s*)+',
-                                   r'(\n\s?-\s?.+\.' + file_formats_pattern + r'(=20)?\s*)+$',
-                                   r'(\n\[image\](=20)?\s*)+$']
+                                   r'(\s?-\s?.+\.' + file_formats_pattern + r'(=20)?\s*)+$',
+                                   r'(\[image\](=20)?\s*)+$']
 
         for pattern in attached_files_patterns:
             body = re.sub(pattern, '\n', body, flags=re.IGNORECASE)

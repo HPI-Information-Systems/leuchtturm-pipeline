@@ -500,8 +500,9 @@ class TextCleaning(Pipe):
         clean_original_ws = clean
         clean = textacy.preprocess.normalize_whitespace(clean)  # Replace 2+ spaces/newlines with 1 char
 
-        clean_original_ws = self.remove_strict(clean_original_ws) if not self.readable else clean_original_ws
-        clean = self.remove_strict(clean) if not self.readable else clean
+        if not self.readable:
+            clean_original_ws = self.remove_strict(clean_original_ws)
+            clean = self.remove_strict(clean)
 
         document[self.write_to_original_ws] = clean_original_ws
         document[self.write_to] = clean
