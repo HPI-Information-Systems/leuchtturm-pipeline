@@ -13,12 +13,7 @@ class CommunityDetector:
         """
         print('starting community detection using clauset-newman-moore:')
         snap = Snap(graph, quiet=False)
-
-        community_labels = []
-        for labelled_node in enumerate(snap.communities(algorithm=2)):
-            community_labels.append(labelled_node[1])
-
-        return community_labels
+        return self.run_snap_community_detection(snap.communities, 2)
 
     def girvan_newman(self, graph):
         """Detect communities using girvan-newman from snap.
@@ -27,12 +22,7 @@ class CommunityDetector:
         """
         print('starting community detection using girvan-newman:')
         snap = Snap(graph, quiet=False)
-
-        community_labels = []
-        for labelled_node in enumerate(snap.communities(algorithm=1)):
-            community_labels.append(labelled_node[1])
-
-        return community_labels
+        return self.run_snap_community_detection(snap.communities, 1)
 
     def bigclam(self, graph):
         """Detect communities using bigclam from snap.
@@ -41,9 +31,15 @@ class CommunityDetector:
         """
         print('starting community detection using bigclam:')
         snap = Snap(graph, quiet=False)
+        return self.run_snap_community_detection(snap.bigclam)
 
+    def run_snap_community_detection(self, func, *args):
+        """Detect communities using declared function from snap.
+
+        Input: networkX graph, function, arguments for function
+        """
         community_labels = []
-        for labelled_node in enumerate(snap.bigclam()):
+        for labelled_node in enumerate(func(*args)):
             community_labels.append(labelled_node[1])
 
         return community_labels
