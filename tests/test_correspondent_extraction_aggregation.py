@@ -81,16 +81,16 @@ def test_extract_aliases_from_signature():
         two_aliases
     ]
     aliases = [
-        ['Sara'],
-        ['Nora J. Dobin'],
-        ['Dana', 'Dana Perino']
+        {'Sara'},
+        {'Nora J. Dobin'},
+        {'Dana', 'Dana Perino'}
     ]
     correspondentDataExtraction = CorrespondentDataExtraction()
     for i, email in enumerate(emails_with_aliases_in_signature):
-        assert aliases[i] == correspondentDataExtraction.extract_aliases_from(
+        assert aliases[i] == set(correspondentDataExtraction.extract_aliases_from(
             email['signature'],
             email['sender_email_address'][:3]
-        )
+        ))
 
 
 correspondent_object_keys = {
