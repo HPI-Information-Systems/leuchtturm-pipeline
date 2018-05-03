@@ -4,6 +4,7 @@ import ujson as json
 import re
 from .common import Pipe
 from .utils.logger import YarnLogger
+from datetime import datetime
 
 
 class SignatureExtraction(Pipe):
@@ -129,6 +130,8 @@ class SignatureExtraction(Pipe):
             return body, signature
 
         for data_item in data_items:
+            timestamp = datetime.now()
+            self.logger.warn('S ' + str(timestamp))
             document = json.loads(data_item)
             document[self.write_body_without_signature_to], document[self.write_signature_to] = \
                 extract_signature(
@@ -138,6 +141,8 @@ class SignatureExtraction(Pipe):
             )
             del document[self.read_from]
             yield json.dumps(document)
+            self.logger.warn('E ' + str(timestamp))
+            self.logger.warn('Took this much time: ' + str(datetime.now() - timestamp))
 
         self.logger.warn("Finished running signature extraction on partition.")
 
