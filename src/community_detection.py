@@ -1,30 +1,49 @@
-import networkx.algorithms.community as nxcom
-import time
+"""This Module makes the community detection methods available."""
+
 from snap import Snap
 
+
 class CommunityDetector:
+    """This class holds the Community detection methods."""
+
     def clauset_newman_moore(self, graph):
+        """Detect communities using clauset-newman-moore from snap.
+
+        Input: networkX graph
+        """
         print('starting community detection using clauset-newman-moore:')
-        # start = time.time()
         snap = Snap(graph, quiet=False)
 
-        for labelled_node in snap.communities(algorithm=2):
-            yield labelled_node
+        community_labels = []
+        for labelled_node in enumerate(snap.communities(algorithm=2)):
+            community_labels.append(labelled_node[1])
+
+        return community_labels
 
     def girvan_newman(self, graph):
+        """Detect communities using girvan-newman from snap.
+
+        Input: networkX graph
+        """
         print('starting community detection using girvan-newman:')
-        # start = time.time()
         snap = Snap(graph, quiet=False)
 
-        for labelled_node in snap.communities(algorithm=1):
-            yield labelled_node
+        community_labels = []
+        for labelled_node in enumerate(snap.communities(algorithm=1)):
+            community_labels.append(labelled_node[1])
+
+        return community_labels
 
     def bigclam(self, graph):
+        """Detect communities using bigclam from snap.
+
+        Input: networkX graph
+        """
         print('starting community detection using bigclam:')
-        # start = time.time()
         snap = Snap(graph, quiet=False)
 
-        for labelled_node in snap.bigclam():
-            print(str(labelled_node))
+        community_labels = []
+        for labelled_node in enumerate(snap.bigclam()):
+            community_labels.append(labelled_node[1])
 
-        return graph
+        return community_labels
