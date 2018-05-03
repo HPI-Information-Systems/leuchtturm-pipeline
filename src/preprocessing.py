@@ -509,6 +509,4 @@ class TextCleaning(Pipe):
 
     def run(self, rdd):
         """Run pipe in spark context."""
-        self.logger.warn("At the beginning of text cleaning task, # partitions: " + str(rdd.getNumPartitions()))
-        return rdd.map(lambda x: self.run_on_document(x)) \
-                  .repartition(rdd.getNumPartitions())
+        return rdd.map(lambda x: self.run_on_document(x))

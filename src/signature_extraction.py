@@ -117,8 +117,8 @@ class SignatureExtraction(Pipe):
             self.logger.warn(path + " " + sender_email_address)
             self.logger.warn(
                 "LENGTH: " + str(len(body)) +
-                "\nSTART: " + body[:10] +
-                "\nEND: " + body[-10:]
+                "\nSTART: " + body[:10].replace('\n', '\\n') +
+                "\nEND: " + body[-10:].replace('\n', '\\n')
             )
             body, signature = talon_signature.extract(
                 body,
@@ -155,6 +155,5 @@ class SignatureExtraction(Pipe):
 
     def run(self, rdd):
         """Run pipe in spark context."""
-        self.logger.warn("At the beginning of signature extraction task, # partitions: " + str(rdd.getNumPartitions()))
         return rdd.map(self.run_on_document) \
             .mapPartitions(self.run_on_partition)

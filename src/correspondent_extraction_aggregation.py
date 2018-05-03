@@ -22,6 +22,7 @@ class CorrespondentDataExtraction(Pipe):
     def __init__(self):
         """Set constant regex patterns for class access."""
         super().__init__()
+        self.logger = YarnLogger()
 
     phone_pattern = r'(\(?\b[0-9]{3}\)?(?:-|\.|/| {1,2}| - )?[0-9]{3}(?:-|\.|/| {1,2}| - )?[0-9]{4,5}\b)'
     phone_type_patterns = [r'(off|ph|tel|dir|voice)',
@@ -124,6 +125,15 @@ class CorrespondentDataExtraction(Pipe):
         """Apply correspondent data extraction to a leuchtturm document. Return list of leuchtturm documents."""
         document = json.loads(data_item)
 
+        self.logger.warn("START " + document['path'] + " " + document['header']['sender']['email'])
+        self.logger.warn(
+            "LENGTH: " + str(len(document['text_clean'])) +
+            "\nSTART: " + document['text_clean'][:10].replace('\n', '\\n') +
+            "\nEND: " + document['text_clean'][-10:].replace('\n', '\\n') +
+            '\nSTART SIG: ' + document['signature'][:10].replace('\n', '\\n') +
+            '\nEND SIG: ' + document['signature'][-10:].replace('\n', '\\n')
+        )
+
         document = self.filter_document_keys(document)
         phone_numbers = self.extract_phone_numbers_from(document['signature'])
         document.update(phone_numbers)
@@ -136,6 +146,13 @@ class CorrespondentDataExtraction(Pipe):
         document['writes_to'] = self.extract_writes_to_relationship(document['recipients'])
         document = self.convert_and_rename_fields(document)
         documents = [document] + self.extract_receiving_correspondents(document)
+
+        sig = 'DEFAULT'
+        if document['signatures']:
+            sig = document['signatures'][0]
+        self.logger.warn('FINISH' +
+                         '\nSTART SIG: ' + sig[:10] +
+                         '\nEND SIG: ' + sig[-10:])
 
         return [json.dumps(document) for document in documents]
 
@@ -184,6 +201,8 @@ class CorrespondentDataAggregation(Pipe):
         correspondent1 = json.loads(data1)
         correspondent2 = json.loads(data2)
 
+        self.logger.warn('START ' + str(correspondent1['email_addresses']))
+
         unified_person = {
             'email_addresses': correspondent1['email_addresses'],
             'source_count': correspondent1['source_count'] + correspondent2['source_count'],
@@ -199,11 +218,10 @@ class CorrespondentDataAggregation(Pipe):
         if len(unified_person['identifying_names']) > 1:
             identifying_name = max(unified_person['identifying_names'])
             unified_person['aliases'] = unified_person['identifying_names']
-            self.logger.warn(unified_person['email_addresses'])
-            self.logger.warn(unified_person['aliases'])
-            self.logger.warn(type(unified_person['aliases']))
             unified_person['aliases'].remove(identifying_name)
             unified_person['identifying_names'] = [identifying_name]
+
+        self.logger.warn('FINISH ' + str(correspondent1['email_addresses']))
 
         return json.dumps(unified_person)
 
@@ -218,6 +236,7 @@ class CorrespondentDataAggregation(Pipe):
         correspondent1 = json.loads(data1)
         correspondent2 = json.loads(data2)
 
+        self.logger.warn('START ' + str(correspondent1['identifying_names']))
         unified_person = {
             'identifying_names': correspondent1['identifying_names'],
             'source_count': correspondent1['source_count'] + correspondent2['source_count'],
@@ -226,6 +245,7 @@ class CorrespondentDataAggregation(Pipe):
         for key in correspondent1:
             if key not in ['identifying_names', 'source_count']:
                 unified_person[key] = list(set(correspondent1[key] + correspondent2[key]))
+        self.logger.warn('FINISH ' + str(correspondent1['identifying_names']))
         return json.dumps(unified_person)
 
     def use_email_addresses_as_identifying_names(self, data):
@@ -263,6 +283,7 @@ class CorrespondentIdInjection(Pipe):
         """Set up class attributes."""
         super().__init__()
         self.correspondent_rdd = [json.loads(corr) for corr in correspondent_rdd.value]
+        self.logger = YarnLogger()
 
     def _find_matching_correspondent(self, original_name, original_email_address):
         """Look up identifying_name of correspondent object inside broadcast.
@@ -312,8 +333,15 @@ class CorrespondentIdInjection(Pipe):
     def run_on_document(self, data):
         """Wrap writing the identifying_name back onto sender and recipient entries for one email."""
         document = json.loads(data)
+
+        self.logger.warn("START " + document['path'] +
+                         "\nSENDER EMAIL " + document['header']['sender']['email'] +
+                         "\nSENDER NAME" + document['header']['sender']['name'])
         document = self.assign_identifying_name_for_sender(document)
         document = self.assign_identifying_name_for_recipients(document)
+        self.logger.warn("FINISH " + document['path'] +
+                         "\nID_NAME " + document['header']['sender']['identifying_name']
+                         )
         return json.dumps(document)
 
     def run(self, rdd):
