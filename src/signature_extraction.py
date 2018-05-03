@@ -110,17 +110,11 @@ class SignatureExtraction(Pipe):
 
         self.logger.warn("Starting to run signature extraction on partition...")
 
-        def extract_signature(body, sender_email_address, path):
+        def extract_signature(body, sender_email_address):
             """Apply talon to the preprocessed body.
 
             Uses the email address of the sending correspondent to improve extraction results.
             """
-            self.logger.warn(path + " " + sender_email_address)
-            self.logger.warn(
-                "LENGTH: " + str(len(body)) +
-                "\nSTART: " + body[:10].replace('\n', '\\n') +
-                "\nEND: " + body[-10:].replace('\n', '\\n')
-            )
             body, signature = talon_signature.extract(
                 body,
                 sender=sender_email_address
@@ -131,18 +125,27 @@ class SignatureExtraction(Pipe):
 
         for data_item in data_items:
             timestamp = datetime.now()
-            self.logger.warn('S ' + str(timestamp))
             document = json.loads(data_item)
+            body_length = len(document[self.write_body_without_signature_to])
+            first_body_characters = document[self.write_body_without_signature_to][:10].replace('\n', '\\n')
+            last_body_characters = document[self.write_body_without_signature_to][-10:].replace('\n', '\\n')
+            self.logger.warn('S ' + str(timestamp))
+            self.logger.warn(document['path'] + " " + document['header']['sender']['email'])
+            self.logger.warn(
+                "LENGTH: " + str(body_length) +
+                "\nSTART: " + first_body_characters +
+                "\nEND: " + last_body_characters
+            )
             document[self.write_body_without_signature_to], document[self.write_signature_to] = \
                 extract_signature(
                     document[self.write_body_without_signature_to],
-                    document['header']['sender']['email'],
-                    document['path']
+                    document['header']['sender']['email']
             )
             del document[self.read_from]
             yield json.dumps(document)
+            diff = document[self.write_body_without_signature_to][-10:].replace('\n', '\\n')
             self.logger.warn('E ' + str(timestamp))
-            self.logger.warn('Took this much time: ' + str(datetime.now() - timestamp))
+            self.logger.warn('Took this much time: ' + str(diff))
 
         self.logger.warn("Finished running signature extraction on partition.")
 
