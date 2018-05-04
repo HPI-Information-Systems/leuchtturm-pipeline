@@ -1,3 +1,4 @@
+# flake8: noqa
 import sys
 
 for i in range(2, 25):

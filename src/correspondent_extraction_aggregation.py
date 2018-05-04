@@ -30,13 +30,13 @@ class CorrespondentDataExtraction(Pipe):
         'phone_numbers_cell': r'(cell|mobile|mob)',
         'phone_numbers_fax': r'(fax|fx|facs|facsimile|facsim)',
         'phone_numbers_home': r'home'
-    }
+    }.items()
 
     def _get_phone_number_type(self, enclosing_line):
-        for pattern_type, pattern in self.phone_types.items():
+        for pattern_type, pattern in self.phone_types:
             if re.search(pattern, enclosing_line, flags=re.IGNORECASE):
                 return pattern_type
-        return list(self.phone_types.items())[0][0]  # set type to 'office' by default
+        return list(self.phone_types)[0][0]  # set type to 'office' by default
 
     def filter_document_keys(self, document):
         """Remove key-values that are irrelevant to correspondent information extraction."""
@@ -49,7 +49,7 @@ class CorrespondentDataExtraction(Pipe):
 
     def extract_phone_numbers_from(self, signature):
         """Extract phone numbers and their type (office, cell, home, fax) from a signature."""
-        phone_numbers = {key: [] for key in self.phone_types.keys()}
+        phone_numbers = {key: [] for key in [tuple[0] for tuple in self.phone_types]}
 
         for line in signature.split('\n'):
             phone_number_match = re.search(self.phone_pattern, line, flags=re.IGNORECASE)
@@ -70,18 +70,18 @@ class CorrespondentDataExtraction(Pipe):
             return []
 
         email_username_prefix = email_username[:3]
-        email_username_postfix = email_username[-3:]
+        # email_username_postfix = email_username[-3:]
         alias_prefix_pattern = r'(?:^|\n)\b(' + email_username_prefix + r'[\w -.]*)\s?(?:\n|$)'
-        alias_postfix_pattern = r'(?:^|\n)([\w -.]*' + email_username_postfix + r')(?:$|\n)'
-        first_two_signature_lines = '\n'.join([line for line in signature.split('\n') if line != ''][:2])
+        # alias_postfix_pattern = r'(?:^|\n)([\w -.]*' + email_username_postfix + r')(?:$|\n)'
+        # first_two_signature_lines = '\n'.join([line for line in signature.split('\n') if line != ''][:2])
 
         # note: using regex module (not re) so that matches can overlap (necessary because of shared \n between aliases)
         aliases = set(
             regex.findall(alias_prefix_pattern, signature, overlapped=True, flags=re.IGNORECASE)
         )
-        aliases.update(set(
-            regex.findall(alias_postfix_pattern, first_two_signature_lines, overlapped=True, flags=re.IGNORECASE)
-        ))
+        # aliases.update(set(
+        #     regex.findall(alias_postfix_pattern, first_two_signature_lines, overlapped=True, flags=re.IGNORECASE)
+        # ))
 
         aliases = [alias.strip() for alias in list(aliases)]
         return aliases

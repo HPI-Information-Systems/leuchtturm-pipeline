@@ -94,8 +94,8 @@ class SignatureExtraction(Pipe):
         file_formats_pattern = r'(\w{2,4})'
         attached_files_patterns = [r'(\(See attached\s{,3}file: (.+)\.' + file_formats_pattern + '?\)\s*)+',
                                    r'(<<(.+)\.' + file_formats_pattern + r'?\s*>>\s*(=20)?\s*)+',
-                                   r'(\s?-\s?.+\.' + file_formats_pattern + r'(=20)?\s*)+$',
-                                   r'(\[image\](=20)?\s*)+$']
+                                   r'(\n\s?-\s?.+\.' + file_formats_pattern + r'(=20)?\s*)+$',
+                                   r'(\n\[image\](=20)?\s*)+$']
 
         for pattern in attached_files_patterns:
             body = re.sub(pattern, '\n', body, flags=re.IGNORECASE)
@@ -143,9 +143,7 @@ class SignatureExtraction(Pipe):
             )
             del document[self.read_from]
             yield json.dumps(document)
-            diff = document[self.write_body_without_signature_to][-10:].replace('\n', '\\n')
             self.logger.warn('E ' + str(timestamp))
-            self.logger.warn('Took this much time: ' + str(diff))
 
         self.logger.warn("Finished running signature extraction on partition.")
 
