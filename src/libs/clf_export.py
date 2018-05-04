@@ -1,7 +1,7 @@
 """Make classification steps available for pipeline."""
 
-from features import *
-from preprocessing import *
+from .clf_features import *
+from .clf_preprocessing import *
 import pandas as pd
 
 
