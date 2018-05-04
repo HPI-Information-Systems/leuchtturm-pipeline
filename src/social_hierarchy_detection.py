@@ -2,7 +2,6 @@
 import networkx as nx
 import time
 import datetime
-import dateutil.relativedelta
 import pandas as pd
 from pandas.tseries.offsets import BDay
 
@@ -21,15 +20,54 @@ class SocialHierarchyDetector:
 
     def detect_social_hierarchy(self, graph):
         """Trigger social hierarchy score detection."""
-        # number_of_cliques, cliques = self._number_of_cliques(graph)
-        # raw_clique_score = self._raw_clique_score(graph, cliques)
-        # betweenness_values = self._betweenness_centrality(graph)
-        # degree_values = self._degree_centrality(graph)
-        # hub_values, authority_values = self._hubs_and_authorities(graph)
-        # number_of_emails = self._number_of_emails(graph)
-        # clustering_coefficients = self._clustering_coefficient(graph)
+        number_of_cliques, cliques = self._number_of_cliques(graph)
+        raw_clique_score = self._raw_clique_score(graph, cliques)
+        betweenness_values = self._betweenness_centrality(graph)
+        degree_values = self._degree_centrality(graph)
+        hub_values, authority_values = self._hubs_and_authorities(graph)
+        number_of_emails = self._number_of_emails(graph)
+        clustering_coefficients = self._clustering_coefficient(graph)
         # mean_shortest_paths = self._mean_shortest_paths(graph)
-        response_scores = self._response_score(graph)
+        response_scores, response_avg_times = self._response_score_and_average_time(graph)
+
+        self.normalize(response_avg_times, high=False)
+        metrics = []
+        for metric in [response_avg_times]:
+            metrics.append(self.normalize(metric, high=False))
+
+        for metric in [number_of_cliques, raw_clique_score, betweenness_values, degree_values,
+                       hub_values, authority_values, number_of_emails, clustering_coefficients]:
+            metrics.append(self.normalize(metric))
+
+        graph = self.aggregate(graph, metrics)
+        return graph
+
+    def normalize(self, metric, high=True):
+        inf = min(metric.values())  # find_min_max(metric)
+        sup = max(sorted(metric.values())[:-1])
+
+        normalized_metric = dict()
+        for key, value in metric.items():
+            normalized_value = 100 * (value - inf) / (sup - inf)
+            if not high:
+                normalized_value = 100 - normalized_value
+            normalized_metric[key] = normalized_value
+
+        return normalized_metric
+
+    def aggregate(self, graph, metrics):
+        hierarchy_scores = dict()
+        for node in graph.nodes:
+            score = 0
+            for metric in metrics:
+                score += metric[node]
+            score = score / len(metrics)
+            hierarchy_scores[node] = score
+
+        for i in range(10):
+            print(max(hierarchy_scores.values()[:-i]))
+        print(min(hierarchy_scores.values()))
+        # nx.set_node_attributes(graph, 'hierarchy', hierarchy_scores)
         return graph
 
     def _number_of_emails(self, graph):
@@ -43,18 +81,19 @@ class SocialHierarchyDetector:
                 total_volume += neighbours[neighbour]['volume']
             metric[node] = total_volume
         end = time.time()
-        print(metric)
         print('Found ' + str(len(graph.nodes)) + ' email volumes, took: ' + str(end - start) + 's')
         return metric
 
-    def _response_score(self, graph):
-        print('Start computing response scores')
+    def _response_score_and_average_time(self, graph):
+        print('Start computing response scores and average time')
         # graph = graph.to_directed()
         start = time.time()
-        metric = dict()
+        metric_response_score = dict()
+        metric_average_time = dict()
+        cnt = 0
         for node in graph.nodes:
-            responsed = 0
-            unresponsed = 0
+            responses = []
+            unresponsed = []
             neighbours = graph[node]
             for neighbour in neighbours:
                 timestamps_to_neighbour = neighbours[neighbour]['timeline']
@@ -67,23 +106,35 @@ class SocialHierarchyDetector:
                 if timestamps_from_neighbour and timestamps_to_neighbour[0] == timestamps_from_neighbour[0]:
                     continue  # take out loops
 
-                for t1, t2 in zip(sorted(timestamps_to_neighbour)[:-1], sorted(timestamps_to_neighbour)[1:]):
-                    dt1 = datetime.datetime.fromtimestamp(t1)
-                    dt2 = datetime.datetime.fromtimestamp(t2)
-                    difference = dateutil.relativedelta.relativedelta (dt2, dt1)
-                    print(difference)
+                for t1 in timestamps_to_neighbour:
+                    for t2 in timestamps_from_neighbour:
+                        if t2 > t1 and t2 < _three_business_days(t1):
+                            responses.append((t1, t2))
+                        else:
+                            unresponsed.append(t1)
 
-                # print(timestamps_to_neighbour)
-                # print(timestamps_from_neighbour)
-                # print('')
+            response_score = len(responses) / (len(responses) + len(unresponsed) + 1)
+            metric_response_score[node] = response_score
+
+            total = 0
+            for response in responses:
+                dif = datetime.datetime.fromtimestamp(response[1]) - datetime.datetime.fromtimestamp(response[0])
+                total += datetime.timedelta.total_seconds(dif)
+            if total == 0:
+                avg_time = 432000  # five days max
+            else:
+                avg_time = total / len(responses)
+                cnt += 1
+
+            metric_average_time[node] = avg_time
         end = time.time()
-        print(metric)
         print('Found ' + str(len(graph.nodes)) + ' response scores, took: ' + str(end - start) + 's')
-        return metric
+        return metric_response_score, metric_average_time
 
     def _clustering_coefficient(self, graph):
         print('Start calculating clustering coefficients')
         start = time.time()
+        graph = graph.to_undirected()
         clustering_values = nx.clustering(graph)
         n = len(clustering_values)
         end = time.time()
@@ -93,6 +144,7 @@ class SocialHierarchyDetector:
     def _number_of_cliques(self, graph):
         print('Start counting cliques')
         start = time.time()
+        graph = graph.to_undirected()
         cliques = list(nx.find_cliques(graph))
         n = 0
         for clique in cliques:
@@ -111,6 +163,7 @@ class SocialHierarchyDetector:
     def _raw_clique_score(self, graph, cliques):
         print('Start computing raw clique score')
         start = time.time()
+        graph = graph.to_undirected()
         metric = dict()
         for node in graph.nodes:
             score = 0
@@ -120,7 +173,7 @@ class SocialHierarchyDetector:
                     score += 2 ** (size - 1)
             metric[node] = score
         end = time.time()
-        print('Found ' + len(graph.nodes) + ' raw clique scores, took: ' + str(end - start) + 's')
+        print('Found ' + str(len(graph.nodes)) + ' raw clique scores, took: ' + str(end - start) + 's')
         return metric
 
     def _betweenness_centrality(self, graph):
@@ -133,7 +186,7 @@ class SocialHierarchyDetector:
         return betweenness_values
 
     def _degree_centrality(self, graph):
-        print('Start calculating betweenness values')
+        print('Start calculating degree values')
         start = time.time()
         degree_values = nx.degree_centrality(graph)
         n = len(degree_values)
@@ -142,7 +195,7 @@ class SocialHierarchyDetector:
         return degree_values
 
     def _hubs_and_authorities(self, graph):
-        print('Start calculating betweenness values')
+        print('Start calculating hubs and authorities values')
         start = time.time()
         h_a_values = nx.hits(graph)
         n = len(h_a_values)
@@ -166,6 +219,4 @@ class SocialHierarchyDetector:
         n = len(table_of_means)
         end = time.time()
         print('Calculated ' + str(n) + ' mean shortest paths, took: ' + str(end - start) + 's')
-        # print(table_of_means[max(table_of_means, key=table_of_means.get)])
-        # print(table_of_means[min(table_of_means, key=table_of_means.get)])
         return table_of_means

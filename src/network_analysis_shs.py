@@ -27,7 +27,7 @@ class NetworkAnalyser:
         """Analyse the network. Needs no further parameters, will update data in neo4j."""
         print(self.neo4j_host)
         neo_connection = py2neo.Graph(self.neo4j_host, http_port=self.http_port, bolt_port=self.bolt_port)
-        edges = neo_connection.run('MATCH (source)-[r]->(target) RETURN id(source), id(target), size(r.mail_list) as cnt, r.time_list as tml')
+        edges = neo_connection.run('MATCH (source)-[r]->(target) WHERE ()-->(source)-->() AND ()-->(target)-->() RETURN id(source), id(target), size(r.mail_list) as cnt, r.time_list as tml')
         # nodes = neo_connection.run('MATCH (p:Person) RETURN id(p), p.name, p.email')
 
         graph = nx.DiGraph()
@@ -36,9 +36,11 @@ class NetworkAnalyser:
 
         # for node in nodes:
         #     graph.add_node(node['id(p)'], name='|T|I|M|'.join(node['p.name']), email=node['p.email'])
+        print(len(graph.nodes))
+        print(len(graph.edges))
         social_hierarchy_detector = SocialHierarchyDetector(self.solr_url)
         social_hierarchy_labels = social_hierarchy_detector.detect_social_hierarchy(graph)
-        self.update_network(social_hierarchy_labels)
+        #self.update_network(social_hierarchy_labels)
         # nx.write_graphml(graph, "enron.graphml")
 
     def update_network(self, social_hierarchy_labels):
