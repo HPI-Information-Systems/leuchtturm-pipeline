@@ -65,7 +65,7 @@ class EmailDecoding(Pipe):
 
     def get_main_header(self, message):
         """Return main header of email."""
-        keys = re.compile(r'((x-)?from)|(((x-)|reply-)?to)|((x-)?b?cc)|(subject)|(date)|(sent)', re.IGNORECASE)
+        keys = re.compile(r'((x-)?from)|(((x-)|reply-)?to)|((x-)?b?cc)|(subject)|(date)|(sent)|(sender)', re.IGNORECASE)
 
         # filter headers for following splitting task
         filtered_headers = [header for header in message.items() if keys.match(header[0])]
@@ -359,8 +359,10 @@ class HeaderParsing(Pipe):
             sender = re.sub(r'(on )?\d{2}/\d{2}/\d{2,4}\s\d{2}:\d{2}(:\d{2})?\s?(am|pm)?', '',
                             headers[0][0], flags=re.IGNORECASE)  # rm date
             header['sender'] = self.parse_correspondent(sender)
+        elif self.get_header_value(headers, 'sender'):
+            header['sender'] = self.parse_correspondent(self.get_header_value(headers, 'sender'))
 
-        delimiter = ',' if 'Original Message' not in header_string else ';'  # catch case 'to: lastname, firstname'
+        delimiter = ',' if 'original message' not in header_string.lower() else ';'  # catch 'to: lastname, firstname'
         if self.get_header_value(headers, 'to'):
             header['recipients'] += self.parse_recipients(self.get_header_value(headers, 'to'),
                                                           kind='to', delimiter=delimiter)

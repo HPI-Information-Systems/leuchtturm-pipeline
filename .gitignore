@@ -3,6 +3,7 @@ emails/*.eml
 
 # models
 models/*.p
+models/*.pickle
 models/*.json
 models/*.hdf5
 
