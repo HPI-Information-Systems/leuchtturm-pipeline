@@ -25,11 +25,11 @@ def run_email_pipeline(read_from, write_to, solr, solr_url, dataset):
         EmailDecoding(split_header_body=False),
         EmailSplitting(keep_thread_connected=True),
         HeaderParsing(config=config, use_unix_time=False),
+        EmailCategoryClassification(),
         EmailDeduplication(is_connected_thread=True),
         TextCleaning(read_from='body', write_to='text_clean'),
         LanguageDetection(read_from='text_clean'),
         SpacyNer(read_from='text_clean'),
-        EmailCategoryClassification(),
         EmailFolderClassification()
     ]
     writer = TextFileWriter(path=write_to)

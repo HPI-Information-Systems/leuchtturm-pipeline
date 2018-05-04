@@ -9,10 +9,11 @@ langdetect
 gensim
 https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-2.0.0/en_core_web_sm-2.0.0.tar.gz  # spacy
 textacy
-# numpy
+numpy
+pandas
 # keras
 # git+https://www.github.com/keras-team/keras-contrib.git
-# sklearn
+sklearn
 pysolr
 py2neo
 nltk
