@@ -116,7 +116,7 @@ class SignatureExtraction(Pipe):
             Uses the email address of the sending correspondent to improve extraction results.
             """
             body, signature = talon_signature.extract(
-                body,
+                body[-300:],
                 sender=sender_email_address
             )
             if not signature:
