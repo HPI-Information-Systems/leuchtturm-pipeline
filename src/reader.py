@@ -13,6 +13,7 @@ Resulting documents must be in json format with at least these fields:
 import email
 import ujson as json
 import uuid
+import os
 
 from .common import Pipe, SparkProvider
 
@@ -37,7 +38,7 @@ class EmlReader(Pipe):
 
     def create_document(self, document, path):
         """Create json entry for a document."""
-        doc_id = path.split('/')[-1].split('.') if self.filename_is_doc_id else str(uuid.uuid4())
+        doc_id = path.split(os.sep)[-1].split('.')[0] if self.filename_is_doc_id else str(uuid.uuid4())
 
         return json.dumps({'doc_id': doc_id,
                            'path': path,

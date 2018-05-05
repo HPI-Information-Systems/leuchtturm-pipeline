@@ -20,7 +20,7 @@ def run_email_pipeline(read_from, write_to, solr, solr_url, dataset):
     config = get_config(dataset)
     SparkProvider.spark_context()
 
-    reader = EmlReader(read_from)
+    reader = EmlReader(read_from, filename_is_doc_id=True)
     pipes = [
         EmailDecoding(split_header_body=False),
         EmailSplitting(keep_thread_connected=True),

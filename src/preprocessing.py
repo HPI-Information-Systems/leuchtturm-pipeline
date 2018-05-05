@@ -33,7 +33,12 @@ class EmailDecoding(Pipe):
         if encoding is None:
             encoding = 'utf-8'
 
-        return text.decode(encoding, 'ignore')
+        try:
+            text = text.decode(encoding, 'replace')
+        except LookupError:
+            text = text.decode('utf-8', 'replace')
+
+        return text
 
     def remove_html_tags(self, text):
         """Convert html to corresponding md."""
@@ -148,6 +153,7 @@ class EmailSplitting(Pipe):
         # when no headers are found is the entire unsplit mail to be added
         if not headers:
             parts.append(remaining_email)
+
         for index, found_header in enumerate(headers):
             current_header = found_header
             next_header = ''
