@@ -52,6 +52,10 @@ PYSPARK_PYTHON=./leuchtturm_env/bin/python \
     --driver-memory 8g --executor-memory 4g --num-executors 23 --executor-cores 4 \
     --archives leuchtturm_env.zip#leuchtturm_env,models.zip#models,config.zip#config \
     --py-files src.zip \
+    --conf "spark.driver.extraJavaOptions=-Dlog4j.configuration=file:$(pwd)/config/log4j_leuchtturm.properties" \
+    --conf "spark.executor.extraJavaOptions=-Dlog4j.configuration=file:$(pwd)/config/log4j_leuchtturm.properties" \
+    --driver-java-options "-Dlog4j.debug=true -Dlog4j.configuration=file:$(pwd)/config/log4j_leuchtturm.properties" \
+    --files "$(pwd)/config/log4j_leuchtturm.properties" \
     run_pipeline.py --read-from $EMAILS --write-to $PRESULT --solr --solr-url $SOLR --dataset $DATASET 2>/dev/null
 
 echo -e '\n[Done]'
