@@ -40,6 +40,8 @@ source deactivate
 
 echo '[stage 2 of 2] Running leuchtturm pipeline. This might take a while ...'
 hdfs dfs -rm -r $PRESULT || true
+hdfs dfs -rm -r $PRESULT"_intermediate_1" || true
+hdfs dfs -rm -r $PRESULT"_intermediate_2" || true
 hdfs dfs -rm -r $PRESULT"_correspondent" || true
 hdfs dfs -rm -r $PRESULT"_injected" || true
 hdfs dfs -rm -r $PRESULT"_topics" || true

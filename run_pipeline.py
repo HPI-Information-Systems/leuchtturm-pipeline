@@ -29,19 +29,31 @@ def run_email_pipeline(read_from, write_to, solr, solr_url, dataset):
         EmailSplitting(keep_thread_connected=True),
         HeaderParsing(config=config, use_unix_time=False),
         EmailDeduplication(is_connected_thread=True),
-        TextCleaning(read_from='body', write_to='text_clean', write_to_original_ws='text_clean_original_ws'),
+        TextCleaning(read_from='body', write_to='text_clean', write_to_original_ws='text_clean_original_ws')
+    ]
+    writer = TextFileWriter(path=write_to + '_intermediate_1')
+    Pipeline(reader, pipes, writer).run()
+
+    reader2 = TextFileReader(write_to + '_intermediate_1')
+    pipes2 = [
         SignatureExtraction(  # also relies on document['header']['sender']['email']
             read_from='text_clean_original_ws',
             write_body_without_signature_to='body_without_signature',
             write_signature_to='signature'
-        ),
+        )
+    ]
+    writer2 = TextFileWriter(path=write_to + '_intermediate_2')
+    Pipeline(reader2, pipes2, writer2).run()
+
+    reader3 = TextFileReader(write_to + '_intermediate_2')
+    pipes3 = [
         LanguageDetection(read_from='text_clean'),
         SpacyNer(read_from='text_clean'),
         EmailCategoryClassification(),
         EmailFolderClassification()
     ]
-    writer = TextFileWriter(path=write_to)
-    Pipeline(reader, pipes, writer).run()
+    writer3 = TextFileWriter(path=write_to)
+    Pipeline(reader3, pipes3, writer3).run()
 
     reader = TextFileReader(path=write_to)
     writer = TextFileWriter(path=write_to + '_topics')
