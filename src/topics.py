@@ -19,9 +19,10 @@ class TopicModelTraining(Pipe):
     Export pickeled model to a textfile.
     """
 
-    def __init__(self):
+    def __init__(self, conf):
         """TODO: set params here (iterations, num_topics, ...)!! Especially output paths."""
-        super().__init__()
+        super().__init__(conf)
+        self.conf = conf
 
     def run(self, rdd):
         """Run topic model training."""
@@ -88,13 +89,13 @@ class TopicModelTraining(Pipe):
         processed_corpus = docs
 
         dictionary = corpora.Dictionary(processed_corpus)
-        with open('./models/pickled_lda_dictionary.p', 'wb') as pfile:
+        with open(self.conf.get('topic_modelling', 'file_dictionary'), 'wb') as pfile:
             pickle.dump(dictionary, pfile)
 
         bow_corpus = [dictionary.doc2bow(text) for text in processed_corpus]
 
         lda = models.ldamodel.LdaModel(bow_corpus, num_topics=num_topics, iterations=iterations, eta=eta, alpha=alpha)
-        with open('./models/pickled_lda_model.p', 'wb') as pfile:
+        with open(self.conf.get('topic_modelling', 'file_model'), 'wb') as pfile:
             pickle.dump(lda, pfile)
 
 
@@ -105,34 +106,32 @@ class TopicModelPrediction(Pipe):
     Will add topic field.
     """
 
-    def __init__(self, read_from='text_clean', path_model='./models/pickled_lda_model.p',
-                 path_dict='./models/pickled_lda_dictionary.p'):
+    def __init__(self, conf, read_from='text_clean'):
         """Set params here."""
-        super().__init__()
+        super().__init__(conf)
         self.read_from = read_from
-        self.path_model = path_model
-        self.path_dict = path_dict
+        self.conf = conf
         # TODO add variable train_topic_model=Bool to trigger tm training within the main pipeline
 
     def load_model(self):
         """Load lda model from defined path."""
-        with open(self.path_model, mode='rb') as pfile:
+        with open(self.conf.get('topic_modelling', 'file_model'), mode='rb') as pfile:
             model = pickle.load(pfile)
 
         return model
 
     def load_dictionary(self):
         """Load dict for lda tm from defined path."""
-        with open(self.path_dict, mode='rb') as pfile:
+        with open(self.conf.get('topic_modelling', 'file_dictionary'), mode='rb') as pfile:
             dictionary = pickle.load(pfile)
 
         return dictionary
 
     def get_topics_for_doc(self, doc_id, text, model, dictionary):
         """Predict topics for a text."""
-        def get_word_from_term_id_and_round(tuple):
-            term = dictionary[tuple[0]]
-            term_conf = round(float(tuple[1]), 8)
+        def get_word_from_term_id_and_round(word_tuple):
+            term = dictionary[word_tuple[0]]
+            term_conf = round(float(word_tuple[1]), 8)
             return (term, term_conf)
 
         bow = dictionary.doc2bow(text.split())

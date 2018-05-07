@@ -8,30 +8,49 @@ class Config:
     DEFAULT_CONFIG_FILE = os.path.join(os.path.realpath(__file__), 'default.ini')
     DEFAULTS = {
         'settings': {
-            'run_local': False,
             'log_level': 'INFO'
         },
         'data': {
-            'dataset': 'DefaultDataset',
-            'source_dir': './emails',
-            'working_dir': './pipeline_result',
+            'dataset': 'dataset',
+            'source_dir': './data/input',
+            'working_dir': './data/processed',
             'time_min': 0,
             'time_max': 2147483647
         },
         'solr': {
             'import': False,
+            'protocol': 'http',
             'host': '0.0.0.0',
-            'port': '8983',
-            'collection': 'default',
-            'data_location': './data/solr',
-            'log_location': './data/solr/log'
+            'port': 8983,
+            'url_path': 'solr',
+            'collection': '%{data:dataset}',
+            'topic_collection': '%{collection}_topics',
+            'data_location': './data/solr/',
+            'log_location': './data/logs/solr'
         },
         'neo4j': {
             'import': False,
+            'protocol': 'http',
             'host': '0.0.0.0',
-            'port': '7474',
+            'http_port': 7474,
+            'bolt_port': 7687,
             'data_location': './data/neo4j',
-            'log_location': './data/neo4j/log'
+            'log_location': './data/logs/neo4j'
+        },
+        'topic_modelling': {
+            'train_model': True,
+            'working_dir': '%{data:working_dir}_topics',
+            'file_model': '%{data:working_dir}/models/topicmodel.pickle',
+            'file_dictionary': '%{data:working_dir}/models/topicmodel.dict',
+        },
+        'spark': {
+            'ram': '4g',
+            'run_local': False,
+            'parallelism': 276
+        },
+        'classification': {
+            'train_model': True,
+            'file_model': '%{data:working_dir}/models/classification_model.pickle'
         }
     }
 
@@ -47,13 +66,42 @@ class Config:
 
         self.logger.setLevel(self.get('settings', 'log_level'))
 
+        self._solr_url = None
+
         self._print_info()
 
     def get(self, section, option):
         arg = self.args.get(section + '_' + option, None)
         if arg is None:
-            return self.config.get(section, option)
+            arg = self.config.get(section, option)
+
+        if arg is None:
+            raise KeyError
+
+        # try to convert stuff that is a string
+        if arg == 'True':
+            return True
+        if arg == 'False':
+            return False
+        if arg == 'None':
+            return None
+        if arg.isdigit(arg):
+            return int(arg)
+        try:
+            return float(arg)
+        except ValueError:
+            pass
+
+        # okay, probably was actually a string
         return arg
+
+    @property
+    def solr_url(self):
+        if self._solr_url:
+            return self._solr_url
+        self._solr_url = self.get('solr', 'protocol') + '://' + self.get('solr', 'host') + ':' + \
+                         self.get('solr', 'port') + '/' + self.get('solr', 'url_path') + '/'
+        return self._solr_url
 
     def _print_info(self):
         self.logger.info(self.args)
@@ -94,6 +142,11 @@ class Config:
         return conf_parser, args.conf_file
 
     def _get_cli_args(self, conf_parser):
+        """"
+        Define CLI arguments here for things that might change more often than you would edit a
+        config file.
+        One might for example just turn on database imports in one run or have a different log level.
+        """
         parser = argparse.ArgumentParser(
             parents=[conf_parser],
             description=__doc__,
@@ -136,7 +189,3 @@ class Config:
                             help='neo4j log directory (used to start neo4j)')
 
         return parser.parse_args()
-
-
-if __name__ == '__main__':
-    conf = Config()

@@ -13,17 +13,19 @@ class EmailCategoryClassification(Pipe):
     Assign classes to every email doc.
     """
 
-    def __init__(self):
+    def __init__(self, conf):
         """Initialization."""
-        super().__init__()
+        super().__init__(conf)
+        self.conf = conf
         self.fake_categories = ['business', 'personal', 'spam']
         self.fake_subcategories = ['scheduling', 'strategy', 'family', 'sports']
 
     def load_model(self):
         """Load model from path."""
-        raise NotImplementedError
+        model_file = self.conf.get('classification', 'model_file')
+        return None
 
-    def get_category_for_document(self, document, model=None):
+    def get_category_for_document(self, document):
         """Predict classes for an email document, enable fake classes."""
         def get_fake_categories():
             prob_category = dict()
@@ -58,6 +60,7 @@ class EmailCategoryClassification(Pipe):
             return maximum
 
         category = dict()
+        model = self.load_model()
         if not model:
             prob_category = get_fake_categories()
             prob_subcategory = get_fake_subcategories()
@@ -73,7 +76,7 @@ class EmailCategoryClassification(Pipe):
 
         return category
 
-    def run_on_document(self, email_doc, model=None):
+    def run_on_document(self, email_doc, model):
         """Predict classes for a document."""
         document = json.loads(email_doc)
 
@@ -83,11 +86,11 @@ class EmailCategoryClassification(Pipe):
         return json.dumps(document)
 
     def run_on_partition(self, partition):
-        """Run task in spark context. Partitionwise for performance reasosn."""
-        model = None  # self.load_model()
+        """Run task in spark context. Partitionwise for performance reasons."""
+        model = self.load_model()
 
         for doc in partition:
-            yield self.run_on_document(doc, model=model)
+            yield self.run_on_document(doc, model)
 
     def run(self, rdd):
         """Run task in spark context."""

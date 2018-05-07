@@ -15,9 +15,9 @@ class SpacyNer(Pipe):
     Recognize entities of type person, location, organization and assign others to category miscellaneous.
     """
 
-    def __init__(self, read_from='text_clean'):
+    def __init__(self, conf, read_from='text_clean'):
         """Set params. read_from: field to search entities in."""
-        super().__init__()
+        super().__init__(conf)
         self.read_from = read_from
 
     def extract_entities(self, text, spacy_model):

@@ -13,7 +13,6 @@ Resulting documents must be in json format with at least these fields:
 import email
 import ujson as json
 import uuid
-
 from .common import Pipe, SparkProvider
 
 
@@ -46,6 +45,7 @@ class EmlReader(Pipe):
     def run(self):
         """Run task in a spark context. Return rdd."""
         rdd = SparkProvider.spark_context().wholeTextFiles(self.source_directory, minPartitions=self.parallelism)
+        rdd = rdd.filter(lambda x: x[0].endswith('eml'))
         rdd = rdd.filter(lambda x: self.is_valid_email(x[1])) if self.apply_email_filter else rdd
         rdd = rdd.map(lambda x: self.create_document(x[1], x[0]))
 
@@ -59,7 +59,7 @@ class TextFileReader(Pipe):
     No transformations will be applied.
     """
 
-    def __init__(self, path='./pipeline_result'):
+    def __init__(self, path):
         """Set params. path is location of dumped rdd (local or hdfs)."""
         super().__init__()
         self.path = path

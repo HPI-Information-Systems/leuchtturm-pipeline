@@ -14,9 +14,9 @@ class EmailDeduplication(Pipe):
     Based on logic in select_email(), duplicate will be dropped from rdd.
     """
 
-    def __init__(self, is_connected_thread=False):
+    def __init__(self, conf, is_connected_thread=False):
         """Select deduplication method. We might offer more advaced options here."""
-        super().__init__()
+        super().__init__(conf)
         self.is_connected_thread = is_connected_thread
 
     def convert_to_tupel(self, document):
@@ -39,9 +39,9 @@ class EmailDeduplication(Pipe):
         else:
             return document2
 
-    def convert_from_tupel(self, document_tupel):
+    def convert_from_tuple(self, document_tuple):
         """Convert tupel entry of rdd to usual format for pipeline."""
-        return document_tupel[1]
+        return document_tuple[1]
 
     def generate_doc_id_from_header(self, header):
         """Generate a hash-like id from a header."""
@@ -77,7 +77,7 @@ class EmailDeduplication(Pipe):
 
         return rdd.map(lambda x: self.convert_to_tupel(x)) \
                   .reduceByKey(lambda x, y: self.select_email(x, y)) \
-                  .map(lambda x: self.convert_from_tupel(x))
+                  .map(lambda x: self.convert_from_tuple(x))
 
 
 class CorrespondentDeduplication(Pipe):
