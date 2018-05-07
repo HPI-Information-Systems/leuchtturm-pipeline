@@ -64,8 +64,8 @@ class SocialHierarchyDetector:
             score = score / len(metrics)
             hierarchy_scores[node] = score
 
-        for i in range(10):
-            print(max(hierarchy_scores.values()[:-i]))
+        for i in range(1, 10):
+            print(max(sorted(list(hierarchy_scores.values()))[:-i]))
         print(min(hierarchy_scores.values()))
         # nx.set_node_attributes(graph, 'hierarchy', hierarchy_scores)
         return graph
