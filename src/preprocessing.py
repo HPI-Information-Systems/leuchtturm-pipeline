@@ -34,9 +34,9 @@ class EmailDecoding(Pipe):
             encoding = 'utf-8'
 
         try:
-            text = text.decode(encoding, 'replace')
+            text = text.decode(encoding, 'ignore')
         except LookupError:
-            text = text.decode('utf-8', 'replace')
+            text = text.decode('utf-8', 'ignore')
 
         return text
 
@@ -46,7 +46,7 @@ class EmailDecoding(Pipe):
         h.ignore_links = True
         h.ignore_emphasis = True
         h.ignore_images = True
-        h.escape_snob = True
+        h.body_width = 0
 
         return h.handle(text)
 
