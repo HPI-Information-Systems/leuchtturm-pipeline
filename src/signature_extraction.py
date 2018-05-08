@@ -104,8 +104,6 @@ class SignatureExtraction(Pipe):
 
     def run_on_partition(self, data_items):
         """Apply pure extraction task partition-wise so that talon models don't have to be reloaded for each email."""
-        from talon import signature as talon_signature
-
         self.logger.warn("Starting to run signature extraction on partition...")
 
         def extract_signature(body):
@@ -113,12 +111,11 @@ class SignatureExtraction(Pipe):
 
             Uses the email address of the sending correspondent to improve extraction results.
             """
-            body, signature = talon_signature.bruteforce.extract_signature(
-                body[-300:]
-            )
-            if not signature:
-                signature = ''
-            return body, signature
+            split = re.split('\n\s*-+\s*\n', body[-300:])
+            if len(split) == 2:
+                self.logger.warn("Found a signature: ", split[1])
+                return split[0], split[1]
+            return body, ''
 
         for data_item in data_items:
             timestamp = datetime.now()
