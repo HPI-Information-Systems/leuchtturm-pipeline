@@ -33,7 +33,12 @@ class EmailDecoding(Pipe):
         if encoding is None:
             encoding = 'utf-8'
 
-        return text.decode(encoding, 'ignore')
+        try:
+            text = text.decode(encoding, 'replace')
+        except LookupError:
+            text = text.decode('utf-8', 'replace')
+
+        return text
 
     def remove_html_tags(self, text):
         """Convert html to corresponding md."""
@@ -49,23 +54,19 @@ class EmailDecoding(Pipe):
         body_text = ''
         for part in message.walk():
             charset = part.get_content_charset()
-            if part.get_content_type() == 'text/plain':
-                text = part.get_payload(decode=True)
-                body_text = self.decode_part(text, encoding=charset)
-                break
-            elif part.get_content_type() == 'text/html':
+            if part.get_content_type() == 'text/plain' or part.get_content_type() == 'text/html':
                 text = part.get_payload(decode=True)
                 body_text = self.remove_html_tags(self.decode_part(text, encoding=charset))
                 break
 
         if not body_text:
-            body_text = 'Empty body'
+            body_text = '[Empty message]'
 
         return body_text
 
     def get_main_header(self, message):
         """Return main header of email."""
-        keys = re.compile(r'(from)|((reply-)?to)|(b?cc)|(subject)|(date)|(sent)', re.IGNORECASE)
+        keys = re.compile(r'(from)|((reply-)?to)|(b?cc)|(subject)|(date)|(sent(-by)?)', re.IGNORECASE)
 
         # filter headers for following splitting task
         filtered_headers = [header for header in message.items() if keys.match(header[0])]
@@ -175,12 +176,9 @@ class EmailSplitting(Pipe):
         """Apply email splitting to a leuchtturm document. Return list of leuchtturm documents."""
         document = json.loads(raw_message)
 
-        document['headers_regex'] = [part[0] for part in self.detect_parts(document['raw'])]
         parts = []
         if self.use_quagga:
             parts = self.detect_parts_quagga(document['raw'])
-            document['headers_quagga'] = [part[0] for part in parts]
-            document['quaggavsre'] = len(document['headers_regex']) == len(document['headers_quagga'])
         else:
             parts = self.detect_parts(document['raw'])
 
@@ -227,7 +225,7 @@ class HeaderParsing(Pipe):
     def __init__(self, config=None, clean_subject=False, use_unix_time=False):
         """Set parsing rules."""
         super().__init__()
-        self.clean_subject = clean_subject  # TODO is not implemented
+        self.clean_subject = clean_subject
         self.use_unix_time = use_unix_time
         self.start_date = None
         self.end_date = None
@@ -252,7 +250,7 @@ class HeaderParsing(Pipe):
         """Split a string that is likely a header into its fields."""
         header_string = self.prepare_header_string(header_string)
 
-        separator_re = re.compile(r'\s((?=(x-)?from:\s)|(?=((x|reply)-)?to:\s)|(?=(x-)?b?cc:\s)|(?=date:\s)|(?=sent:\s)|(?=subject:\s))', re.IGNORECASE)  # NOQA
+        separator_re = re.compile(r'\s((?=(x-)?from:\s)|(?=((x|reply)-)?to:\s)|(?=(x-)?b?cc:\s)|(?=date:\s)|(?=sent(-by)?:\s)|(?=subject:\s))', re.IGNORECASE)  # NOQA
         header_fields = separator_re.split(header_string)  # split into separate headers
         header_fields = [header_field for header_field in header_fields if header_field]  # filter none and empty
         for index, header_field in enumerate(header_fields):
@@ -273,6 +271,7 @@ class HeaderParsing(Pipe):
     def clean_email(self, email_string):
         """Clean email address."""
         email = email_string.replace('[mailto:', '').replace(']', '')
+        email = email.replace('<', '').replace('>', '')
         email = re.search(r'\S+@\S+\.\S{2,}', email)  # get email
         email = email.group(0) if email is not None else ''
         email = unquote(email.lower())
@@ -281,9 +280,9 @@ class HeaderParsing(Pipe):
 
     def clean_name(self, name_string):
         """Normalize and clean a name. Lastname, Firstname becomes to Fn Ln."""
-        name = re.sub(r'\S+@\S+\.\S{2,}', '', name_string)  # remove email
+        name = re.sub(r'(<.+>)|(\[.+\])', '', name_string)  # remove [FI] flags and similar
+        name = re.sub(r'\S+@\S+\.\S{2,}', '', name)  # remove email
         name = re.sub(r'(?<=\w)(/|@).*', '', name)  # normalize weird enron names (beau ratliff/hou/ees@ees)
-        name = re.sub(r'\[\w+\]', '', name)  # remove [FI] flags and similar
         name = name.replace('"', '').replace("'", '').split(',')
         name.reverse()
         name = ' '.join(name).strip(whitespace)
@@ -391,7 +390,7 @@ class HeaderParsing(Pipe):
             header['date'], header['date_changed'] = self.parse_date(self.get_header_value(headers, 'sent'))
         elif headers:
             date = re.search(r'\d{2}/\d{2}/\d{2,4}\s\d{2}:\d{2}(:\d{2})?\s?(am|pm)?',
-                             headers[0][0], flags=re.IGNORECASE)  # get date
+                             self.prepare_header_string(header_string), flags=re.IGNORECASE)  # get date
             if date is not None:
                 header['date'], header['date_changed'] = self.parse_date(date.group(0))
 
