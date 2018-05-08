@@ -105,19 +105,16 @@ class SignatureExtraction(Pipe):
     def run_on_partition(self, data_items):
         """Apply pure extraction task partition-wise so that talon models don't have to be reloaded for each email."""
         from talon import signature as talon_signature
-        import talon
-        talon.init()
 
         self.logger.warn("Starting to run signature extraction on partition...")
 
-        def extract_signature(body, sender_email_address):
+        def extract_signature(body):
             """Apply talon to the preprocessed body.
 
             Uses the email address of the sending correspondent to improve extraction results.
             """
-            body, signature = talon_signature.extract(
-                body[-300:],
-                sender=sender_email_address
+            body, signature = talon_signature.bruteforce.extract_signature(
+                body[-300:]
             )
             if not signature:
                 signature = ''
@@ -136,10 +133,8 @@ class SignatureExtraction(Pipe):
                 "\nSTART: " + first_body_characters +
                 "\nEND: " + last_body_characters
             )
-            document[self.write_body_without_signature_to], document[self.write_signature_to] = \
-                extract_signature(
-                    document[self.write_body_without_signature_to],
-                    document['header']['sender']['email']
+            document[self.write_body_without_signature_to], document[self.write_signature_to] = extract_signature(
+                document[self.write_body_without_signature_to]
             )
             del document[self.read_from]
             yield json.dumps(document)
