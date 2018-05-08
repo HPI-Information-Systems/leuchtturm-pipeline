@@ -20,29 +20,33 @@ class SocialHierarchyDetector:
 
     def detect_social_hierarchy(self, graph):
         """Trigger social hierarchy score detection."""
+        print('Start detecting social hierarchy scores')
+        start = time.time()
+        number_of_emails = self._number_of_emails(graph)
+        response_scores, response_avg_times = self._response_score_and_average_time(graph)
         number_of_cliques, cliques = self._number_of_cliques(graph)
         raw_clique_score = self._raw_clique_score(graph, cliques)
+        weighted_clique_score = self._weighted_clique_score(graph, cliques, number_of_emails, response_avg_times)
         betweenness_values = self._betweenness_centrality(graph)
         degree_values = self._degree_centrality(graph)
         hub_values, authority_values = self._hubs_and_authorities(graph)
-        number_of_emails = self._number_of_emails(graph)
         clustering_coefficients = self._clustering_coefficient(graph)
-        # mean_shortest_paths = self._mean_shortest_paths(graph)
-        response_scores, response_avg_times = self._response_score_and_average_time(graph)
+        mean_shortest_paths = self._mean_shortest_paths(graph)
 
-        self.normalize(response_avg_times, high=False)
         metrics = []
-        for metric in [response_avg_times]:
-            metrics.append(self.normalize(metric, high=False))
+        for metric in [response_avg_times, mean_shortest_paths]:
+            metrics.append(self._normalize(metric, high=False))
 
         for metric in [number_of_cliques, raw_clique_score, betweenness_values, degree_values,
-                       hub_values, authority_values, number_of_emails, clustering_coefficients]:
-            metrics.append(self.normalize(metric))
+                       hub_values, authority_values, number_of_emails, clustering_coefficients, weighted_clique_score]:
+            metrics.append(self._normalize(metric))
 
-        graph = self.aggregate(graph, metrics)
+        graph = self._aggregate(graph, metrics)
+        end = time.time()
+        print('Calculated ' + str(len(graph.nodes)) + ' social hierarchy scores, took: ' + str(end - start) + 's')
         return graph
 
-    def normalize(self, metric, high=True):
+    def _normalize(self, metric, high=True):
         inf = min(metric.values())  # find_min_max(metric)
         sup = max(sorted(metric.values())[:-1])
 
@@ -55,7 +59,7 @@ class SocialHierarchyDetector:
 
         return normalized_metric
 
-    def aggregate(self, graph, metrics):
+    def _aggregate(self, graph, metrics):
         hierarchy_scores = dict()
         for node in graph.nodes:
             score = 0
@@ -67,7 +71,7 @@ class SocialHierarchyDetector:
         for i in range(1, 10):
             print(max(sorted(list(hierarchy_scores.values()))[:-i]))
         print(min(hierarchy_scores.values()))
-        # nx.set_node_attributes(graph, 'hierarchy', hierarchy_scores)
+        nx.set_node_attributes(graph, hierarchy_scores, 'hierarchy')
         return graph
 
     def _number_of_emails(self, graph):
@@ -174,6 +178,26 @@ class SocialHierarchyDetector:
             metric[node] = score
         end = time.time()
         print('Found ' + str(len(graph.nodes)) + ' raw clique scores, took: ' + str(end - start) + 's')
+        return metric
+
+    def _weighted_clique_score(self, graph, cliques, email_metric, response_metric):
+        print('Start computing weighted clique score')
+        start = time.time()
+        metric = dict()
+        for node in graph.nodes:
+            score = 0
+            for clique in cliques:
+                if node in clique:
+                    size = len(clique)
+                    time_score = 0
+                    for other_node in clique:
+                        email_volume = email_metric[other_node]
+                        response_value = response_metric[other_node]
+                        time_score += email_volume * response_value
+                    score += time_score * (2 ** (size - 1))
+            metric[node] = score
+        end = time.time()
+        print('Found ' + str(len(graph.nodes)) + ' weighted clique scores, took: ' + str(end - start) + 's')
         return metric
 
     def _betweenness_centrality(self, graph):
