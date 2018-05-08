@@ -46,6 +46,7 @@ class EmailDecoding(Pipe):
         h.ignore_links = True
         h.ignore_emphasis = True
         h.ignore_images = True
+        h.escape_snob = True
 
         return h.handle(text)
 
