@@ -113,7 +113,7 @@ class SignatureExtraction(Pipe):
             """
             split = re.split('\n\s*-+\s*\n', body[-300:])
             if len(split) == 2:
-                self.logger.warn("Found a signature: ", split[1])
+                self.logger.warn("Found a signature: " + split[1])
                 return split[0], split[1]
             return body, ''
 
@@ -134,8 +134,8 @@ class SignatureExtraction(Pipe):
                 document[self.write_body_without_signature_to]
             )
             del document[self.read_from]
-            yield json.dumps(document)
             self.logger.warn('E ' + str(timestamp))
+            yield json.dumps(document)
 
         self.logger.warn("Finished running signature extraction on partition.")
 
