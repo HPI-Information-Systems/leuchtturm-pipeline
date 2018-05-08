@@ -46,7 +46,6 @@ class EmailDecoding(Pipe):
         h.ignore_links = True
         h.ignore_emphasis = True
         h.ignore_images = True
-        h.body_width = 0
 
         return h.handle(text)
 
@@ -57,7 +56,9 @@ class EmailDecoding(Pipe):
             charset = part.get_content_charset()
             if part.get_content_type() == 'text/plain' or part.get_content_type() == 'text/html':
                 text = part.get_payload(decode=True)
-                body_text = self.remove_html_tags(self.decode_part(text, encoding=charset))
+                body_text = self.decode_part(text, encoding=charset)
+                if re.search(r'<[^>]+>', body_text) and re.search(r'</[^>]+>', body_text):
+                    body_text = self.remove_html_tags(body_text)
                 break
 
         if not body_text:
