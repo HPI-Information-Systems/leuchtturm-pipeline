@@ -113,83 +113,64 @@ class TopicModelTraining(Pipe):
     Export pickeled model to a textfile.
     """
 
-    def __init__(self):
+    def __init__(self, num_topics=100, eta=0.1):
         """TODO: set params here (iterations, num_topics, ...)!! Especially output paths."""
         super().__init__()
+        self.num_topics = num_topics
+        self.eta = eta
+        self.alpha = 50 / num_topics
+
+    def remove_irrelevant_keys(self, item):
+        document = json.loads(item)
+        date = document['header']['date']
+        for key in list(set(document.keys()) - {'body'}):
+            document.pop(key)
+        document['date'] = date
+        return json.dumps(document)
+
+    def convert_to_tuple(self, item, bucket_timeframe='month'):
+        document = json.loads(item)
+        splitting_key = document['date']
+
+        if bucket_timeframe == 'year':
+            # '2001-05-15T08:31:00Z' --> ['2001', '05-15T08:31:00Z'] --> '2001'
+            splitting_key = document['date'].split('-', 1)[0]
+        elif bucket_timeframe == 'month':
+            # '2001-05-15T08:31:00Z' --> ['2001-05', '15T08:31:00Z'] --> '2001-05'
+            splitting_key = document['date'].rsplit('-', 1)[0]
+        elif bucket_timeframe == 'day':
+            # '2001-05-15T08:31:00Z' --> ['2001-05-15', '08:31:00Z'] --> '2001-05-15'
+            splitting_key = document['date'].split('T', 1)
+        return splitting_key, json.dumps([document])
+
+    def bucket_emails_by_date(self, item1, item2):
+        document1 = json.loads(item1)
+        document2 = json.loads(item2)
+        return json.dumps(document1 + document2)
+
+    def convert_from_tuple(self, document_tupel):
+        """Convert tupel entry of rdd to usual format for pipeline."""
+        return document_tupel[1]
 
     def run(self, rdd):
         """Run topic model training."""
-        iterations = 1000
-        num_topics = 100
-        alpha = 50 / num_topics
-        eta = 0.1
-        raw_corpus = rdd.collect()
-
-        stopwords = nltksw.words('english')
-
-        lemma = WordNetLemmatizer()
-        short_tokens = set()
-        numbers = set()
-
-        def clean(doc):
-            tokens = [token for token in doc.lower().split()]
-            punc_free = [token.strip(punctuation) for token in tokens]
-            empty_string_free = [token for token in punc_free if token]
-            stopword_free = [word for word in empty_string_free if word not in stopwords]
-            short_token_free = [word if len(word) > 2 else short_tokens.add(word) for word in stopword_free]
-            empty_string_free2 = [token for token in short_token_free if token]
-            numerics_free = []
-            for token in empty_string_free2:
-                if [char for char in token if not (char.isdigit() or char in punctuation)]:
-                    numerics_free.append(token)
-                else:
-                    numerics_free.append('lt_number')
-                    numbers.add(token)
-            lemmatized = [lemma.lemmatize(word) for word in numerics_free]
-            return lemmatized
-
-        docs = [clean(doc) for doc in raw_corpus]
-
-        word_doc_appearances = defaultdict(set)
-        for i, doc in enumerate(docs):
-            for token in doc:
-                word_doc_appearances[token].add(i)
-
-        high_freq_tokens = set()
-        low_freq_tokens = set()
-
-        MIN_FREQ = 3
-        MAX_PERCENTAGE = 0.05
-        max_freq = MAX_PERCENTAGE * len(docs)
-
-        def filter_by_freq(doc):
-            filtered_doc = []
-            for token in doc:
-                if token == 'lt_number':
-                    filtered_doc.append(token)
-                elif len(word_doc_appearances[token]) < MIN_FREQ:
-                    low_freq_tokens.add(token)
-                elif len(word_doc_appearances[token]) > max_freq:
-                    high_freq_tokens.add(token)
-                else:
-                    filtered_doc.append(token)
-            return filtered_doc
-
-        docs = [filter_by_freq(doc) for doc in docs]
-
-        docs = [doc for doc in docs if doc]
-
-        processed_corpus = docs
-
-        dictionary = corpora.Dictionary(processed_corpus)
-        with open('./models/pickled_lda_dictionary.p', 'wb') as pfile:
-            pickle.dump(dictionary, pfile)
-
-        bow_corpus = [dictionary.doc2bow(text) for text in processed_corpus]
-
-        lda = models.ldamodel.LdaModel(bow_corpus, num_topics=num_topics, iterations=iterations, eta=eta, alpha=alpha)
-        with open('./models/pickled_lda_model.p', 'wb') as pfile:
-            pickle.dump(lda, pfile)
+        # hopefully the use of 'filter()' can be dropped at some point when all docs have a date
+        return rdd.filter(lambda item: json.loads(item)['header']['date']) \
+           .map(self.remove_irrelevant_keys) \
+           .map(self.convert_to_tuple) \
+           .reduceByKey(self.bucket_emails_by_date) \
+           .map(self.convert_from_tuple) \
+           .sortBy(lambda item: json.loads(item)[0]['date'])
+        #
+        # dictionary = corpora.Dictionary(processed_corpus)
+        # with open('./models/pickled_lda_dictionary.p', 'wb') as pfile:
+        #     pickle.dump(dictionary, pfile)
+        #
+        # bow_corpus = [dictionary.doc2bow(text) for text in processed_corpus]
+        #
+        # lda = models.ldamodel.LdaModel(bow_corpus, num_topics=num_topics, iterations=iterations, eta=eta, alpha=alpha)
+        # with open('./models/pickled_lda_model.p', 'wb') as pfile:
+        #     pickle.dump(lda, pfile)
 
 
 class TopicModelPrediction(Pipe):
