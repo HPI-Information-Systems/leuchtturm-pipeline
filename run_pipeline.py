@@ -9,7 +9,7 @@ from src.reader import EmlReader, TextFileReader
 from src.preprocessing import EmailDecoding, EmailSplitting, HeaderParsing, TextCleaning, LanguageDetection
 from src.deduplication import EmailDeduplication
 from src.ner import SpacyNer
-from src.topics import TopicModelPrediction, TopicModelTraining
+from src.topics import TopicModelPreprocessing
 from src.writer import TextFileWriter, SolrFileWriter
 from src.category_classification import EmailCategoryClassification
 from src.folder_classification import EmailFolderClassification
@@ -20,24 +20,32 @@ def run_email_pipeline(read_from, write_to, solr, solr_url, dataset):
     config = get_config(dataset)
     SparkProvider.spark_context()
 
-    reader = EmlReader(read_from)
-    pipes = [
-        EmailDecoding(split_header_body=False),
-        EmailSplitting(keep_thread_connected=True),
-        HeaderParsing(config=config, use_unix_time=False),
-        EmailDeduplication(is_connected_thread=True),
-        TextCleaning(read_from='body', write_to='text_clean'),
-        LanguageDetection(read_from='text_clean'),
-        SpacyNer(read_from='text_clean'),
-        EmailCategoryClassification(),
-        EmailFolderClassification()
-    ]
-    writer = TextFileWriter(path=write_to)
-    Pipeline(reader, pipes, writer).run()
-
     reader = TextFileReader(path=write_to)
-    writer = TextFileWriter(path=write_to + '_topics')
-    Pipeline(reader, [TopicModelPrediction()], writer).run()
+    writer = TextFileWriter(path=write_to + '_bow')
+    pipe = TopicModelPreprocessing(read_from='body', write_to='bow')  # should read from body_wo_signature
+    Pipeline(reader, [pipe], writer).run()
+
+    # rdd = TopicModelTraining().run(rdd)
+
+
+    # reader = EmlReader(read_from)
+    # pipes = [
+    #     EmailDecoding(split_header_body=False),
+    #     EmailSplitting(keep_thread_connected=True),
+    #     HeaderParsing(config=config, use_unix_time=False),
+    #     EmailDeduplication(is_connected_thread=True),
+    #     TextCleaning(read_from='body', write_to='text_clean'),
+        # LanguageDetection(read_from='text_clean'),
+        # SpacyNer(read_from='text_clean'),
+        # EmailCategoryClassification(),
+        # EmailFolderClassification()
+    # ]
+    # writer = TextFileWriter(path=write_to)
+    # Pipeline(reader, pipes, writer).run()
+
+    # reader = TextFileReader(path=write_to)
+    # writer = TextFileWriter(path=write_to + '_topics')
+    # Pipeline(reader, [TopicModelPrediction()], writer).run()
 
     if solr:
         SolrFileWriter(write_to, solr_url=solr_url).run()
@@ -46,12 +54,12 @@ def run_email_pipeline(read_from, write_to, solr, solr_url, dataset):
     SparkProvider.stop_spark_context()
 
 
-def run_topic_model_training():
-    """Run tm training on small datasets."""
-    df = EmlReader('./emails').run()
-    df = HeaderParsing().run(df)
-    df = TextCleaning(read_from='body', write_to='text_clean').run(df).map(lambda x: json.loads(x)['text_clean'])
-    TopicModelTraining().run(df)
+# def run_topic_model_training():
+#     """Run tm training on small datasets."""
+#     df = EmlReader('./emails').run()
+#     df = HeaderParsing().run(df)
+#     df = TextCleaning(read_from='body', write_to='text_clean').run(df).map(lambda x: json.loads(x)['text_clean'])
+#     TopicModelTraining().run(df)
 
 
 if __name__ == '__main__':

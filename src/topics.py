@@ -12,6 +12,100 @@ from nltk.stem.wordnet import WordNetLemmatizer
 from .common import Pipe
 
 
+class TopicModelPreprocessing(Pipe):
+    def __init__(self, read_from, write_to, min_freq=0, max_percentage=1.00):
+        super().__init__()
+        self.read_from = read_from
+        self.write_to = write_to
+        self.stopwords = nltksw.words('english')
+        self.lemma = WordNetLemmatizer()
+        self.word_frequencies = defaultdict(lambda: 0)
+        self.high_freq_words = set()
+        self.low_freq_words = set()
+        self.max_percentage = max_percentage
+        self.max_freq = -1
+        self.min_freq = min_freq
+
+
+    def tokenize(self, body):
+        return body.lower().split()
+
+
+    def remove_various_words(self, bow, sender, recipients):
+        names = [part.lower() for part in sender['name'].split()]
+        for recipient in recipients:
+            for part in recipient['name'].split():
+                names.append(part.lower())
+
+        processed_bow = []
+        for word in bow:
+            # remove names of the sender and the recipients of the email
+            word = word if word not in names else ''
+            # remove punctuation characters
+            word = word.strip(punctuation)
+            # remove stopwords
+            word = word if word not in self.stopwords else ''
+            # remove very short words as they often don't carry any meaning
+            word = word if len(word) > 2 else ''
+            # remove numbers
+            word = word if not self._is_numeric(word) else ''
+            if word:
+                processed_bow.append(word)
+
+        return processed_bow
+
+    def _is_numeric(self, word):
+        for char in word:
+            if not (char.isdigit() or char in punctuation):
+                return False
+        return True
+
+    def lemmatize(self, bow):
+        return [self.lemma.lemmatize(word) for word in bow]
+
+    def count_word_frequencies(self, bow):
+        for word in bow:
+            self.word_frequencies[word] += 1
+
+    def run_on_document(self, item):
+        """Transform a document into clean text."""
+        document = json.loads(item)
+        bow = self.tokenize(document[self.read_from])
+
+        bow = self.remove_various_words(bow, document['header']['sender'], document['header']['recipients'])
+        bow = self.lemmatize(bow)
+        self.count_word_frequencies(bow)
+
+        document[self.write_to] = bow
+        return json.dumps(document)
+
+    def filter_by_frequencies(self, item):
+        document = json.loads(item)
+        bow = document[self.write_to]
+
+        filtered_bow = []
+        for word in bow:
+            if self.word_frequencies[word] > self.min_freq \
+               and self.word_frequencies[word] < self.max_freq:
+                filtered_bow.append(word)
+
+        document[self.write_to] = filtered_bow
+        return json.dumps(document)
+
+    # def filter_keys(self, item):
+    #     document = json.loads(item)
+    #     for key in list(set(document.keys()) - {'body', 'bow'}):
+    #         document.pop(key)
+    #     return json.dumps(document)
+
+    def run(self, rdd):
+        """Run pipe in spark context."""
+        self.max_freq = self.max_percentage * rdd.count()
+        rdd = rdd.map(self.run_on_document)
+        return rdd.map(self.filter_by_frequencies)
+                  # .map(self.filter_dont_push)
+
+
 class TopicModelTraining(Pipe):
     """Train topic model and export it.
 
