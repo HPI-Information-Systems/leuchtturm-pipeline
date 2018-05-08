@@ -16,7 +16,7 @@ elif [ $1 == 'dnc' ]; then
     DATASET=dnc
     EMAILS=dnc
     PRESULT=tmp/dnc_result
-    SOLR=http://sopedu.hpi.uni-potsdam.de:8983/solr/eval_quagga
+    SOLR=http://sopedu.hpi.uni-potsdam.de:8983/solr/dnc
 else
     echo 'No deployment config selected. enron, enron-dev or dnc possible.'
     exit 1
