@@ -4,6 +4,7 @@ from collections import defaultdict
 import ujson as json
 import pickle
 from string import punctuation
+import os
 
 from gensim import corpora, models
 from nltk.corpus import stopwords as nltksw
@@ -115,14 +116,15 @@ class TopicModelPrediction(Pipe):
 
     def load_model(self):
         """Load lda model from defined path."""
-        with open(self.conf.get('topic_modelling', 'file_model'), mode='rb') as pfile:
+        with open(os.path.abspath(self.conf.get('topic_modelling', 'file_model')), mode='rb') as pfile:
             model = pickle.load(pfile)
+
 
         return model
 
     def load_dictionary(self):
         """Load dict for lda tm from defined path."""
-        with open(self.conf.get('topic_modelling', 'file_dictionary'), mode='rb') as pfile:
+        with open(os.path.abspath(self.conf.get('topic_modelling', 'file_dictionary')), mode='rb') as pfile:
             dictionary = pickle.load(pfile)
 
         return dictionary

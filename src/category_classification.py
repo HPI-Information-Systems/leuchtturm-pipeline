@@ -22,7 +22,7 @@ class EmailCategoryClassification(Pipe):
 
     def load_model(self):
         """Load model from path."""
-        model_file = self.conf.get('classification', 'model_file')
+        file_model = self.conf.get('classification', 'file_model')
         return None
 
     def get_category_for_document(self, document):
