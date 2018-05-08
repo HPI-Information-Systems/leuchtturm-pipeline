@@ -136,15 +136,11 @@ class SignatureExtraction(Pipe):
                 "\nSTART: " + first_body_characters +
                 "\nEND: " + last_body_characters
             )
-            if len(document[self.write_body_without_signature_to]) < 10000:
-                document[self.write_body_without_signature_to], document[self.write_signature_to] = \
-                    extract_signature(
-                        document[self.write_body_without_signature_to],
-                        document['header']['sender']['email']
-                )
-            else:
-                document[self.write_body_without_signature_to], document[self.write_signature_to] = \
-                    (document[self.write_body_without_signature_to], '')
+            document[self.write_body_without_signature_to], document[self.write_signature_to] = \
+                extract_signature(
+                    document[self.write_body_without_signature_to],
+                    document['header']['sender']['email']
+            )
             del document[self.read_from]
             yield json.dumps(document)
             self.logger.warn('E ' + str(timestamp))

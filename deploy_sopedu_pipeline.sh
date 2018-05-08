@@ -40,8 +40,6 @@ source deactivate
 
 echo '[stage 2 of 2] Running leuchtturm pipeline. This might take a while ...'
 hdfs dfs -rm -r $PRESULT || true
-hdfs dfs -rm -r $PRESULT"_intermediate_1" || true
-hdfs dfs -rm -r $PRESULT"_intermediate_2" || true
 hdfs dfs -rm -r $PRESULT"_correspondent" || true
 hdfs dfs -rm -r $PRESULT"_injected" || true
 hdfs dfs -rm -r $PRESULT"_topics" || true
@@ -52,10 +50,6 @@ PYSPARK_PYTHON=./leuchtturm_env/bin/python \
     --driver-memory 8g --executor-memory 4g --num-executors 23 --executor-cores 4 \
     --archives leuchtturm_env.zip#leuchtturm_env,models.zip#models,config.zip#config \
     --py-files src.zip \
-    --conf "spark.driver.extraJavaOptions=-Dlog4j.configuration=file:$(pwd)/config/log4j_leuchtturm.properties" \
-    --conf "spark.executor.extraJavaOptions=-Dlog4j.configuration=file:$(pwd)/config/log4j_leuchtturm.properties" \
-    --driver-java-options "-Dlog4j.debug=true -Dlog4j.configuration=file:$(pwd)/config/log4j_leuchtturm.properties" \
-    --files "$(pwd)/config/log4j_leuchtturm.properties" \
     run_pipeline.py --read-from $EMAILS --write-to $PRESULT --solr --solr-url $SOLR --dataset $DATASET 2>/dev/null
 
 echo -e '\n[Done]'
