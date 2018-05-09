@@ -7,7 +7,7 @@ from src.util import get_config
 from src.common import Pipeline, SparkProvider
 from src.reader import EmlReader  # , TextFileReader
 from src.preprocessing import EmailDecoding, EmailSplitting, HeaderParsing, TextCleaning  # , LanguageDetection
-from src.deduplication import EmailDeduplication
+# from src.deduplication import EmailDeduplication
 # from src.ner import SpacyNer
 from src.topics import TopicModelTraining  # , TopicModelPrediction
 from src.writer import TextFileWriter, SolrFileWriter
