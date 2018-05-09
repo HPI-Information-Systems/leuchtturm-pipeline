@@ -2,6 +2,7 @@
 
 from email import message_from_string
 from email.utils import unquote
+from email.header import make_header, decode_header
 import ujson as json
 import re
 from string import whitespace
@@ -34,9 +35,9 @@ class EmailDecoding(Pipe):
             encoding = 'utf-8'
 
         try:
-            text = text.decode(encoding, 'ignore')
+            text = text.decode(encoding, 'replace')
         except LookupError:
-            text = text.decode('utf-8', 'ignore')
+            text = text.decode('utf-8', 'replace')
 
         return text
 
@@ -191,7 +192,7 @@ class EmailSplitting(Pipe):
         for index, (header, body) in enumerate(parts):
             obj = document
             obj['header'] = header
-            obj['body'] = body
+            obj['body'] = body.strip(whitespace)
 
             if len(parts) > 1:  # if there are multiple parts, add an identifier to the original document id
                 obj['doc_id'] = original_doc_id + '_part_' + str(index + 1) + '_of_' + str(len(parts))
@@ -264,9 +265,9 @@ class HeaderParsing(Pipe):
 
     def get_header_value(self, transformed_header, field):
         """Get value from a transformed header list."""
-        field = [header for header in transformed_header if header[0].lower() == field.lower()]
+        field = [header_value for header_value in transformed_header if header_value[0].lower() == field.lower()]
         try:
-            return field[0][1]
+            return str(make_header(decode_header(field[0][1])))
         except IndexError:
             return ''
 
