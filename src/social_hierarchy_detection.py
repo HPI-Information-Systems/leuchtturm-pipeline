@@ -19,7 +19,10 @@ class SocialHierarchyDetector:
         self.solr_url = solr_url
 
     def detect_social_hierarchy(self, graph):
-        """Trigger social hierarchy score detection."""
+        """
+        Trigger social hierarchy score detection.
+        Returns dict of nodes as keys and their hierarchy scores as values.
+        """
         print('Start detecting social hierarchy scores')
         start = time.time()
         number_of_emails = self._number_of_emails(graph)
@@ -41,10 +44,11 @@ class SocialHierarchyDetector:
                        hub_values, authority_values, number_of_emails, clustering_coefficients, weighted_clique_score]:
             metrics.append(self._normalize(metric))
 
-        graph = self._aggregate(graph, metrics)
+        hierarchy_scores = self._aggregate(graph, metrics)
+        # TODO statistics
         end = time.time()
         print('Calculated ' + str(len(graph.nodes)) + ' social hierarchy scores, took: ' + str(end - start) + 's')
-        return graph
+        return hierarchy_scores
 
     def _normalize(self, metric, high=True):
         inf = min(metric.values())  # find_min_max(metric)
@@ -68,11 +72,8 @@ class SocialHierarchyDetector:
             score = score / len(metrics)
             hierarchy_scores[node] = score
 
-        for i in range(1, 10):
-            print(max(sorted(list(hierarchy_scores.values()))[:-i]))
-        print(min(hierarchy_scores.values()))
-        nx.set_node_attributes(graph, hierarchy_scores, 'hierarchy')
-        return graph
+        print(hierarchy_scores)
+        return hierarchy_scores
 
     def _number_of_emails(self, graph):
         print('Start counting emails')
