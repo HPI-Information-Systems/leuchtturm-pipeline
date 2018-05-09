@@ -12,7 +12,7 @@ def test_spark_parallelism():
     default = SparkProvider.spark_parallelism(conf)
     assert default == conf.get('spark', 'parallelism')
 
-    conf = Config(['--settings-run-local'])
+    conf = Config(['--settings-run-local', '--spark-parallelism=1'])
     default_cluster = SparkProvider.spark_parallelism(conf)
     assert default_cluster == 1
 
