@@ -1,10 +1,19 @@
+"""Global configuration handler for everything"""
 from configparser import ConfigParser, ExtendedInterpolation
 import argparse
-import logging
+
 import os
 
 
+# import logging
+
 class Config:
+    """
+    Global configuration handler for everything
+
+    to override command line arguments, provide list during initialisation.
+    This can also be done in places, where the program isn't executed directly from the command line.
+    """
     DEFAULT_CONFIG_FILE = os.path.join(os.path.realpath(__file__), 'default.ini')
     DEFAULTS = {
         'settings': {
@@ -61,6 +70,10 @@ class Config:
     }
 
     def __init__(self, override_args=None):
+        """
+        TODO: write docstring
+        :param override_args:
+        """
         # logging.basicConfig(format='%(asctime)s.%(msecs)03d|%(name)s|%(levelname)s> %(message)s', datefmt='%H:%M:%S')
         # self.logger = logging.getLogger()
 
@@ -77,6 +90,12 @@ class Config:
         self._print_info()
 
     def get(self, section, option):
+        """
+        TODO: write docstring
+        :param section:
+        :param option:
+        :return:
+        """
         arg = self.args.get(section + '_' + option, None)
         if arg is None:
             arg = self.config.get(section, option)
@@ -106,6 +125,10 @@ class Config:
 
     @property
     def solr_url(self):
+        """
+        TODO: write docstring
+        :return:
+        """
         if self._solr_url:
             return self._solr_url
         self._solr_url = '{}://{}:{}/{}/'.format(self.get('solr', 'protocol'),
@@ -117,7 +140,6 @@ class Config:
 
     def _print_info(self):
         # TODO log with yarn logger
-        pass
         # self.logger.info(self.args)
 
         # self.logger.info(('  Neo4j:\n'
@@ -139,14 +161,24 @@ class Config:
         #                   '\n').format(self.get('solr', 'host'),
         #                                self.get('solr', 'data_location'),
         #                                self.get('solr', 'port')))
+        pass
 
     def _load_conf_file(self):
+        """
+        TODO: write docstring
+        :return:
+        """
         config = ConfigParser(interpolation=ExtendedInterpolation())
         config.read_dict(self.DEFAULTS)
         config.read(self.conf_file)
         return config
 
     def _get_cli_conf_file(self, override_args):
+        """
+        TODO: write docstring
+        :param override_args:
+        :return:
+        """
         conf_parser = argparse.ArgumentParser(add_help=False)
         conf_parser.add_argument('-c', '--conf_file',
                                  help='Location of config file containing default settings',
@@ -156,10 +188,14 @@ class Config:
         return conf_parser, args.conf_file
 
     def _get_cli_args(self, conf_parser, override_args):
-        """"
+        """
         Define CLI arguments here for things that might change more often than you would edit a
         config file.
         One might for example just turn on database imports in one run or have a different log level.
+
+        :param conf_parser:
+        :param override_args:
+        :return:
         """
         parser = argparse.ArgumentParser(
             parents=[conf_parser],

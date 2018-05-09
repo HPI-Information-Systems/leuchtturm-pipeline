@@ -5,6 +5,7 @@ import json
 from src.ner import SpacyNer
 from config.config import Config
 
+
 def test_entity_extraction():
     """Test some examples."""
     conf = Config(['-c', 'config/testconfig.ini'])
