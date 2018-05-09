@@ -44,8 +44,11 @@ class Config:
             'file_dictionary': '${data:working_dir}/models/topicmodel.dict'
         },
         'spark': {
-            'ram': '4g',
+            'driver_memory': '8g',
+            'executor_memory': '4g',
             'run_local': False,
+            'num_executors': 23,
+            'executor_cores': 4,
             'parallelism': 276
         },
         'classification': {
@@ -101,8 +104,11 @@ class Config:
     def solr_url(self):
         if self._solr_url:
             return self._solr_url
-        self._solr_url = self.get('solr', 'protocol') + '://' + self.get('solr', 'host') + ':' + \
-                         self.get('solr', 'port') + '/' + self.get('solr', 'url_path') + '/'
+        self._solr_url = '{}://{}:{}/{}/'.format(self.get('solr', 'protocol'),
+                                                 self.get('solr', 'host'),
+                                                 self.get('solr', 'port'),
+                                                 self.get('solr', 'url_path'))
+
         return self._solr_url
 
     def _print_info(self):
