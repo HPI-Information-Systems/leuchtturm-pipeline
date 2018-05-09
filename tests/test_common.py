@@ -8,7 +8,7 @@ from config.config import Config
 
 def test_spark_parallelism():
     """Parallelism level depends on env variable."""
-    conf = Config()
+    conf = Config([])
     default = SparkProvider.spark_parallelism(conf)
     assert default == conf.get('spark', 'parallelism')
 
@@ -19,7 +19,7 @@ def test_spark_parallelism():
 
 def test_spark_conf():
     """Spark config provider actually returns a valid conf."""
-    config = Config()
+    config = Config([])
     conf = SparkProvider.spark_conf(config)
     assert conf is not None
 
@@ -45,6 +45,6 @@ def test_pipeline_init_exception():
 
 def test_pipe_initializes():
     """Pipe object initializes wo. raising an exception."""
-    conf = Config()
+    conf = Config([])
     pipe = Pipe(conf)
     assert pipe is not None
