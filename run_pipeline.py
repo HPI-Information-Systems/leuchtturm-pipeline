@@ -9,7 +9,7 @@ from src.reader import EmlReader, TextFileReader
 from src.preprocessing import EmailDecoding, EmailSplitting, HeaderParsing, TextCleaning, LanguageDetection
 from src.deduplication import EmailDeduplication
 from src.ner import SpacyNer
-from src.topics import TopicModelPreprocessing, TopicModelTraining
+from src.topics import TopicModelPreprocessing, TopicModelBucketing, TopicModelTraining
 from src.writer import TextFileWriter, SolrFileWriter
 from src.category_classification import EmailCategoryClassification
 from src.folder_classification import EmailFolderClassification
@@ -30,11 +30,14 @@ def run_email_pipeline(read_from, write_to, solr, solr_url, dataset):
     # Pipeline(reader, [pipe], writer).run()
 
 
+    # TM BUCKETING
+    # rdd = TextFileReader(path=write_to + '_bow').run()
+    # rdd = TopicModelBucketing().run(rdd)
+    # TextFileWriter(path=write_to + '_buckets').run(rdd)
 
     # TM TRAINING
-    rdd = TextFileReader(path=write_to + '_bow').run()
-    rdd = TopicModelTraining().run(rdd)
-    TextFileWriter(path=write_to + '_tm_training').run(rdd)
+    rdd = TextFileReader(path=write_to + '_buckets').run()
+    TopicModelTraining().run(rdd)
 
 
     # STANDARD PREPROCESSING

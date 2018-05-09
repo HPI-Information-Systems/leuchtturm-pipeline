@@ -5,7 +5,8 @@ import ujson as json
 import pickle
 from string import punctuation
 
-from gensim import corpora, models
+from gensim.models import ldaseqmodel
+from gensim.corpora import Dictionary
 from nltk.corpus import stopwords as nltksw
 from nltk.stem.wordnet import WordNetLemmatizer
 
@@ -106,20 +107,16 @@ class TopicModelPreprocessing(Pipe):
                   # .map(self.filter_dont_push)
 
 
-class TopicModelTraining(Pipe):
+class TopicModelBucketing(Pipe):
     """Train topic model and export it.
 
     Train a lda topic model using gensim.
     Export pickeled model to a textfile.
     """
 
-    def __init__(self, read_from='bow', num_topics=100, eta=0.1):
-        """TODO: set params here (iterations, num_topics, ...)!! Especially output paths."""
+    def __init__(self, read_from='bow'):
         super().__init__()
         self.read_from = read_from
-        self.num_topics = num_topics
-        self.eta = eta
-        self.alpha = 50 / num_topics
 
     def remove_irrelevant_keys(self, item):
         document = json.loads(item)
@@ -143,38 +140,62 @@ class TopicModelTraining(Pipe):
             # '2001-05-15T08:31:00Z' --> ['2001-05-15', '08:31:00Z'] --> '2001-05-15'
             splitting_key = document['date'].split('T', 1)
         document['count_in_bucket'] = 1
-        return splitting_key, [document]
+        return splitting_key, [json.dumps(document)]
 
     def bucket_emails_by_date(self, item1, item2):
-        new_count = item1[0]['count_in_bucket'] + item2[0]['count_in_bucket']
-        merged_documents = item1 + item2
+        document1 = [json.loads(subitem) for subitem in item1]
+        document2 = [json.loads(subitem) for subitem in item2]
+        new_count = document1[0]['count_in_bucket'] + document2[0]['count_in_bucket']
+        merged_documents = document1 + document2
         for i in range(len(merged_documents)):
             merged_documents[i]['count_in_bucket'] = new_count
 
-        return merged_documents
+        return [json.dumps(doc) for doc in merged_documents]
 
-    def convert_from_tuple(self, document_tupel):
+    def convert_from_tuple(self, document_tuple):
         """Convert tupel entry of rdd to usual format for pipeline."""
-        return document_tupel[1]
+        return document_tuple[1]
+
+    def dump_items(self, item):
+        documents = [json.loads(subitem) for subitem in item]
+        return json.dumps(documents)
 
     def run(self, rdd):
         """Run topic model training."""
+        # if sorting doesn't work because buckets are too big, try sorting before
         # hopefully the use of 'filter()' can be dropped at some point when all docs have a date
         return rdd.filter(lambda item: json.loads(item)['header']['date']) \
            .map(self.remove_irrelevant_keys) \
            .map(self.convert_to_tuple) \
            .reduceByKey(self.bucket_emails_by_date) \
            .map(self.convert_from_tuple) \
-           .sortBy(lambda item: item[0]['date'])
-        # dictionary = corpora.Dictionary(processed_corpus)
-        # with open('./models/pickled_lda_dictionary.p', 'wb') as pfile:
-        #     pickle.dump(dictionary, pfile)
-        #
-        # bow_corpus = [dictionary.doc2bow(text) for text in processed_corpus]
-        #
-        # lda = models.ldamodel.LdaModel(bow_corpus, num_topics=num_topics, iterations=iterations, eta=eta, alpha=alpha)
-        # with open('./models/pickled_lda_model.p', 'wb') as pfile:
-        #     pickle.dump(lda, pfile)
+           .sortBy(lambda item: json.loads(item[0])['date']) \
+           .map(self.dump_items)
+
+
+class TopicModelTraining(Pipe):
+    def __init__(self, read_from='bow', num_topics=100, eta=0.1):
+        """TODO: set params here (iterations, num_topics, ...)!! Especially output paths."""
+        super().__init__()
+        self.read_from = read_from
+        self.num_topics = num_topics
+        self.eta = eta
+        self.alpha = 50 / num_topics
+
+    def run(self, rdd):
+        buckets = rdd.collect()
+        bows = [doc['bow'] for bucket in buckets for doc in json.loads(bucket)]
+
+        dictionary = Dictionary(bows)
+        bow_corpus = [dictionary.doc2bow(bow) for bow in bows]
+        time_slices = [int(json.loads(bucket)[0]['count_in_bucket']) for bucket in buckets]
+
+        ldaseq = ldaseqmodel.LdaSeqModel(corpus=bow_corpus, id2word=dictionary, time_slice=time_slices, num_topics=10)
+
+        with open('./models/pickled_ldaseq_dictionary.p', 'wb') as pfile:
+            pickle.dump(dictionary, pfile)
+        with open('./models/pickled_ldaseq_model.p', 'wb') as pfile:
+            pickle.dump(ldaseq, pfile)
 
 
 class TopicModelPrediction(Pipe):
