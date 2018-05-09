@@ -1,4 +1,4 @@
-"""Global configuration handler for everything"""
+"""Global configuration handler for everything."""
 from configparser import ConfigParser, ExtendedInterpolation
 import argparse
 
@@ -8,12 +8,14 @@ import os
 # import logging
 
 class Config:
-    """
-    Global configuration handler for everything
+    """Docstring.
+
+    Global configuration handler for everything.
 
     to override command line arguments, provide list during initialisation.
     This can also be done in places, where the program isn't executed directly from the command line.
     """
+
     DEFAULT_CONFIG_FILE = os.path.join(os.path.realpath(__file__), 'default.ini')
     DEFAULTS = {
         'settings': {
@@ -70,7 +72,8 @@ class Config:
     }
 
     def __init__(self, override_args=None):
-        """
+        """Init.
+
         TODO: write docstring
         :param override_args:
         """
@@ -90,7 +93,8 @@ class Config:
         self._print_info()
 
     def get(self, section, option):
-        """
+        """Get.
+
         TODO: write docstring
         :param section:
         :param option:
@@ -125,7 +129,8 @@ class Config:
 
     @property
     def solr_url(self):
-        """
+        """Solr URL.
+
         TODO: write docstring
         :return:
         """
@@ -139,6 +144,7 @@ class Config:
         return self._solr_url
 
     def _print_info(self):
+        """Print Info for local execution."""
         # TODO log with yarn logger
         # self.logger.info(self.args)
 
@@ -164,7 +170,8 @@ class Config:
         pass
 
     def _load_conf_file(self):
-        """
+        """Docstring.
+
         TODO: write docstring
         :return:
         """
@@ -174,7 +181,8 @@ class Config:
         return config
 
     def _get_cli_conf_file(self, override_args):
-        """
+        """Docstring.
+
         TODO: write docstring
         :param override_args:
         :return:
@@ -188,7 +196,8 @@ class Config:
         return conf_parser, args.conf_file
 
     def _get_cli_args(self, conf_parser, override_args):
-        """
+        """Docstring.
+
         Define CLI arguments here for things that might change more often than you would edit a
         config file.
         One might for example just turn on database imports in one run or have a different log level.

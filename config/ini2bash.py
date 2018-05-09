@@ -1,4 +1,5 @@
-"""
+"""ini2bash.
+
 A small helper which writes all configured variables in a format, which can be sourced in bash.
 All variables will be upper-cased, sections and options are separated by '_'
 
