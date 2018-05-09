@@ -37,12 +37,6 @@ class Config:
             'data_location': './data/neo4j',
             'log_location': './data/logs/neo4j'
         },
-        'topic_modelling': {
-            'train_model': True,
-            'working_dir': '${data:working_dir}_topics',
-            'file_model': '${data:working_dir}/models/topicmodel.pickle',
-            'file_dictionary': '${data:working_dir}/models/topicmodel.dict'
-        },
         'spark': {
             'driver_memory': '8g',
             'executor_memory': '4g',
@@ -51,9 +45,18 @@ class Config:
             'executor_cores': 4,
             'parallelism': 276
         },
+        'models': {
+            'directory': '${data:working_dir}/models'
+        },
+        'topic_modelling': {
+            'train_model': True,
+            'working_dir': '${data:working_dir}_topics',
+            'file_model': '${models:directory}/topicmodel.pickle',
+            'file_dictionary': '${models:directory}/topicmodel.dict'
+        },
         'classification': {
             'train_model': True,
-            'file_model': '${data:working_dir}/models/classification_model.pickle'
+            'file_model': '${models:directory}/classification_model.pickle'
         }
     }
 
@@ -173,6 +176,10 @@ class Config:
                             help='Path to directory where raw emails are located.')
         parser.add_argument('--data-working-dir',
                             help='Path where results will be written to. WARNING: THIS DIRECTORY SHOULD NOT EXIST!')
+        parser.add_argument('--data-time-min',
+                            help='Start of time, everything beforehand will be pre-dated.')
+        parser.add_argument('--data-time-max',
+                            help='End of time, everything beforehand will be post-dated.')
 
         parser.add_argument('--solr-import', action='store_true',
                             help='Set this flag if results should be written to solr.')

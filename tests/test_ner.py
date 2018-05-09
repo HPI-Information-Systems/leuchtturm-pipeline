@@ -3,11 +3,12 @@
 import json
 
 from src.ner import SpacyNer
-
+from config.config import Config
 
 def test_entity_extraction():
     """Test some examples."""
-    task = SpacyNer(read_from='text')
+    conf = Config(['-c', 'config/testconfig.ini'])
+    task = SpacyNer(conf, read_from='text')
     task.load_spacy()
 
     doc = json.dumps({'text': 'London is the capital of the United Kingdom.'})
