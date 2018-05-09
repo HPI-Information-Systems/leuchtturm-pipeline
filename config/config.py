@@ -38,7 +38,7 @@ class Config:
             'log_location': './data/logs/neo4j'
         },
         'spark': {
-            'driver_memory': '8g',
+            'driver_memory': '6g',
             'executor_memory': '4g',
             'run_local': False,
             'num_executors': 23,
@@ -171,14 +171,16 @@ class Config:
                             help='Verbosity level of logging', default=None)
         parser.add_argument('--settings-run-local', action='store_true', default=None,
                             help='Set this to execute the pipeline in a local environment')
+        parser.add_argument('--settings-run-distributed', action='store_false', default=None,
+                            help='Set this to execute the pipeline in a distributed fashion')
 
         parser.add_argument('--data-source-dir',
                             help='Path to directory where raw emails are located.')
         parser.add_argument('--data-working-dir',
                             help='Path where results will be written to. WARNING: THIS DIRECTORY SHOULD NOT EXIST!')
-        parser.add_argument('--data-time-min',
+        parser.add_argument('--data-time-min', type=int,
                             help='Start of time, everything beforehand will be pre-dated.')
-        parser.add_argument('--data-time-max',
+        parser.add_argument('--data-time-max', type=int,
                             help='End of time, everything beforehand will be post-dated.')
 
         parser.add_argument('--solr-import', action='store_true',
@@ -204,5 +206,8 @@ class Config:
                             help='neo4j data directory (used to start neo4j)')
         parser.add_argument('--neo4j-log-location',
                             help='neo4j log directory (used to start neo4j)')
+
+        parser.add_argument('--spark-parallelism', type=int,
+                            help='Spark parallelism')
 
         return parser.parse_args(override_args)

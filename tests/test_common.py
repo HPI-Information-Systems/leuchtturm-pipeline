@@ -8,7 +8,7 @@ from config.config import Config
 
 def test_spark_parallelism():
     """Parallelism level depends on env variable."""
-    conf = Config([])
+    conf = Config(['--settings-run-distributed', '--spark-parralelism=276'])
     default = SparkProvider.spark_parallelism(conf)
     assert default == conf.get('spark', 'parallelism')
 
