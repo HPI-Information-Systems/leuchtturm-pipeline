@@ -75,7 +75,7 @@ class EmailDecoding(Pipe):
         filtered_headers = [header for header in message.items() if keys.match(header[0])]
         headers = ''
         for header in filtered_headers:
-            headers += header[0] + ': ' + header[1] + '\n'
+            headers += header[0] + ': ' + str(make_header(decode_header(header[1]))) + '\n'
 
         return headers
 
@@ -267,7 +267,7 @@ class HeaderParsing(Pipe):
         """Get value from a transformed header list."""
         field = [header_value for header_value in transformed_header if header_value[0].lower() == field.lower()]
         try:
-            return str(make_header(decode_header(field[0][1])))
+            return field[0][1]
         except IndexError:
             return ''
 
