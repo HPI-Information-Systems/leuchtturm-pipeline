@@ -54,14 +54,14 @@ class Config:
         }
     }
 
-    def __init__(self):
+    def __init__(self, override_args=None):
         # logging.basicConfig(format='%(asctime)s.%(msecs)03d|%(name)s|%(levelname)s> %(message)s', datefmt='%H:%M:%S')
         # self.logger = logging.getLogger()
 
-        conf_parser, self.conf_file = self._get_cli_conf_file()
+        conf_parser, self.conf_file = self._get_cli_conf_file(override_args)
         self.config = self._load_conf_file()
 
-        self.args = self._get_cli_args(conf_parser)
+        self.args = self._get_cli_args(conf_parser, override_args)
         self.args = vars(self.args)
 
         # self.logger.setLevel(self.get('settings', 'log_level'))
@@ -136,16 +136,16 @@ class Config:
         config.read(self.conf_file)
         return config
 
-    def _get_cli_conf_file(self):
+    def _get_cli_conf_file(self, override_args):
         conf_parser = argparse.ArgumentParser(add_help=False)
         conf_parser.add_argument('-c', '--conf_file',
                                  help='Location of config file containing default settings',
                                  metavar='FILE',
                                  default=self.DEFAULT_CONFIG_FILE)
-        args, _ = conf_parser.parse_known_args()
+        args, _ = conf_parser.parse_known_args(override_args)
         return conf_parser, args.conf_file
 
-    def _get_cli_args(self, conf_parser):
+    def _get_cli_args(self, conf_parser, override_args):
         """"
         Define CLI arguments here for things that might change more often than you would edit a
         config file.
@@ -192,4 +192,4 @@ class Config:
         parser.add_argument('--neo4j-log-location',
                             help='neo4j log directory (used to start neo4j)')
 
-        return parser.parse_args()
+        return parser.parse_args(override_args)
