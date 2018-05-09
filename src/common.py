@@ -29,7 +29,8 @@ class SparkProvider(object):
         """Provide config for spark context."""
         spark_conf = SparkConf().set('spark.hive.mapred.supports.subdirectories', 'true') \
             .set('spark.hadoop.mapreduce.input.fileinputformat.input.dir.recursive', 'true') \
-            .set('spark.driver.memory', conf.get('spark', 'ram'))
+            .set('spark.driver.memory', conf.get('spark', 'driver_memory')) \
+            .set('spark.executor.memory', conf.get('spark', 'executor_memory'))
 
         return spark_conf
 
