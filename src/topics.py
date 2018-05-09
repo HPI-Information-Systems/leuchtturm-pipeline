@@ -119,7 +119,6 @@ class TopicModelPrediction(Pipe):
         with open(os.path.abspath(self.conf.get('topic_modelling', 'file_model')), mode='rb') as pfile:
             model = pickle.load(pfile)
 
-
         return model
 
     def load_dictionary(self):

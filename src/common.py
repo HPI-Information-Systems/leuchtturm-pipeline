@@ -1,8 +1,6 @@
 """Common classes and functions to leuchtturm pipes and pipelines."""
 
-from os import environ
 from glob import glob
-
 from pyspark import SparkContext, SparkConf
 
 

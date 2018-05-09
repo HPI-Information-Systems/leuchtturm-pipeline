@@ -45,7 +45,8 @@ class EmlReader(Pipe):
 
     def run(self):
         """Run task in a spark context. Return rdd."""
-        rdd = SparkProvider.spark_context(self.conf).wholeTextFiles(self.source_directory, minPartitions=self.parallelism)
+        rdd = SparkProvider.spark_context(self.conf).wholeTextFiles(self.source_directory,
+                                                                    minPartitions=self.parallelism)
         rdd = rdd.filter(lambda x: x[0].endswith('eml'))
         rdd = rdd.filter(lambda x: self.is_valid_email(x[1])) if self.apply_email_filter else rdd
         rdd = rdd.map(lambda x: self.create_document(x[1], x[0]))

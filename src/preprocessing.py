@@ -117,7 +117,7 @@ class EmailSplitting(Pipe):
     begin_forwarded_message_heuristic = r'(.*Begin forwarded message:((\n|.)*?)To:.*)'
     original_message_heuristic = r'(.*-{3}.*Original Message((\n|.)*?)Subject:.*)'
     reply_seperator_heuristic = r'(.*_{3}.*Reply Separator((\n|.)*?)Date.*)'
-    date_to_subject_heuristic = r'(.*\n.*(on )?\d{2}\/\d{2}\/\d{2,4}\s\d{2}:\d{2}(:\d{2})?\s?(AM|PM|am|pm)?.*\n.*(\n.*)?To: (\n|.)*?Subject: .*)' # NOQA
+    date_to_subject_heuristic = r'(.*\n.*(on )?\d{2}\/\d{2}\/\d{2,4}\s\d{2}:\d{2}(:\d{2})?\s?(AM|PM|am|pm)?.*\n.*(\n.*)?To: (\n|.)*?Subject: .*)'  # NOQA
     from_to_subject_heuristic = r'(.*From:((\n|.)*?)Subject:.*)'
 
     header_regex = re.compile('(%s|%s|%s|%s|%s|%s)' % (
