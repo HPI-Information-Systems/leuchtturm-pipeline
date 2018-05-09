@@ -84,6 +84,9 @@ class Config:
         if arg is None:
             raise KeyError
 
+        if not isinstance(arg, str):
+            return arg
+
         # try to convert stuff that is a string
         if arg == 'True':
             return True
@@ -91,8 +94,6 @@ class Config:
             return False
         if arg == 'None':
             return None
-        if arg is True or arg is False:
-            return arg
         if arg.isdigit():
             return int(arg)
         try:
