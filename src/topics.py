@@ -113,9 +113,10 @@ class TopicModelTraining(Pipe):
     Export pickeled model to a textfile.
     """
 
-    def __init__(self, num_topics=100, eta=0.1):
+    def __init__(self, read_from='bow', num_topics=100, eta=0.1):
         """TODO: set params here (iterations, num_topics, ...)!! Especially output paths."""
         super().__init__()
+        self.read_from = read_from
         self.num_topics = num_topics
         self.eta = eta
         self.alpha = 50 / num_topics
@@ -123,7 +124,7 @@ class TopicModelTraining(Pipe):
     def remove_irrelevant_keys(self, item):
         document = json.loads(item)
         date = document['header']['date']
-        for key in list(set(document.keys()) - {'body'}):
+        for key in list(set(document.keys()) - {self.read_from}):
             document.pop(key)
         document['date'] = date
         return json.dumps(document)
@@ -141,12 +142,16 @@ class TopicModelTraining(Pipe):
         elif bucket_timeframe == 'day':
             # '2001-05-15T08:31:00Z' --> ['2001-05-15', '08:31:00Z'] --> '2001-05-15'
             splitting_key = document['date'].split('T', 1)
-        return splitting_key, json.dumps([document])
+        document['count_in_bucket'] = 1
+        return splitting_key, [document]
 
     def bucket_emails_by_date(self, item1, item2):
-        document1 = json.loads(item1)
-        document2 = json.loads(item2)
-        return json.dumps(document1 + document2)
+        new_count = item1[0]['count_in_bucket'] + item2[0]['count_in_bucket']
+        merged_documents = item1 + item2
+        for i in range(len(merged_documents)):
+            merged_documents[i]['count_in_bucket'] = new_count
+
+        return merged_documents
 
     def convert_from_tuple(self, document_tupel):
         """Convert tupel entry of rdd to usual format for pipeline."""
@@ -160,8 +165,7 @@ class TopicModelTraining(Pipe):
            .map(self.convert_to_tuple) \
            .reduceByKey(self.bucket_emails_by_date) \
            .map(self.convert_from_tuple) \
-           .sortBy(lambda item: json.loads(item)[0]['date'])
-        #
+           .sortBy(lambda item: item[0]['date'])
         # dictionary = corpora.Dictionary(processed_corpus)
         # with open('./models/pickled_lda_dictionary.p', 'wb') as pfile:
         #     pickle.dump(dictionary, pfile)
