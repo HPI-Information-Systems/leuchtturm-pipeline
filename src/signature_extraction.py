@@ -124,6 +124,7 @@ class SignatureExtraction(Pipe):
             first_body_characters = document[self.write_body_without_signature_to][:10].replace('\n', '\\n')
             last_body_characters = document[self.write_body_without_signature_to][-10:].replace('\n', '\\n')
             self.logger.warn('S ' + str(timestamp))
+            print('this is a test')
             self.logger.warn(document['path'] + " " + document['header']['sender']['email'])
             self.logger.warn(
                 "LENGTH: " + str(body_length) +
