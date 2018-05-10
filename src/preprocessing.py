@@ -11,7 +11,6 @@ from langdetect import detect
 import textacy
 import dateparser
 import datetime
-from .utils.logger import YarnLogger
 
 from .common import Pipe
 
@@ -456,7 +455,6 @@ class TextCleaning(Pipe):
         self.write_to = write_to
         self.write_to_original_ws = write_to_original_ws
         self.readable = readable
-        self.logger = YarnLogger()
 
     def convert_to_ascii(self, text):
         """Replace unicode chars with their closest ascii char."""

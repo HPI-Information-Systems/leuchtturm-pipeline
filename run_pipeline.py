@@ -7,7 +7,7 @@ from src.util import get_config
 from src.common import Pipeline, SparkProvider
 from src.reader import EmlReader  # , TextFileReader
 from src.preprocessing import EmailDecoding, EmailSplitting, HeaderParsing, TextCleaning  # , LanguageDetection
-# from src.deduplication import EmailDeduplication
+from src.deduplication import EmailDeduplication
 # from src.ner import SpacyNer
 from src.topics import TopicModelTraining  # , TopicModelPrediction
 from src.writer import TextFileWriter, SolrFileWriter
@@ -26,10 +26,9 @@ def run_email_pipeline(read_from, write_to, solr, solr_url, dataset):
     reader = EmlReader(read_from)
     pipes = [
         EmailDecoding(split_header_body=False),
-        # EmailSplitting(keep_thread_connected=True),
-        EmailSplitting(keep_thread_connected=False),
+        EmailSplitting(keep_thread_connected=True),
         HeaderParsing(config=config, use_unix_time=False),
-        # EmailDeduplication(is_connected_thread=True),
+        EmailDeduplication(is_connected_thread=True),
         TextCleaning(read_from='body', write_to='text_clean', write_to_original_ws='text_clean_original_ws'),
         SignatureExtraction(  # also relies on document['header']['sender']['email']
             read_from='text_clean_original_ws',

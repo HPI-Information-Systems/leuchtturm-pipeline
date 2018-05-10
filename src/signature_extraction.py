@@ -3,7 +3,6 @@
 import ujson as json
 import re
 from .common import Pipe
-from .utils.logger import YarnLogger
 from datetime import datetime
 
 
@@ -28,7 +27,6 @@ class SignatureExtraction(Pipe):
         self.write_body_without_signature_to = write_body_without_signature_to
         self.write_signature_to = write_signature_to
         self.write_sent_from_mobile_to = write_sent_from_mobile_to
-        self.logger = YarnLogger()
 
     def _get_mobile_signature_patterns(self):
         return [
@@ -104,18 +102,26 @@ class SignatureExtraction(Pipe):
 
     def run_on_partition(self, data_items):
         """Apply pure extraction task partition-wise so that talon models don't have to be reloaded for each email."""
-        self.logger.warn("Starting to run signature extraction on partition...")
+        from talon import signature as talon_signature
+        import talon
+        talon.init()
 
-        def extract_signature(body):
+        print('lt_logs', datetime.now(),
+              'Starting to run signature extraction on partition...',
+              flush=True)
+
+        def extract_signature(body, sender_email_address):
             """Apply talon to the preprocessed body.
 
             Uses the email address of the sending correspondent to improve extraction results.
             """
-            split = re.split('\n\s*-+\s*\n', body[-300:])
-            if len(split) == 2:
-                self.logger.warn("Found a signature: " + split[1])
-                return split[0], split[1]
-            return body, ''
+            body, signature = talon_signature.extract(
+                body[-300:],
+                sender=sender_email_address
+            )
+            if not signature:
+                signature = ''
+            return body, signature
 
         for data_item in data_items:
             timestamp = datetime.now()
@@ -123,22 +129,29 @@ class SignatureExtraction(Pipe):
             body_length = len(document[self.write_body_without_signature_to])
             first_body_characters = document[self.write_body_without_signature_to][:10].replace('\n', '\\n')
             last_body_characters = document[self.write_body_without_signature_to][-10:].replace('\n', '\\n')
-            self.logger.warn('S ' + str(timestamp))
-            print('this is a test')
-            self.logger.warn(document['path'] + " " + document['header']['sender']['email'])
-            self.logger.warn(
-                "LENGTH: " + str(body_length) +
-                "\nSTART: " + first_body_characters +
-                "\nEND: " + last_body_characters
-            )
+            print('lt_logs', timestamp,
+                  'Start extraction on', document['path'],
+                  'sender email address:', document['header']['sender']['email'],
+                  flush=True)
+            print('lt_logs', timestamp,
+                  'Length:', str(body_length),
+                  'Start:', first_body_characters,
+                  'End:', last_body_characters,
+                  flush=True)
             document[self.write_body_without_signature_to], document[self.write_signature_to] = extract_signature(
-                document[self.write_body_without_signature_to]
+                document[self.write_body_without_signature_to],
+                document['header']['sender']['email']
             )
             del document[self.read_from]
-            self.logger.warn('E ' + str(timestamp))
+            print('lt_logs', datetime.now(),
+                  'Finish extraction on single body from', timestamp,
+                  'Time diff (in s) was', (datetime.now() - timestamp).total_seconds(),
+                  flush=True)
             yield json.dumps(document)
 
-        self.logger.warn("Finished running signature extraction on partition.")
+        print('lt_logs', datetime.now(),
+              'Finished running signature extraction on partition.',
+              flush=True)
 
     def run_on_document(self, data_item):
         """Apply signature-specific preprocessing tasks to a leuchtturm document."""
