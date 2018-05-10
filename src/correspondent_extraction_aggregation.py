@@ -7,6 +7,7 @@ Information is mostly drawn from extracted signatures.
 import ujson as json
 import re
 import regex
+from datetime import datetime
 from .common import Pipe
 
 
@@ -67,19 +68,30 @@ class CorrespondentDataExtraction(Pipe):
         if len(email_username) < 3:
             return []
 
-        email_username_prefix = email_username[:3]
-        email_username_postfix = email_username[-3:]
-        alias_prefix_pattern = r'(?:^|\n)\b(' + email_username_prefix + r'[\w -.]*)\s?(?:\n|$)'
-        alias_postfix_pattern = r'(?:^|\n)([\w -.]*' + email_username_postfix + r')(?:$|\n)'
+        email_username_start = regex.escape(email_username[:3])
+        email_username_end = regex.escape(email_username[-3:])
+        alias_prefix_pattern = r'(?:^|\n)\b(' + email_username_start + r'[\w -.]*)\s?(?:\n|$)'
+        alias_postfix_pattern = r'(?:^|\n)([\w -.]*' + email_username_end + r')(?:$|\n)'
         first_two_signature_lines = '\n'.join([line for line in signature.split('\n') if line != ''][:2])
 
-        # note: using regex module (not re) so that matches can overlap (necessary because of shared \n between aliases)
-        aliases = set(
-            regex.findall(alias_prefix_pattern, signature, overlapped=True, flags=re.IGNORECASE)
-        )
-        aliases.update(set(
-            regex.findall(alias_postfix_pattern, first_two_signature_lines, overlapped=True, flags=re.IGNORECASE)
-        ))
+        aliases = set()
+        try:
+            # note: using regex module (not re) for overlapping matches (necessary because of shared \n between aliases)
+            aliases = set(
+                regex.findall(alias_prefix_pattern, signature, overlapped=True, flags=re.IGNORECASE)
+            )
+            aliases.update(set(
+                regex.findall(alias_postfix_pattern, first_two_signature_lines, overlapped=True, flags=re.IGNORECASE)
+            ))
+        except Exception:
+            print('lt_logs', datetime.now(),
+                  'Error in Alias Extraction',
+                  'aliases so far', aliases,
+                  'prefix pattern', alias_prefix_pattern,
+                  'signature', signature.replace('\n', '\\n'),
+                  'postfix pattern', alias_postfix_pattern,
+                  'first_two_signature_lines', first_two_signature_lines.replace('\n', '\\n'),
+                  flush=True)
 
         aliases = [alias.strip() for alias in list(aliases)]
         return aliases
