@@ -5,15 +5,15 @@ import ujson as json
 
 from src.util import get_config
 from src.common import Pipeline, SparkProvider
-from src.reader import EmlReader  # , TextFileReader
+from src.reader import EmlReader, TextFileReader
 from src.preprocessing import EmailDecoding, EmailSplitting, HeaderParsing, TextCleaning  # , LanguageDetection
 from src.deduplication import EmailDeduplication
 # from src.ner import SpacyNer
 from src.topics import TopicModelTraining  # , TopicModelPrediction
 from src.writer import TextFileWriter, SolrFileWriter
 from src.signature_extraction import SignatureExtraction
-# from src.correspondent_extraction_aggregation \
-#     import CorrespondentDataExtraction, CorrespondentDataAggregation, CorrespondentIdInjection
+from src.correspondent_extraction_aggregation \
+    import CorrespondentDataExtraction, CorrespondentDataAggregation, CorrespondentIdInjection
 # from src.category_classification import EmailCategoryClassification
 # from src.folder_classification import EmailFolderClassification
 
@@ -46,29 +46,29 @@ def run_email_pipeline(read_from, write_to, solr, solr_url, dataset):
     # reader = TextFileReader(path=write_to)
     # writer = TextFileWriter(path=write_to + '_topics')
     # Pipeline(reader, [TopicModelPrediction()], writer).run()
-    #
-    # reader = TextFileReader(write_to)
-    # pipes = [
-    #     CorrespondentDataExtraction(),
-    #     CorrespondentDataAggregation(),
-    # ]
-    # writer = TextFileWriter(path=write_to + '_correspondent')
-    # Pipeline(reader, pipes, writer).run()
-    #
-    # correspondent_rdd = SparkProvider.spark_context().broadcast(
-    #     TextFileReader(write_to + '_correspondent').run().collect()
-    # )
-    # pipes = [
-    #     CorrespondentIdInjection(correspondent_rdd),
-    # ]
-    # writer = TextFileWriter(path=write_to + '_injected')
-    # Pipeline(reader, pipes, writer).run()
+
+    reader = TextFileReader(write_to)
+    pipes = [
+        CorrespondentDataExtraction(),
+        CorrespondentDataAggregation(),
+    ]
+    writer = TextFileWriter(path=write_to + '_correspondent')
+    Pipeline(reader, pipes, writer).run()
+
+    correspondent_rdd = SparkProvider.spark_context().broadcast(
+        TextFileReader(write_to + '_correspondent').run().collect()
+    )
+    pipes = [
+        CorrespondentIdInjection(correspondent_rdd),
+    ]
+    writer = TextFileWriter(path=write_to + '_injected')
+    Pipeline(reader, pipes, writer).run()
 
     # Neo4JFileWriter(write_to + '_correspondent').run()
 
     if solr:
-        SolrFileWriter(write_to, solr_url=solr_url).run()
-        # SolrFileWriter(write_to + '_injected', solr_url=solr_url).run()
+        # SolrFileWriter(write_to, solr_url=solr_url).run()
+        SolrFileWriter(write_to + '_injected', solr_url=solr_url).run()
         # SolrFileWriter(write_to + '_topics', solr_url=solr_url + '_topics').run()
 
     SparkProvider.stop_spark_context()
