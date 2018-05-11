@@ -25,7 +25,7 @@ class EmailCategoryClassification(Pipe):
         file_model = self.conf.get('classification', 'file_model')
         return file_model
 
-    def get_category_for_document(self, document):
+    def get_category_for_document(self, document, model):
         """Predict classes for an email document, enable fake classes."""
         def get_fake_categories():
             prob_category = dict()
@@ -60,7 +60,7 @@ class EmailCategoryClassification(Pipe):
             return maximum
 
         category = dict()
-        model = self.load_model()
+        # model = self.load_model()
         if not model:
             prob_category = get_fake_categories()
             prob_subcategory = get_fake_subcategories()
