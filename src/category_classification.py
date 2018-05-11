@@ -27,7 +27,6 @@ class EmailCategoryClassification(Pipe):
 
     def get_category_for_document(self, document, model):
         """Predict classes for an email document, enable fake classes."""
-
         def get_fake_categories():
             prob_category = dict()
             a = uniform(0, 1)
