@@ -78,7 +78,7 @@ class Neo4JNodeWriter(Pipe):
     def run_on_partition(self, partition):
         """Collect docs partitionwise and upload them."""
         correspondents = [json.loads(item) for item in partition]
-        graph = Graph(self.neo4j_host, http_port=self.http_port, bolt_port=self.bolt_port)
+        graph = Graph(host=self.neo4j_host, http_port=self.http_port, bolt_port=self.bolt_port)
         graph.run('UNWIND $correspondents AS correspondent '
                   'CREATE (a:Person) SET a = correspondent',
                   correspondents=correspondents)
@@ -107,7 +107,7 @@ class Neo4JEdgeWriter(Pipe):
     def run_on_partition(self, partition):
         """Collect docs partitionwise and upload them."""
         documents = [json.loads(item) for item in partition]
-        graph = Graph(self.neo4j_host, http_port=self.http_port, bolt_port=self.bolt_port)
+        graph = Graph(host=self.neo4j_host, http_port=self.http_port, bolt_port=self.bolt_port)
         for mail in documents:
             mail_id = mail.get('doc_id', '')
             header = mail.get('header', {})

@@ -17,6 +17,9 @@ elif [ $1 == 'dnc' ]; then
     EMAILS=dnc
     PRESULT=tmp/dnc_result
     SOLR=http://sopedu.hpi.uni-potsdam.de:8983/solr/dnc
+    NEO4J_HOST=172.16.64.28
+    NEO4J_BOLT_PORT=61000
+    NEO4J_HTTP_PORT=61100
 else
     echo 'No deployment config selected. enron, enron-dev or dnc possible.'
     exit 1
@@ -43,13 +46,19 @@ hdfs dfs -rm -r $PRESULT || true
 hdfs dfs -rm -r $PRESULT"_correspondent" || true
 hdfs dfs -rm -r $PRESULT"_injected" || true
 hdfs dfs -rm -r $PRESULT"_topics" || true
-curl $SOLR/update\?commit\=true -d  '<delete><query>*:*</query></delete>' || true
-curl $SOLR"_topics"/update\?commit\=true -d  '<delete><query>*:*</query></delete>' || true
+curl $SOLR/update\?commit\=true -d '<delete><query>*:*</query></delete>' || true
+curl $SOLR"_topics"/update\?commit\=true -d '<delete><query>*:*</query></delete>' || true
+curl -H "Content-Type: application/json" -X POST \
+     -d '{"statements": [{"statement": "MATCH (n) DETACH DELETE n"}]}' \
+     "http://"$NEO4J_HOST":"$NEO4J_HTTP_PORT"/db/data/transaction/commit"
 PYSPARK_PYTHON=./leuchtturm_env/bin/python \
     spark-submit --master yarn --deploy-mode cluster \
     --driver-memory 8g --executor-memory 4g --num-executors 23 --executor-cores 4 \
     --archives leuchtturm_env.zip#leuchtturm_env,models.zip#models,config.zip#config \
     --py-files src.zip \
-    run_pipeline.py --read-from $EMAILS --write-to $PRESULT --solr --solr-url $SOLR --dataset $DATASET 2>/dev/null
+    run_pipeline.py --read-from $EMAILS --write-to $PRESULT \
+    --solr --solr-url $SOLR \
+    --neo4j --neo4j-host $NEO4J_HOST --neo4j-bolt-port $NEO4J_BOLT_PORT --neo4j-http-port $NEO4J_HTTP_PORT \
+    --dataset $DATASET 2>/dev/null
 
 echo -e '\n[Done]'

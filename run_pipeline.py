@@ -2,6 +2,7 @@
 
 import argparse
 import ujson as json
+from datetime import datetime
 
 from src.util import get_config
 from src.common import Pipeline, SparkProvider
@@ -10,7 +11,7 @@ from src.preprocessing import EmailDecoding, EmailSplitting, HeaderParsing, Text
 from src.deduplication import EmailDeduplication
 from src.ner import SpacyNer
 from src.topics import TopicModelTraining, TopicModelPrediction
-from src.writer import TextFileWriter, SolrFileWriter  # , Neo4JFileWriter
+from src.writer import TextFileWriter, SolrFileWriter, Neo4JFileWriter
 from src.signature_extraction import SignatureExtraction
 from src.correspondent_extraction_aggregation \
     import CorrespondentDataExtraction, CorrespondentDataAggregation, CorrespondentIdInjection
@@ -18,7 +19,9 @@ from src.category_classification import EmailCategoryClassification
 from src.folder_classification import EmailFolderClassification
 
 
-def run_email_pipeline(read_from, write_to, solr, solr_url, dataset):
+def run_email_pipeline(
+        read_from, write_to, solr, solr_url, neo4j, neo4j_host, neo4j_bolt_port, neo4j_http_port, dataset
+):
     """Run main email pipeline."""
     config = get_config(dataset)
     SparkProvider.spark_context()
@@ -64,13 +67,16 @@ def run_email_pipeline(read_from, write_to, solr, solr_url, dataset):
     writer = TextFileWriter(path=write_to + '_injected')
     Pipeline(reader, pipes, writer).run()
 
-    # Neo4JFileWriter(write_to + '_correspondent', mode='nodes').run()
-    # Neo4JFileWriter(write_to + '_injected', mode='edges').run()
+    if neo4j:
+        print('lt_logs', datetime.now(), 'Start Neo4j Uploads...', flush=True)
+        Neo4JFileWriter(
+            write_to + '_correspondent', neo4j_host, neo4j_http_port, neo4j_bolt_port, mode='nodes').run()
+        Neo4JFileWriter(
+            write_to + '_injected', neo4j_host, neo4j_http_port, neo4j_bolt_port, mode='edges').run()
 
     if solr:
-        # SolrFileWriter(write_to, solr_url=solr_url).run()
         SolrFileWriter(write_to + '_injected', solr_url=solr_url).run()
-        # SolrFileWriter(write_to + '_topics', solr_url=solr_url + '_topics').run()
+        SolrFileWriter(write_to + '_topics', solr_url=solr_url + '_topics').run()
 
     SparkProvider.stop_spark_context()
 
@@ -97,6 +103,20 @@ if __name__ == '__main__':
     parser.add_argument('--solr-url',
                         help='Url to running solr instance (with core/collection specified).',
                         default='http://sopedu.hpi.uni-potsdam.de:8983/solr/enron')
+    parser.add_argument('--neo4j',
+                        action='store_true',
+                        help='Set this flag if results should be written to neo4j.')
+    parser.add_argument('--neo4j-host',
+                        help='Url to running neo4j instance.',
+                        default='localhost')
+    parser.add_argument('--neo4j-bolt-port',
+                        help='Bolt port of running neo4j instance.',
+                        type=int,
+                        default='7687')
+    parser.add_argument('--neo4j-http-port',
+                        help='HTTP port of running neo4j instance.',
+                        type=int,
+                        default='7474')
     parser.add_argument('--dataset',
                         help='Dataset config to read.')
     args = parser.parse_args()
@@ -105,4 +125,8 @@ if __name__ == '__main__':
                        args.write_to,
                        args.solr,
                        args.solr_url,
+                       args.neo4j,
+                       args.neo4j_host,
+                       args.neo4j_bolt_port,
+                       args.neo4j_http_port,
                        args.dataset)
