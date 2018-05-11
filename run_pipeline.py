@@ -6,16 +6,16 @@ import ujson as json
 from src.util import get_config
 from src.common import Pipeline, SparkProvider
 from src.reader import EmlReader, TextFileReader
-from src.preprocessing import EmailDecoding, EmailSplitting, HeaderParsing, TextCleaning  # , LanguageDetection
+from src.preprocessing import EmailDecoding, EmailSplitting, HeaderParsing, TextCleaning, LanguageDetection
 from src.deduplication import EmailDeduplication
-# from src.ner import SpacyNer
-from src.topics import TopicModelTraining  # , TopicModelPrediction
-from src.writer import TextFileWriter, SolrFileWriter
+from src.ner import SpacyNer
+from src.topics import TopicModelTraining, TopicModelPrediction
+from src.writer import TextFileWriter, SolrFileWriter  # , Neo4JFileWriter
 from src.signature_extraction import SignatureExtraction
 from src.correspondent_extraction_aggregation \
     import CorrespondentDataExtraction, CorrespondentDataAggregation, CorrespondentIdInjection
-# from src.category_classification import EmailCategoryClassification
-# from src.folder_classification import EmailFolderClassification
+from src.category_classification import EmailCategoryClassification
+from src.folder_classification import EmailFolderClassification
 
 
 def run_email_pipeline(read_from, write_to, solr, solr_url, dataset):
@@ -34,18 +34,18 @@ def run_email_pipeline(read_from, write_to, solr, solr_url, dataset):
             read_from='text_clean_original_ws',
             write_body_without_signature_to='body_without_signature',
             write_signature_to='signature'
-        )
-        # LanguageDetection(read_from='text_clean'),
-        # SpacyNer(read_from='text_clean'),
-        # EmailCategoryClassification(),
-        # EmailFolderClassification()
+        ),
+        LanguageDetection(read_from='text_clean'),
+        SpacyNer(read_from='text_clean'),
+        EmailCategoryClassification(),
+        EmailFolderClassification()
     ]
     writer = TextFileWriter(path=write_to)
     Pipeline(reader, pipes, writer).run()
 
-    # reader = TextFileReader(path=write_to)
-    # writer = TextFileWriter(path=write_to + '_topics')
-    # Pipeline(reader, [TopicModelPrediction()], writer).run()
+    reader = TextFileReader(path=write_to)
+    writer = TextFileWriter(path=write_to + '_topics')
+    Pipeline(reader, [TopicModelPrediction()], writer).run()
 
     reader = TextFileReader(write_to)
     pipes = [
@@ -64,7 +64,8 @@ def run_email_pipeline(read_from, write_to, solr, solr_url, dataset):
     writer = TextFileWriter(path=write_to + '_injected')
     Pipeline(reader, pipes, writer).run()
 
-    # Neo4JFileWriter(write_to + '_correspondent').run()
+    # Neo4JFileWriter(write_to + '_correspondent', mode='nodes').run()
+    # Neo4JFileWriter(write_to + '_injected', mode='edges').run()
 
     if solr:
         # SolrFileWriter(write_to, solr_url=solr_url).run()

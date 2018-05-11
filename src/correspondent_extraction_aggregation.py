@@ -241,6 +241,19 @@ class CorrespondentDataAggregation(Pipe):
         document['identifying_names'] = document['email_addresses']
         return json.dumps(document)
 
+    def convert_identifying_names_field(self, data):
+        """Convert from 'identifying_nameS' of type list to 'identifying_name' of type str."""
+        document = json.loads(data)
+        if len(document['identifying_names']) == 1:
+            document['identifying_name'] = document.pop('identifying_names')[0]
+        else:
+            document['identifying_name'] = ''
+            print('lt_logs', datetime.now(),
+                  'Warning in Correspondent Aggregation: there should be exactly 1 identifying name but found',
+                  document['identifying_names'],
+                  flush=True)
+        return json.dumps(document)
+
     def run(self, rdd):
         """Run pipe in spark context."""
         rdd = rdd.map(self.prepare_for_reduction)
@@ -258,7 +271,8 @@ class CorrespondentDataAggregation(Pipe):
                                         .map(self.extract_data_from_tuple)
         rdd_without_identifying_names = rdd.filter(lambda data: not json.loads(data)['identifying_names']) \
                                            .map(self.use_email_addresses_as_identifying_names)
-        rdd = rdd_with_identifying_names.union(rdd_without_identifying_names)
+        rdd = rdd_with_identifying_names.union(rdd_without_identifying_names) \
+                                        .map(self.convert_identifying_names_field)
 
         return rdd
 
@@ -282,7 +296,7 @@ class CorrespondentIdInjection(Pipe):
                 (corr for corr in self.correspondent_rdd if original_email_address in corr['email_addresses']), None)
         if not correspondent:
             correspondent = next(
-                (corr for corr in self.correspondent_rdd if original_name in corr['identifying_names']), None)
+                (corr for corr in self.correspondent_rdd if original_name == corr['identifying_name']), None)
         if not correspondent:
             correspondent = next(
                 (corr for corr in self.correspondent_rdd if original_name in corr['aliases']), None)
@@ -295,8 +309,8 @@ class CorrespondentIdInjection(Pipe):
 
         correspondent = self._find_matching_correspondent(original_name, original_email_address)
 
-        if correspondent and correspondent['identifying_names']:
-            document['header']['sender']['identifying_name'] = correspondent['identifying_names'][0]
+        if correspondent and correspondent['identifying_name']:
+            document['header']['sender']['identifying_name'] = correspondent['identifying_name']
         else:
             document['header']['sender']['identifying_name'] = ''
 
@@ -310,8 +324,8 @@ class CorrespondentIdInjection(Pipe):
 
             correspondent = self._find_matching_correspondent(original_name, original_email_address)
 
-            if correspondent and correspondent['identifying_names']:
-                document['header']['recipients'][i]['identifying_name'] = correspondent['identifying_names'][0]
+            if correspondent and correspondent['identifying_name']:
+                document['header']['recipients'][i]['identifying_name'] = correspondent['identifying_name']
             else:
                 document['header']['recipients'][i]['identifying_name'] = ''
         return document
