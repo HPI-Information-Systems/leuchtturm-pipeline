@@ -42,15 +42,15 @@ cd config && zip -r --quiet config.zip * && mv config.zip .. && cd .. || return
 source deactivate
 
 echo '[stage 2 of 2] Running leuchtturm pipeline. This might take a while ...'
-hdfs dfs -rm -r $PRESULT || true
-hdfs dfs -rm -r $PRESULT"_correspondent" || true
-hdfs dfs -rm -r $PRESULT"_injected" || true
-hdfs dfs -rm -r $PRESULT"_topics" || true
+# hdfs dfs -rm -r $PRESULT || true
+# hdfs dfs -rm -r $PRESULT"_correspondent" || true
+# hdfs dfs -rm -r $PRESULT"_injected" || true
+# hdfs dfs -rm -r $PRESULT"_topics" || true
 curl $SOLR/update\?commit\=true -d '<delete><query>*:*</query></delete>' || true
 curl $SOLR"_topics"/update\?commit\=true -d '<delete><query>*:*</query></delete>' || true
 curl -H "Content-Type: application/json" -X POST \
      -d '{"statements": [{"statement": "MATCH (n) DETACH DELETE n"}]}' \
-     "http://"$NEO4J_HOST":"$NEO4J_HTTP_PORT"/db/data/transaction/commit"
+     "http://"$NEO4J_HOST":"$NEO4J_HTTP_PORT"/db/data/transaction/commit" || true
 PYSPARK_PYTHON=./leuchtturm_env/bin/python \
     spark-submit --master yarn --deploy-mode cluster \
     --driver-memory 8g --executor-memory 4g --num-executors 23 --executor-cores 4 \

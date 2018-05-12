@@ -1,3 +1,4 @@
+# flake8: noqa
 """This module runs the main pipeline."""
 
 import argparse
@@ -26,57 +27,56 @@ def run_email_pipeline(
     config = get_config(dataset)
     SparkProvider.spark_context()
 
-    reader = EmlReader(read_from)
-    pipes = [
-        EmailDecoding(split_header_body=False),
-        EmailSplitting(keep_thread_connected=True),
-        HeaderParsing(config=config, use_unix_time=False),
-        EmailDeduplication(is_connected_thread=True),
-        TextCleaning(read_from='body', write_to='text_clean', write_to_original_ws='text_clean_original_ws'),
-        SignatureExtraction(  # also relies on document['header']['sender']['email']
-            read_from='text_clean_original_ws',
-            write_body_without_signature_to='body_without_signature',
-            write_signature_to='signature'
-        ),
-        LanguageDetection(read_from='text_clean'),
-        SpacyNer(read_from='text_clean'),
-        EmailCategoryClassification(),
-        EmailFolderClassification()
-    ]
-    writer = TextFileWriter(path=write_to)
-    Pipeline(reader, pipes, writer).run()
-
-    reader = TextFileReader(path=write_to)
-    writer = TextFileWriter(path=write_to + '_topics')
-    Pipeline(reader, [TopicModelPrediction()], writer).run()
-
-    reader = TextFileReader(write_to)
-    pipes = [
-        CorrespondentDataExtraction(),
-        CorrespondentDataAggregation(),
-    ]
-    writer = TextFileWriter(path=write_to + '_correspondent')
-    Pipeline(reader, pipes, writer).run()
-
-    correspondent_rdd = SparkProvider.spark_context().broadcast(
-        TextFileReader(write_to + '_correspondent').run().collect()
-    )
-    pipes = [
-        CorrespondentIdInjection(correspondent_rdd),
-    ]
-    writer = TextFileWriter(path=write_to + '_injected')
-    Pipeline(reader, pipes, writer).run()
-
-    if neo4j:
-        print('lt_logs', datetime.now(), 'Start Neo4j Uploads...', flush=True)
-        Neo4JFileWriter(
-            write_to + '_correspondent', neo4j_host, neo4j_http_port, neo4j_bolt_port, mode='nodes').run()
-        Neo4JFileWriter(
-            write_to + '_injected', neo4j_host, neo4j_http_port, neo4j_bolt_port, mode='edges').run()
+    # reader = EmlReader(read_from)
+    # pipes = [
+    #     EmailDecoding(split_header_body=False),
+    #     EmailSplitting(keep_thread_connected=True),
+    #     HeaderParsing(config=config, use_unix_time=False),
+    #     EmailDeduplication(is_connected_thread=True),
+    #     TextCleaning(read_from='body', write_to='text_clean', write_to_original_ws='text_clean_original_ws'),
+    #     SignatureExtraction(  # also relies on document['header']['sender']['email']
+    #         read_from='text_clean_original_ws',
+    #         write_body_without_signature_to='body_without_signature',
+    #         write_signature_to='signature'
+    #     ),
+    #     LanguageDetection(read_from='text_clean'),
+    #     SpacyNer(read_from='text_clean'),
+    #     EmailCategoryClassification(),
+    #     EmailFolderClassification()
+    # ]
+    # writer = TextFileWriter(path=write_to)
+    # Pipeline(reader, pipes, writer).run()
+    #
+    # reader = TextFileReader(path=write_to)
+    # writer = TextFileWriter(path=write_to + '_topics')
+    # Pipeline(reader, [TopicModelPrediction()], writer).run()
+    #
+    # reader = TextFileReader(write_to)
+    # pipes = [
+    #     CorrespondentDataExtraction(),
+    #     CorrespondentDataAggregation(),
+    # ]
+    # writer = TextFileWriter(path=write_to + '_correspondent')
+    # Pipeline(reader, pipes, writer).run()
+    #
+    # correspondent_rdd = SparkProvider.spark_context().broadcast(
+    #     TextFileReader(write_to + '_correspondent').run().collect()
+    # )
+    # pipes = [
+    #     CorrespondentIdInjection(correspondent_rdd),
+    # ]
+    # writer = TextFileWriter(path=write_to + '_injected')
+    # Pipeline(reader, pipes, writer).run()
 
     if solr:
         SolrFileWriter(write_to + '_injected', solr_url=solr_url).run()
         SolrFileWriter(write_to + '_topics', solr_url=solr_url + '_topics').run()
+
+    if neo4j:
+        Neo4JFileWriter(
+            write_to + '_correspondent', neo4j_host, neo4j_http_port, neo4j_bolt_port, mode='nodes').run()
+        Neo4JFileWriter(
+            write_to + '_injected', neo4j_host, neo4j_http_port, neo4j_bolt_port, mode='edges').run()
 
     SparkProvider.stop_spark_context()
 

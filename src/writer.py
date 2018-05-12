@@ -77,11 +77,14 @@ class Neo4JNodeWriter(Pipe):
 
     def run_on_partition(self, partition):
         """Collect docs partitionwise and upload them."""
+        start_time = datetime.now()
+        print('lt_logs', start_time, 'Start Neo4j Node Upload on partition...', flush=True)
         correspondents = [json.loads(item) for item in partition]
         graph = Graph(host=self.neo4j_host, http_port=self.http_port, bolt_port=self.bolt_port)
         graph.run('UNWIND $correspondents AS correspondent '
                   'CREATE (a:Person) SET a = correspondent',
                   correspondents=correspondents)
+        print('lt_logs', datetime.now(), 'Finish Neo4j Node Upload on partition from', start_time, flush=True)
 
     def run(self, rdd):
         """Run task in spark context."""
@@ -106,6 +109,8 @@ class Neo4JEdgeWriter(Pipe):
 
     def run_on_partition(self, partition):
         """Collect docs partitionwise and upload them."""
+        start_time = datetime.now()
+        print('lt_logs', start_time, 'Start Neo4j Edge Upload on partition...', flush=True)
         documents = [json.loads(item) for item in partition]
         graph = Graph(host=self.neo4j_host, http_port=self.http_port, bolt_port=self.bolt_port)
         for mail in documents:
@@ -137,6 +142,7 @@ class Neo4JEdgeWriter(Pipe):
                 mail_id=mail_id,
                 mail_timestamp=mail_timestamp
             )
+        print('lt_logs', datetime.now(), 'Finish Neo4j Edge Upload on partition from', start_time, flush=True)
 
     def run(self, rdd):
         """Run task in spark context."""
