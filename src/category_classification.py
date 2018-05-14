@@ -16,20 +16,21 @@ class EmailCategoryClassification(Pipe):
 
     def __init__(self, conf):
         """Initialization."""
-        super().__init__()
+        super().__init__(conf)
+        self.conf = conf
 
     def load_clf(self):
         """Load classifier and required vectorizers."""
-        with open('./models/email_clf.pickle', 'rb') as f:
+        with open(self.conf.get('classification', 'file_clf'), 'rb') as f:
             clf = pickle.load(f)
 
-        with open('./models/email_vectorizer_body.pickle', 'rb') as f:
+        with open(self.conf.get('classification', 'file_body_vectorizer'), 'rb') as f:
             vectorizer_body = pickle.load(f)
 
-        with open('./models/email_vectorizer_subject.pickle', 'rb') as f:
+        with open(self.conf.get('classification', 'file_subject_vectorizer'), 'rb') as f:
             vectorizer_subject = pickle.load(f)
 
-        with open('./models/email_encoder.pickle', 'rb') as f:
+        with open(self.conf.get('classification', 'file_label_encoder'), 'rb') as f:
             label_encoder = pickle.load(f)
 
         return clf_export.EmailClfInterface(clf, vectorizer_body, vectorizer_subject, label_encoder)

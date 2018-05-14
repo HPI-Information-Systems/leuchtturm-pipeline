@@ -65,8 +65,11 @@ class Config:
             'file_dictionary': '${models:directory}/topicmodel.dict'
         },
         'classification': {
-            'train_model': True,
-            'file_model': '${models:directory}/classification_model.pickle'
+            'train_model': False,
+            'file_clf': '${models:directory}/email_clf.pickle',
+            'file_label_encoder': '${models:directory}/email_encoder.pickle',
+            'file_body_vectorizer': '${models:directory}/email_vectorizer_body.pickle',
+            'file_subject_vectorizer': '${models:directory}/email_vectorizer_subject.pickle'
         }
     }
 
