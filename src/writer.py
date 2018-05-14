@@ -1,13 +1,13 @@
 """Exit points for leuchtturm pipelines."""
 
 import ujson as json
+import datetime
+import time
 
 from py2neo import Graph
 from pysolr import Solr
 
 from .common import Pipe, SparkProvider
-import time
-import datetime
 
 
 class SolrWriter(Pipe):
@@ -18,9 +18,9 @@ class SolrWriter(Pipe):
     NOTE: Does not run on large or highly distributed rdds. Use SolrFileWriter instead.
     """
 
-    def __init__(self, solr_url='http://sopedu.hpi.uni-potsdam.de:8983/solr/emails'):
+    def __init__(self, conf, solr_url):
         """Set url of solr instance."""
-        super().__init__()
+        super().__init__(conf)
         self.solr_url = solr_url
 
     def run_on_partition(self, partition):
@@ -47,16 +47,17 @@ class SolrFileWriter(Pipe):
     Utilizes SolrWriter under the hood.
     """
 
-    def __init__(self, path, solr_url='http://sopedu.hpi.uni-potsdam.de:8983/solr/emails'):
+    def __init__(self, conf, path, solr_url='http://sopedu.hpi.uni-potsdam.de:8983/solr/emails'):
         """Set solr config and path where rdd is read from."""
-        super().__init__()
+        super().__init__(conf)
+        self.conf = conf
         self.path = path
         self.solr_url = solr_url
-        self.solr_writer = SolrWriter(solr_url=self.solr_url)
+        self.solr_writer = SolrWriter(conf, self.solr_url)
 
     def run(self):
         """Run task in spark context."""
-        sc = SparkProvider.spark_context()
+        sc = SparkProvider.spark_context(self.conf)
         for part in sc.wholeTextFiles(self.path).map(lambda x: x[0]).collect():
             results = sc.textFile(part)
             self.solr_writer.run(results)
@@ -70,12 +71,12 @@ class Neo4JWriter(Pipe):
     NOTE: Does not run on large or highly distributed rdds. Use Neo4JFileWriter instead.
     """
 
-    def __init__(self, neo4j_host='sopedu.hpi.uni-potsdam.de', http_port=7474, bolt_port=7687):
+    def __init__(self, conf):
         """Set Neo4j instance config."""
-        super().__init__()
-        self.neo4j_host = neo4j_host
-        self.http_port = http_port
-        self.bolt_port = bolt_port
+        super().__init__(conf)
+        self.neo4j_host = conf.get('neo4j', 'host')
+        self.http_port = conf.get('neo4j', 'http_port')
+        self.bolt_port = conf.get('neo4j', 'bolt_port')
 
     def run_on_partition(self, partition):
         """Collect docs partitionwise and upload them."""
@@ -145,17 +146,19 @@ class Neo4JFileWriter(Pipe):
     Utilizes Neo4JWriter under the hood.
     """
 
-    def __init__(self, neo4j_host='sopedu.hpi.uni-potsdam.de', http_port=7474, bolt_port=7687):
+    def __init__(self, conf, path):
         """Set Neo4j instance config."""
-        super().__init__()
-        self.neo4j_host = neo4j_host
-        self.http_port = http_port
-        self.bolt_port = bolt_port
-        self.neo4j_writer = Neo4JWriter(neo4j_host=self.neo4j_host, http_port=self.http_port, bolt_port=self.bolt_port)
+        super().__init__(conf)
+        self.conf = conf
+        self.path = path
+        self.neo4j_host = conf.get('neo4j', 'host')
+        self.http_port = conf.get('neo4j', 'http_port')
+        self.bolt_port = conf.get('neo4j', 'bolt_port')
+        self.neo4j_writer = Neo4JWriter(conf)
 
     def run(self):
         """Run task in spark context."""
-        sc = SparkProvider.spark_context()
+        sc = SparkProvider.spark_context(self.conf)
         for part in sc.wholeTextFiles(self.path).map(lambda x: x[0]).collect():
             results = sc.textFile(part)
             self.neo4j_writer.run(results)
@@ -168,9 +171,9 @@ class TextFileWriter(Pipe):
     Given path will be produced and must not exist. Each line will represent a document.
     """
 
-    def __init__(self, path='./tmp'):
+    def __init__(self, conf, path):
         """Set output path."""
-        super().__init__()
+        super().__init__(conf)
         self.path = path
 
     def run(self, rdd):

@@ -1,8 +1,6 @@
 """Common classes and functions to leuchtturm pipes and pipelines."""
 
-from os import environ
 from glob import glob
-
 from pyspark import SparkContext, SparkConf
 
 
@@ -12,10 +10,10 @@ class SparkProvider(object):
     _spark_context = None
 
     @staticmethod
-    def spark_context():
+    def spark_context(conf):
         """Spark context singleton."""
         if SparkProvider._spark_context is None:
-            SparkProvider._spark_context = SparkContext(conf=SparkProvider.spark_conf(),
+            SparkProvider._spark_context = SparkContext(conf=SparkProvider.spark_conf(conf),
                                                         pyFiles=SparkProvider.py_files())
 
         return SparkProvider._spark_context
@@ -27,12 +25,14 @@ class SparkProvider(object):
             SparkProvider._spark_context.stop()
 
     @staticmethod
-    def spark_conf():
+    def spark_conf(conf):
         """Provide config for spark context."""
-        conf = SparkConf().set('spark.hive.mapred.supports.subdirectories', 'true') \
-                          .set('spark.hadoop.mapreduce.input.fileinputformat.input.dir.recursive', 'true')
+        spark_conf = SparkConf().set('spark.hive.mapred.supports.subdirectories', 'true') \
+            .set('spark.hadoop.mapreduce.input.fileinputformat.input.dir.recursive', 'true') \
+            .set('spark.driver.memory', conf.get('spark', 'driver_memory')) \
+            .set('spark.executor.memory', conf.get('spark', 'executor_memory'))
 
-        return conf
+        return spark_conf
 
     @staticmethod
     def py_files():
@@ -40,21 +40,11 @@ class SparkProvider(object):
         return glob('src/**/*.py', recursive=True)
 
     @staticmethod
-    def is_in_clustermode():
-        """Check if env variable LEUCHTTURM_RUNNER is set to CLUSTER."""
-        try:
-            if environ['LEUCHTTURM_RUNNER'] == 'LOCAL':
-                return False
-        except KeyError:
-            return True
-
-    @staticmethod
-    def spark_parallelism():
+    def spark_parallelism(conf):
         """If running on cluster return high degree of parallelism."""
-        if SparkProvider.is_in_clustermode():
-            return 276
-        else:
+        if conf.get('spark', 'run_local'):
             return 1
+        return conf.get('spark', 'parallelism')
 
 
 class Pipeline(object):
@@ -82,19 +72,19 @@ class Pipeline(object):
 class Pipe(object):
     """Meta class for all pipes. Defines API."""
 
-    def __init__(self):
+    def __init__(self, conf):
         """Initialize common vars."""
         super().__init__()
-        self.parallelism = SparkProvider.spark_parallelism()
+        self.parallelism = SparkProvider.spark_parallelism(conf)
 
-    def run_on_document(self):
+    def run_on_document(self, raw_message):
         """Run task on a single document. Should be unit tested."""
         raise NotImplementedError
 
-    def run_on_partition(self):
+    def run_on_partition(self, partition):
         """Run task on a single partition. For expensive imports."""
         raise NotImplementedError
 
-    def run(self):
+    def run(self, rdd):
         """Run task in spark context. Unless export pipe: return rdd."""
         raise NotImplementedError

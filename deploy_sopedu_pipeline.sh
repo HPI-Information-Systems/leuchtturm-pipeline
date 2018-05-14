@@ -2,23 +2,8 @@
 
 set -e # exit script on first failure
 
-if [ $1 == 'enron' ]; then
-    DATASET=enron
-    EMAILS=enron_calo
-    PRESULT=tmp/enron_result
-    SOLR=http://sopedu.hpi.uni-potsdam.de:8983/solr/enron
-elif [ $1 == 'enron-dev' ]; then
-    DATASET=enron
-    EMAILS=enron_calo
-    PRESULT=tmp/enron_dev_result
-    SOLR=http://sopedu.hpi.uni-potsdam.de:8983/solr/enron_dev
-elif [ $1 == 'dnc' ]; then
-    DATASET=dnc
-    EMAILS=dnc
-    PRESULT=tmp/dnc_result
-    SOLR=http://sopedu.hpi.uni-potsdam.de:8983/solr/dnc
-else
-    echo 'No deployment config selected. enron, enron-dev or dnc possible.'
+if [ $# -eq 0 ]; then
+    echo 'You have to select a config. See config folder!'
     exit 1
 fi
 
@@ -35,19 +20,27 @@ rm models/*
 # zip src dir to ship it as py-files
 zip -r --quiet src.zip src || return
 # zip config dir to ship it as archives
-cd config && zip -r --quiet config.zip * && mv config.zip .. && cd .. || return
+cd config && zip -r --quiet config_raw.zip * && mv config_raw.zip .. && cd .. || return
+zip -r --quiet config.zip config || return
+
+# load variables from selected config
+source <(python config/ini2bash.py -c $1)
+SOLR=$SOLR_URL$SOLR_COLLECTION
+SOLR_TOPICS=$SOLR_URL$SOLR_TOPIC_COLLECTION
+
 source deactivate
 
 echo '[stage 2 of 2] Running leuchtturm pipeline. This might take a while ...'
-hdfs dfs -rm -r $PRESULT || true
-hdfs dfs -rm -r $PRESULT"_topics" || true
+hdfs dfs -rm -r $DATA_RESULTS_DIR || true
+hdfs dfs -rm -r $TOPIC_MODELLING_WORKING_DIR || true
 curl $SOLR/update\?commit\=true -d  '<delete><query>*:*</query></delete>' || true
-curl $SOLR"_topics"/update\?commit\=true -d  '<delete><query>*:*</query></delete>' || true
+curl $SOLR_TOPICS/update\?commit\=true -d  '<delete><query>*:*</query></delete>' || true
 PYSPARK_PYTHON=./leuchtturm_env/bin/python \
     spark-submit --master yarn --deploy-mode cluster \
-    --driver-memory 8g --executor-memory 4g --num-executors 23 --executor-cores 4 \
-    --archives leuchtturm_env.zip#leuchtturm_env,models.zip#models,config.zip#config \
-    --py-files src.zip \
-    run_pipeline.py --read-from $EMAILS --write-to $PRESULT --solr --solr-url $SOLR --dataset $DATASET 2>/dev/null
+    --driver-memory $SPARK_DRIVER_MEMORY --executor-memory $SPARK_EXECUTOR_MEMORY \
+    --num-executors $SPARK_NUM_EXECUTORS --executor-cores $SPARK_EXECUTOR_CORES \
+    --archives leuchtturm_env.zip#leuchtturm_env,models.zip#models,config_raw.zip#config \
+    --py-files src.zip,config.zip \
+    run_pipeline.py -c=$1 2>/dev/null
 
 echo -e '\n[Done]'

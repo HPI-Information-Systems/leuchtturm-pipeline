@@ -24,9 +24,10 @@ class EmlReader(Pipe):
     Will be represented as a json object including basic metainfo in rdd.
     """
 
-    def __init__(self, source_directory, filename_is_doc_id=False, apply_email_filter=True):
+    def __init__(self, conf, source_directory, filename_is_doc_id=False, apply_email_filter=True):
         """Set params. Can generate uuids if filenames are not unique and drop all non-emails."""
-        super().__init__()
+        super().__init__(conf)
+        self.conf = conf
         self.source_directory = source_directory
         self.filename_is_doc_id = filename_is_doc_id
         self.apply_email_filter = apply_email_filter
@@ -45,7 +46,8 @@ class EmlReader(Pipe):
 
     def run(self):
         """Run task in a spark context. Return rdd."""
-        rdd = SparkProvider.spark_context().wholeTextFiles(self.source_directory, minPartitions=self.parallelism)
+        rdd = SparkProvider.spark_context(self.conf).wholeTextFiles(self.source_directory,
+                                                                    minPartitions=self.parallelism)
         rdd = rdd.filter(lambda x: self.is_valid_email(x[1])) if self.apply_email_filter else rdd
         rdd = rdd.map(lambda x: self.create_document(x[1], x[0]))
 
@@ -59,14 +61,15 @@ class TextFileReader(Pipe):
     No transformations will be applied.
     """
 
-    def __init__(self, path='./pipeline_result'):
+    def __init__(self, conf, path):
         """Set params. path is location of dumped rdd (local or hdfs)."""
-        super().__init__()
+        super().__init__(conf)
+        self.conf = conf
         self.path = path
 
     def run(self):
         """Run task in spark context."""
-        return SparkProvider.spark_context().textFile(self.path, minPartitions=self.parallelism)
+        return SparkProvider.spark_context(self.conf).textFile(self.path, minPartitions=self.parallelism)
 
 
 class CsvReader(Pipe):
