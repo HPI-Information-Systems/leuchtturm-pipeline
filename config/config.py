@@ -2,7 +2,6 @@
 
 from configparser import ConfigParser, ExtendedInterpolation
 import argparse
-import os
 # import logging
 
 
@@ -15,7 +14,7 @@ class Config:
     This can also be done in places, where the program isn't executed directly from the command line.
     """
 
-    DEFAULT_CONFIG_FILE = os.path.join(os.path.realpath(__file__), 'default.ini')
+    DEFAULT_CONFIG_FILE = './config/default.ini'
     DEFAULTS = {
         'settings': {
             'log_level': 'INFO'
@@ -24,6 +23,7 @@ class Config:
             'dataset': 'dataset',
             'source_dir': './data/input',
             'working_dir': './data/processed',
+            'results_dir': '${data:working_dir}/pipeline_results',
             'time_min': 0,
             'time_max': 2147483647
         },
@@ -54,9 +54,6 @@ class Config:
             'num_executors': 23,
             'executor_cores': 4,
             'parallelism': 276
-        },
-        'pipeline_results': {
-            'working_dir': '${data:working_dir}/pipeline_results'
         },
         'models': {
             'directory': '${data:working_dir}/models'

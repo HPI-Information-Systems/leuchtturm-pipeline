@@ -17,8 +17,8 @@ cp ~/gitlab-runner/emails/* $DATA_SOURCE_DIR
 # export SPARK_HOME=/usr/hdp/2.6.2.0-205/spark2/
 echo '[stage 3 of 3] Running pipeline ...'
 python ./run_pipeline.py -c config/testconfig.ini
-ls $PIPELINE_RESULTS_WORKING_DIR/_SUCCESS
+ls $DATA_RESULTS_DIR/_SUCCESS
 
 echo -e '\n[Done]\n\nHead of pipeline results:\n'
-cat $PIPELINE_RESULTS_WORKING_DIR/* | head -n 1 | python -m json.tool
-cat $PIPELINE_RESULTS_WORKING_DIR/* > result.txt
+cat $DATA_RESULTS_DIR/* | head -n 1 | python -m json.tool
+cat $DATA_RESULTS_DIR/* > result.txt

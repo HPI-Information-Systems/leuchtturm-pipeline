@@ -31,13 +31,13 @@ def run_email_pipeline(conf):
         EmailFolderClassification(conf)
     ]
 
-    writer = TextFileWriter(conf, path=conf.get('pipeline_results', 'working_dir'))
+    writer = TextFileWriter(conf, path=conf.get('data', 'results_dir'))
     Pipeline(reader, pipes, writer).run()
 
     if conf.get('topic_modelling', 'train_model'):
         run_topic_model_training(conf)
 
-    reader = TextFileReader(conf, path=conf.get('pipeline_results', 'working_dir'))
+    reader = TextFileReader(conf, path=conf.get('data', 'results_dir'))
     writer = TextFileWriter(conf, path=conf.get('topic_modelling', 'working_dir'))
     Pipeline(reader, [TopicModelPrediction(conf)], writer).run()
 
@@ -46,7 +46,7 @@ def run_email_pipeline(conf):
         pass
 
     if conf.get('solr', 'import'):
-        SolrFileWriter(conf, conf.get('pipeline_results', 'working_dir'), conf.get('solr', 'collection')).run()
+        SolrFileWriter(conf, conf.get('data', 'results_dir'), conf.get('solr', 'collection')).run()
         SolrFileWriter(conf, conf.get('topic_modelling', 'working_dir'), conf.get('solr', 'topic_collection')).run()
 
     SparkProvider.stop_spark_context()
