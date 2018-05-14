@@ -1,13 +1,13 @@
 """Exit points for leuchtturm pipelines."""
 
 import ujson as json
+import datetime
+import time
 
 from py2neo import Graph
 from pysolr import Solr
 
 from .common import Pipe, SparkProvider
-import time
-import datetime
 
 
 class SolrWriter(Pipe):

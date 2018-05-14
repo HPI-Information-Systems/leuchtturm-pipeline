@@ -2,6 +2,7 @@
 
 from email import message_from_string
 from email.utils import unquote
+import datetime
 import ujson as json
 import re
 from string import whitespace
@@ -10,7 +11,6 @@ from html2text import HTML2Text
 from langdetect import detect
 import textacy
 import dateparser
-import datetime
 
 from .common import Pipe
 
