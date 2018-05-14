@@ -100,6 +100,7 @@ class Config:
         :return:
         """
         arg = self.args.get(section + '_' + option, None)
+
         if arg is None:
             arg = self.config.get(section, option)
 
@@ -228,8 +229,8 @@ class Config:
         parser.add_argument('--data-time-max', type=int,
                             help='End of time, everything beforehand will be post-dated.')
 
-        parser.add_argument('--solr-import', action='store_true',
-                            help='Set this flag if results should be written to solr.')
+        parser.add_argument('--solr-import', type=bool, default=None,
+                            help='Set True if results should be written to solr.')
         parser.add_argument('--solr-host',
                             help='hostname of solr instance')
         parser.add_argument('--solr-port',
@@ -241,8 +242,8 @@ class Config:
         parser.add_argument('--solr-log-location',
                             help='solr log directory (used to start solr)')
 
-        parser.add_argument('--neo4j-import', action='store_true',
-                            help='Set this flag if results should be written to neo4j.')
+        parser.add_argument('--neo4j-import', type=bool, default=None,
+                            help='Set True if results should be written to neo4j.')
         parser.add_argument('--neo4j-host',
                             help='hostname of neo4j instance')
         parser.add_argument('--neo4j-port',
