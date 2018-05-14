@@ -1,17 +1,9 @@
 # Source directory for email raw text
-emails/*.eml
-
-# models
-models/*.p
-models/*.pickle
-models/*.json
-models/*.hdf5
-
-# Text Concat result file
-txtfiles.txt
+*.eml
+*.txt
 
 # NER result files
-results*.csv
+*.csv
 
 # Virtualenv
 # http://iamzed.com/2009/05/07/a-primer-on-virtualenv/
@@ -132,3 +124,4 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+.idea/

@@ -14,7 +14,7 @@ class EmailCategoryClassification(Pipe):
     Assign classes to every email doc.
     """
 
-    def __init__(self):
+    def __init__(self, conf):
         """Initialization."""
         super().__init__()
 
