@@ -2,7 +2,7 @@
 
 set -e # exit script on first failure
 
-if [ $# -eq 0 ]
+if [ $# -eq 0 ]; then
     echo 'You have to select a config. See config folder!'
     exit 1
 fi
@@ -29,7 +29,7 @@ cd config && zip -r --quiet config.zip * && mv config.zip .. && cd .. || return
 source deactivate
 
 echo '[stage 2 of 2] Running leuchtturm pipeline. This might take a while ...'
-hdfs dfs -rm -r $DATA_WORKING_DIR || true
+hdfs dfs -rm -r $PIPELINE_RESULTS_WORKING_DIR || true
 hdfs dfs -rm -r $TOPIC_MODELLING_WORKING_DIR || true
 curl $SOLR/update\?commit\=true -d  '<delete><query>*:*</query></delete>' || true
 curl $SOLR_TOPICS/update\?commit\=true -d  '<delete><query>*:*</query></delete>' || true
