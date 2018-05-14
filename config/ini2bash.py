@@ -16,7 +16,9 @@ DATA_TIME_MAX="2147483647"
 SOLR_IMPORT="FALSE"
 ...
 """
+
 from config import Config
+
 
 conf = Config()
 for section, options in conf.DEFAULTS.items():

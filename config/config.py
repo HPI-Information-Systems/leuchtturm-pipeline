@@ -1,11 +1,10 @@
 """Global configuration handler for everything."""
+
 from configparser import ConfigParser, ExtendedInterpolation
 import argparse
-
 import os
-
-
 # import logging
+
 
 class Config:
     """Docstring.
@@ -56,12 +55,15 @@ class Config:
             'executor_cores': 4,
             'parallelism': 276
         },
+        'pipeline_results': {
+            'working_dir': '${data:working_dir}/pipeline_results'
+        },
         'models': {
             'directory': '${data:working_dir}/models'
         },
         'topic_modelling': {
             'train_model': True,
-            'working_dir': '${data:working_dir}_topics',
+            'working_dir': '${data:working_dir}/topics',
             'file_model': '${models:directory}/topicmodel.pickle',
             'file_dictionary': '${models:directory}/topicmodel.dict'
         },
