@@ -3,20 +3,24 @@
 import pytest
 
 from src.common import SparkProvider, Pipe, Pipeline
+from config.config import Config
 
 
-def test_spark_parallelism(monkeypatch):
+def test_spark_parallelism():
     """Parallelism level depends on env variable."""
-    default = SparkProvider.spark_parallelism()
-    assert default == 276
-    monkeypatch.setenv('LEUCHTTURM_RUNNER', 'LOCAL')
-    default_cluster = SparkProvider.spark_parallelism()
+    conf = Config(['--settings-run-distributed', '--spark-parallelism=276'])
+    default = SparkProvider.spark_parallelism(conf)
+    assert default == conf.get('spark', 'parallelism')
+
+    conf = Config(['--settings-run-local', '--spark-parallelism=1'])
+    default_cluster = SparkProvider.spark_parallelism(conf)
     assert default_cluster == 1
 
 
 def test_spark_conf():
     """Spark config provider actually returns a valid conf."""
-    conf = SparkProvider.spark_conf()
+    config = Config([])
+    conf = SparkProvider.spark_conf(config)
     assert conf is not None
 
 
@@ -41,5 +45,6 @@ def test_pipeline_init_exception():
 
 def test_pipe_initializes():
     """Pipe object initializes wo. raising an exception."""
-    pipe = Pipe()
+    conf = Config([])
+    pipe = Pipe(conf)
     assert pipe is not None
