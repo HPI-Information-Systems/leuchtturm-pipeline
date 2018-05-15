@@ -30,7 +30,7 @@ class Snap:
     def _write_input(self):
         with open(os.path.join(self.TMP_FOLDER, self.TMP_FILE_EDGES), 'w') as f:
             for edge in self.graph.edges():
-                if edge[0] != edge [1]:
+                if edge[0] != edge[1]:
                     f.write(str(edge[0]) + '\t' + str(edge[1]) + '\n')
 
     def _read_result(self):
