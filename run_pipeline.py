@@ -1,3 +1,4 @@
+# flake8: noqa
 """This module runs the main pipeline."""
 
 import argparse
@@ -20,44 +21,40 @@ def run_email_pipeline(read_from, write_to, solr, solr_url, dataset):
     config = get_config(dataset)
     SparkProvider.spark_context()
 
+    # STANDARD PREPROCESSING
+
+    reader = EmlReader(read_from)
+    pipes = [
+        EmailDecoding(split_header_body=False),
+        EmailSplitting(keep_thread_connected=True),
+        HeaderParsing(config=config, use_unix_time=False),
+        EmailDeduplication(is_connected_thread=True),
+        TextCleaning(read_from='body', write_to='text_clean'),
+        # LanguageDetection(read_from='text_clean'),
+        # SpacyNer(read_from='text_clean'),
+        # EmailCategoryClassification(),
+        # EmailFolderClassification()
+    ]
+    writer = TextFileWriter(path=write_to)
+    Pipeline(reader, pipes, writer).run()
 
 
     # TM PREPROCESSING
 
-    # reader = TextFileReader(path=write_to)
-    # writer = TextFileWriter(path=write_to + '_bow')
-    # pipe = TopicModelPreprocessing(read_from='text_clean', write_to='bow')  # should read from body_wo_signature
-    # Pipeline(reader, [pipe], writer).run()
+    reader = TextFileReader(path=write_to)
+    writer = TextFileWriter(path=write_to + '_bow')
+    pipe = TopicModelPreprocessing(read_from='text_clean', write_to='bow')  # should read from body_wo_signature
+    Pipeline(reader, [pipe], writer).run()
 
 
     # TM BUCKETING
-    # rdd = TextFileReader(path=write_to + '_bow').run()
-    # rdd = TopicModelBucketing().run(rdd)
-    # TextFileWriter(path=write_to + '_buckets').run(rdd)
+    rdd = TextFileReader(path=write_to + '_bow').run()
+    rdd = TopicModelBucketing().run(rdd)
+    TextFileWriter(path=write_to + '_buckets').run(rdd)
 
     # TM TRAINING
-    rdd = TextFileReader(path=write_to + '_buckets').run()
-    TopicModelTraining().run(rdd)
-
-
-    # STANDARD PREPROCESSING
-
-    # reader = EmlReader(read_from)
-    # pipes = [
-    #     EmailDecoding(split_header_body=False),
-    #     EmailSplitting(keep_thread_connected=True),
-    #     HeaderParsing(config=config, use_unix_time=False),
-    #     EmailDeduplication(is_connected_thread=True),
-    #     TextCleaning(read_from='body', write_to='text_clean'),
-    #     # LanguageDetection(read_from='text_clean'),
-    #     # SpacyNer(read_from='text_clean'),
-    #     # EmailCategoryClassification(),
-    #     # EmailFolderClassification()
-    # ]
-    # writer = TextFileWriter(path=write_to)
-    # Pipeline(reader, pipes, writer).run()
-
-
+    # rdd = TextFileReader(path=write_to + '_buckets').run()
+    # TopicModelTraining().run(rdd)
 
     # MORE STUFF
 
