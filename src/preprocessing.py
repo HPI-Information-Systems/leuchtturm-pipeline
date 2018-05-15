@@ -1,8 +1,10 @@
 """Pipes to preprocess emails, extract their meta-data, segmentation, ... for leuchtturm pipelines."""
 
+import ast
 from email import message_from_string
 from email.utils import unquote
 from email.header import make_header, decode_header
+import codecs
 import datetime
 import ujson as json
 import re
@@ -37,8 +39,30 @@ class EmailDecoding(Pipe):
         try:
             text = text.decode(encoding, 'replace')
         except LookupError:
-            text = text.decode('utf-8', 'replace')
+            try:
+                text = text.decode('utf-8', 'strict')
+            except UnicodeDecodeError:
+                text = text.decode('iso-8859-1')
+            except Exception:
+                text = str(text)
 
+        # sometimes the string contains unicode to ascii artifacts, clean that up!
+        try:
+            text = re.sub(r'=([A-Z0-9]{2})', lambda x: ast.literal_eval('"\\x' + x.group(1).lower() + '"'), text)
+        except SyntaxError:
+            pass
+
+        # sometimes the string was actually encoded in iso-8859-1,
+        # but the encoding is declared to be utf-8
+        try:
+            if True:
+                text = codecs.decode(text, 'raw_unicode_escape').encode('iso-8859-1', errors='replace').decode()
+            else:
+                text = codecs.decode(text, 'unicode_escape', 'replace').encode('iso-8859-1', errors='replace').decode(errors='replace')
+        except UnicodeDecodeError:
+            pass
+
+        # else assume 'text/plain':
         return text
 
     def remove_html_tags(self, text):
