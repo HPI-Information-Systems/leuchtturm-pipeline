@@ -115,7 +115,7 @@ class CorrespondentDataExtraction(Pipe):
             return {
                 'signatures': [],
                 'email_addresses': [recipient_email_address] if recipient_email_address else [],
-                'identifying_names': [recipient_name] if recipient_name else [],
+                'identifying_names': [recipient_name] if recipient_name else ['asdf'],
                 'aliases_from_signature': [],
                 'aliases': [],
                 'phone_numbers_office': [],
@@ -244,14 +244,12 @@ class CorrespondentDataAggregation(Pipe):
     def convert_identifying_names_field(self, data):
         """Convert from 'identifying_nameS' of type list to 'identifying_name' of type str."""
         document = json.loads(data)
-        if len(document['identifying_names']) == 1:
-            document['identifying_name'] = document.pop('identifying_names')[0]
-        else:
-            document['identifying_name'] = ''
+        if len(document['identifying_names']) != 1:
             print('lt_logs', datetime.now(),
                   'Warning in Correspondent Aggregation: there should be exactly 1 identifying name but found',
-                  document['identifying_names'],
+                  document['identifying_names'], ' - choosing maxmum now.',
                   flush=True)
+        document['identifying_name'] = max(document.pop('identifying_names') or [''])
         return json.dumps(document)
 
     def run(self, rdd):

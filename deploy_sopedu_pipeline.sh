@@ -42,10 +42,10 @@ cd config && zip -r --quiet config.zip * && mv config.zip .. && cd .. || return
 source deactivate
 
 echo '[stage 2 of 2] Running leuchtturm pipeline. This might take a while ...'
-# hdfs dfs -rm -r $PRESULT || true
-# hdfs dfs -rm -r $PRESULT"_correspondent" || true
-# hdfs dfs -rm -r $PRESULT"_injected" || true
-# hdfs dfs -rm -r $PRESULT"_topics" || true
+hdfs dfs -rm -r $PRESULT || true
+hdfs dfs -rm -r $PRESULT"_correspondent" || true
+hdfs dfs -rm -r $PRESULT"_injected" || true
+hdfs dfs -rm -r $PRESULT"_topics" || true
 curl $SOLR/update\?commit\=true -d '<delete><query>*:*</query></delete>' || true
 curl $SOLR"_topics"/update\?commit\=true -d '<delete><query>*:*</query></delete>' || true
 curl -H "Content-Type: application/json" -X POST \
