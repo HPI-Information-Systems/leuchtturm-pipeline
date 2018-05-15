@@ -47,7 +47,7 @@ class SolrFileWriter(Pipe):
     Utilizes SolrWriter under the hood.
     """
 
-    def __init__(self, conf, path, solr_url='http://sopedu.hpi.uni-potsdam.de:8983/solr/emails'):
+    def __init__(self, conf, path, solr_url):
         """Set solr config and path where rdd is read from."""
         super().__init__(conf)
         self.conf = conf
