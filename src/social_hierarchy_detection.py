@@ -3,6 +3,7 @@ import networkx as nx
 import time
 import datetime
 import pandas as pd
+import matplotlib.pyplot as plt
 from pandas.tseries.offsets import BDay
 
 
@@ -21,6 +22,7 @@ class SocialHierarchyDetector:
     def detect_social_hierarchy(self, graph):
         """
         Trigger social hierarchy score detection.
+
         Returns dict of nodes as keys and their hierarchy scores as values.
         """
         print('Start detecting social hierarchy scores')
@@ -45,14 +47,28 @@ class SocialHierarchyDetector:
             metrics.append(self._normalize(metric))
 
         hierarchy_scores = self._aggregate(graph, metrics)
-        # TODO statistics
+        # for testing purposes:
+        # hierarchy_scores = {
+        #     1789: 9.124392619010068, 580: 12.240280965335609, 1081: 26.37987980807487, 1816: 9.145741243918646,
+        #     1064: 15.152177841396314, 1114: 15.177581770488784, 963: 23.667776814550674, 800: 0.025463857506665463,
+        #     803: 12.188869698846476, 825: 6.257739454711132, 831: 9.781444715376796, 885: 9.514021758852707,
+        #     900: 18.431642952354263, 982: 9.230725026500606, 2183: 9.10207433356118, 1049: 0.04337863968422003,
+        #     2128: 9.079217298991635, 1110: 0.0020791866860019144, 1135: 9.161629985203534, 1323: 13.321351762179951,
+        #     2742: 9.067835504621918, 1492: 0.03736859295873761, 1543: 4.557505229810029, 1673: 9.093374266557147,
+        #     1760: 0.019437401197172747, 1878: 4.575436016971585, 1877: 4.575436016971585, 2201: 4.575436016888384,
+        #     1919: 13.63277835046198, 1976: 9.093374266557147, 2072: 0.17968440078391315, 2114: 0.019437401197172747,
+        #     2777: 0.0018654467347532571, 3126: 0.01015105652432728
+        # }
+        self._run_statistics(graph, hierarchy_scores)
+        hierarchy_scores_formatted = self._format_for_upload(hierarchy_scores)
+
         end = time.time()
         print('Calculated ' + str(len(graph.nodes)) + ' social hierarchy scores, took: ' + str(end - start) + 's')
-        return hierarchy_scores
+        return hierarchy_scores_formatted
 
     def _normalize(self, metric, high=True):
-        inf = min(metric.values())  # find_min_max(metric)
-        sup = max(sorted(metric.values())[:-1])
+        inf = min(metric.values())
+        sup = max(sorted(metric.values()))
 
         normalized_metric = dict()
         for key, value in metric.items():
@@ -74,6 +90,13 @@ class SocialHierarchyDetector:
 
         print(hierarchy_scores)
         return hierarchy_scores
+
+    def _format_for_upload(self, metric):
+        scores_formatted = []
+        for node, score in metric.items():
+            scores_formatted.append({'node_id': node, 'hierarchy': score})
+
+        return scores_formatted
 
     def _number_of_emails(self, graph):
         print('Start counting emails')
@@ -245,3 +268,43 @@ class SocialHierarchyDetector:
         end = time.time()
         print('Calculated ' + str(n) + ' mean shortest paths, took: ' + str(end - start) + 's')
         return table_of_means
+
+    def _run_statistics(self, graph, hierarchy_scores):
+        sorted_hierarchy = sorted(hierarchy_scores.values())
+        top_five = sorted(hierarchy_scores, key=hierarchy_scores.get, reverse=True)[:5]
+        email_addresses = nx.get_node_attributes(graph, 'email')
+        for node in top_five:
+            print((hierarchy_scores[node], email_addresses[node], node))
+
+        # plot line diagram
+        x = y = sorted_hierarchy
+        plt.plot(x, y, '.-')
+        plt.title('Hierarchy scores')
+        plt.xlabel('Scores')
+        plt.ylabel('Hierarchy values')
+
+        # plot histogram
+        plt.figure()
+        num_bins = 40
+        n, bins, patches = plt.hist(x, num_bins, alpha=0.75)
+        plt.title('Distribution of Hierarchy scores')
+        plt.xlabel('Scores')
+        plt.ylabel('Hierarchy values')
+
+        plt.rcParams['axes.axisbelow'] = True
+        axes = plt.gca()
+        axes.get_yaxis().grid(color='gray', linestyle='dashed')
+
+        # plot histogram
+        plt.figure()
+        num_bins = 3
+        n, bins, patches = plt.hist(x, num_bins, alpha=0.75)
+        plt.title('Distribution of Hierarchy scores')
+        plt.xlabel('Scores')
+        plt.ylabel('Hierarchy values')
+
+        plt.rcParams['axes.axisbelow'] = True
+        axes = plt.gca()
+        axes.get_yaxis().grid(color='gray', linestyle='dashed')
+
+        plt.show()
