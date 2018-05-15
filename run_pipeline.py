@@ -67,16 +67,17 @@ def run_email_pipeline(
     # ]
     # writer = TextFileWriter(path=write_to + '_injected')
     # Pipeline(reader, pipes, writer).run()
-
-    if solr:
-        SolrFileWriter(write_to + '_injected', solr_url=solr_url).run()
-        SolrFileWriter(write_to + '_topics', solr_url=solr_url + '_topics').run()
+    #
+    # if solr:
+    #     SolrFileWriter(write_to + '_injected', solr_url=solr_url).run()
+    #     SolrFileWriter(write_to + '_topics', solr_url=solr_url + '_topics').run()
 
     if neo4j:
+        # TODO fix paths
         Neo4JFileWriter(
-            write_to + '_correspondent', neo4j_host, neo4j_http_port, neo4j_bolt_port, mode='nodes').run()
+            write_to + '_correspondent_neo4j', neo4j_host, neo4j_http_port, neo4j_bolt_port, mode='nodes').run()
         Neo4JFileWriter(
-            write_to + '_injected', neo4j_host, neo4j_http_port, neo4j_bolt_port, mode='edges').run()
+            write_to + '_injected_neo4j', neo4j_host, neo4j_http_port, neo4j_bolt_port, mode='edges').run()
 
     SparkProvider.stop_spark_context()
 

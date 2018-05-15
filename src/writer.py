@@ -81,9 +81,11 @@ class Neo4JNodeWriter(Pipe):
         print('lt_logs', start_time, 'Start Neo4j Node Upload on partition...', flush=True)
         correspondents = [json.loads(item) for item in partition]
         graph = Graph(host=self.neo4j_host, http_port=self.http_port, bolt_port=self.bolt_port)
-        graph.run('UNWIND $correspondents AS correspondent '
-                  'CREATE (a:Person) SET a = correspondent',
-                  correspondents=correspondents)
+        step_size = 20
+        for i in range(0, len(correspondents), step_size):
+            graph.run('UNWIND $correspondents AS correspondent '
+                      'CREATE (a:Person) SET a = correspondent',
+                      correspondents=correspondents[i:i + step_size])
         print('lt_logs', datetime.now(), 'Finish Neo4j Node Upload on partition from', start_time, flush=True)
 
     def run(self, rdd):
@@ -125,23 +127,25 @@ class Neo4JEdgeWriter(Pipe):
             except Exception:
                 mail_timestamp = 0.0  # timestamp for 1970-01-01T00:00:00+00:00'
 
-            graph.run(
-                'UNWIND $recipients AS recipient '
-                'MATCH '
-                    '(a:Person {identifying_name: $sender_identifying_name}),'  # noqa
-                    '(b:Person {identifying_name: recipient.identifying_name}) '  # noqa
-                'MERGE (a)-[w:WRITESTO]->(b) '
-                    'ON CREATE SET '
-                        'w.mail_list = [$mail_id], '
-                        'w.time_list = [$mail_timestamp] '
-                    'ON MATCH SET '
-                        'w.mail_list = w.mail_list + $mail_id, '
-                        'w.time_list = w.time_list + $mail_timestamp',
-                recipients=recipients,
-                sender_identifying_name=sender['identifying_name'],
-                mail_id=mail_id,
-                mail_timestamp=mail_timestamp
-            )
+            step_size = 10
+            for i in range(0, len(recipients), step_size):
+                graph.run(
+                    'UNWIND $recipients AS recipient '
+                    'MATCH '
+                        '(a:Person {identifying_name: $sender_identifying_name}),'  # noqa
+                        '(b:Person {identifying_name: recipient.identifying_name}) '  # noqa
+                    'MERGE (a)-[w:WRITESTO]->(b) '
+                        'ON CREATE SET '
+                            'w.mail_list = [$mail_id], '
+                            'w.time_list = [$mail_timestamp] '
+                        'ON MATCH SET '
+                            'w.mail_list = w.mail_list + $mail_id, '
+                            'w.time_list = w.time_list + $mail_timestamp',
+                    recipients=recipients[i:i + step_size],
+                    sender_identifying_name=sender['identifying_name'],
+                    mail_id=mail_id,
+                    mail_timestamp=mail_timestamp
+                )
         print('lt_logs', datetime.now(), 'Finish Neo4j Edge Upload on partition from', start_time, flush=True)
 
     def run(self, rdd):
