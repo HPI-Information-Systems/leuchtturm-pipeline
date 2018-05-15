@@ -56,43 +56,43 @@ def test_email_splitting_on_dnc():
 
 def test_header_parsing_on_indented():
     """Headers should be parsed correctly for visually indented headers (>>)."""
-    tool = HeaderParsing(config=config_enron, clean_subject=False, use_unix_time=False)
+    tool = HeaderParsing(conf, clean_subject=False, use_unix_time=False)
     assert tool.run_on_document(header_raw_indent) == header_parsed_indent
 
 
 def test_header_parsing_on_fwd():
     """Headers should be parsed correctly for inline fwds."""
-    tool = HeaderParsing(config=config_enron, clean_subject=False, use_unix_time=False)
+    tool = HeaderParsing(conf, clean_subject=False, use_unix_time=False)
     assert tool.run_on_document(header_raw_fwd) == header_parsed_fwd
 
 
 def test_header_parsing_on_regular():
     """Standard headers should be parsed correctly."""
-    tool = HeaderParsing(config=config_enron, clean_subject=False, use_unix_time=False)
+    tool = HeaderParsing(conf, clean_subject=False, use_unix_time=False)
     assert tool.run_on_document(header_raw_regular) == header_parsed_regular
 
 
 def test_header_parsing_on_dnc():
     """Dnc headers should be parsed correctly."""
-    tool = HeaderParsing(config=config_dnc, clean_subject=False, use_unix_time=False)
+    tool = HeaderParsing(config_dnc, clean_subject=False, use_unix_time=False)
     assert tool.run_on_document(header_raw_dnc) == header_parsed_dnc
 
 
 def test_header_parsing_on_deformed():
     """Deformed headers should be parsed correctly (e.g. no from field, instead startig with name)."""
-    tool = HeaderParsing(config=config_enron, clean_subject=False, use_unix_time=False)
+    tool = HeaderParsing(conf, clean_subject=False, use_unix_time=False)
     assert tool.run_on_document(header_raw_deformed) == header_parsed_deformed
 
 
 def test_header_parsing_low_date():
     """Date lower than specified should be parsed to minimal date."""
-    tool = HeaderParsing(config=config_enron, clean_subject=False, use_unix_time=False)
+    tool = HeaderParsing(config_enron, clean_subject=False, use_unix_time=False)
     assert tool.run_on_document(header_raw_low_date) == header_parsed_low_date
 
 
 def test_header_parsing_high_date():
     """Date greater than specified should be parsed to maximal date."""
-    tool = HeaderParsing(config=config_enron, clean_subject=False, use_unix_time=False)
+    tool = HeaderParsing(config_enron, clean_subject=False, use_unix_time=False)
     assert tool.run_on_document(header_raw_high_date) == header_parsed_high_date
 
 
