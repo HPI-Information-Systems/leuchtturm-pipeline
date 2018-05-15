@@ -55,14 +55,15 @@ class EmailDecoding(Pipe):
         # sometimes the string was actually encoded in iso-8859-1,
         # but the encoding is declared to be utf-8
         try:
-            if True:
+            if encoding == 'iso-8859-1':
                 text = codecs.decode(text, 'raw_unicode_escape').encode('iso-8859-1', errors='replace').decode()
             else:
-                text = codecs.decode(text, 'unicode_escape', 'replace').encode('iso-8859-1', errors='replace').decode(errors='replace')
+                text = codecs.decode(text, 'unicode_escape').encode('iso-8859-1', errors='replace').decode()
         except UnicodeDecodeError:
             pass
 
         # else assume 'text/plain':
+
         return text
 
     def remove_html_tags(self, text):
@@ -127,7 +128,7 @@ class EmailDecoding(Pipe):
         if self.get_attachment_names:
             doc['attachments'] = self.get_attachments(message)
 
-        return json.dumps(doc)
+        return json.dumps(doc, ensure_ascii=False)
 
     def run(self, rdd):
         """Run task in spark context."""
@@ -230,9 +231,9 @@ class EmailSplitting(Pipe):
 
         if self.keep_thread_connected:
             document['parts'] = splitted_emails
-            return json.dumps(document)
+            return json.dumps(document, ensure_ascii=False)
         else:
-            return [json.dumps(email) for email in splitted_emails]
+            return [json.dumps(email, ensure_ascii=False) for email in splitted_emails]
 
     def run(self, rdd):
         """Run pipe in spark context."""
@@ -430,7 +431,7 @@ class HeaderParsing(Pipe):
         else:
             document['header'] = self.parse_header(document['header'])
 
-        return json.dumps(document)
+        return json.dumps(document, ensure_ascii=False)
 
     def run(self, rdd):
         """Run task in spark context."""
@@ -461,7 +462,7 @@ class LanguageDetection(Pipe):
         document = json.loads(raw_message)
         document['lang'] = self.detect_lang(document[self.read_from])
 
-        return json.dumps(document)
+        return json.dumps(document, ensure_ascii=False)
 
     def run(self, rdd):
         """Run task in spark context."""
@@ -524,7 +525,7 @@ class TextCleaning(Pipe):
         clean = self.remove_strict(clean) if not self.readable else clean
         document[self.write_to] = clean
 
-        return json.dumps(document)
+        return json.dumps(document, ensure_ascii=False)
 
     def run(self, rdd):
         """Run pipe in spark context."""

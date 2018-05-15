@@ -160,7 +160,7 @@ class TopicModelPrediction(Pipe):
         document = json.loads(raw_message)
         doc_topics = self.get_topics_for_doc(document['doc_id'], document[self.read_from], model, dictionary)
 
-        return [json.dumps(topic) for topic in doc_topics]
+        return [json.dumps(topic, ensure_ascii=False) for topic in doc_topics]
 
     def run_on_partition(self, partition):
         """Run task in spark context. Partitionwise for performance reasosn."""
