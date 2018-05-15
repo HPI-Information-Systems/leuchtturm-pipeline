@@ -30,7 +30,7 @@ class NetworkAnalyser:
         neo_connection = py2neo.Graph(self.neo4j_host, http_port=self.http_port, bolt_port=self.bolt_port)
         edges = neo_connection.run('MATCH (source)-[r]->(target) WHERE ()-->(source)-->() AND ()-->(target)-->() \
                                     RETURN id(source), id(target), size(r.mail_list) as cnt, r.time_list as tml')
-        nodes = neo_connection.run('MATCH (p:Person) WHERE ()-->(p)-->() RETURN id(p), p.name, p.email')
+        nodes = neo_connection.run('MATCH (p:Person) RETURN id(p), p.name, p.email')
 
         digraph = nx.DiGraph()
 
