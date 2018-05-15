@@ -1,4 +1,3 @@
-# flake8: noqa
 """This module runs the main pipeline."""
 
 import argparse
@@ -10,7 +9,7 @@ from src.reader import EmlReader, TextFileReader
 from src.preprocessing import EmailDecoding, EmailSplitting, HeaderParsing, TextCleaning, LanguageDetection
 from src.deduplication import EmailDeduplication
 from src.ner import SpacyNer
-from src.topics import TopicModelPreprocessing, TopicModelBucketing, TopicModelTraining
+from src.topics import TopicModelPrediction, TopicModelTraining, TopicModelPreprocessing, TopicModelBucketing
 from src.writer import TextFileWriter, SolrFileWriter
 from src.category_classification import EmailCategoryClassification
 from src.folder_classification import EmailFolderClassification
@@ -21,8 +20,6 @@ def run_email_pipeline(read_from, write_to, solr, solr_url, dataset):
     config = get_config(dataset)
     SparkProvider.spark_context()
 
-    # STANDARD PREPROCESSING
-
     reader = EmlReader(read_from)
     pipes = [
         EmailDecoding(split_header_body=False),
@@ -30,37 +27,25 @@ def run_email_pipeline(read_from, write_to, solr, solr_url, dataset):
         HeaderParsing(config=config, use_unix_time=False),
         EmailDeduplication(is_connected_thread=True),
         TextCleaning(read_from='body', write_to='text_clean'),
-        # LanguageDetection(read_from='text_clean'),
-        # SpacyNer(read_from='text_clean'),
-        # EmailCategoryClassification(),
-        # EmailFolderClassification()
+        LanguageDetection(read_from='text_clean'),
+        SpacyNer(read_from='text_clean'),
+        EmailCategoryClassification(),
+        EmailFolderClassification()
     ]
     writer = TextFileWriter(path=write_to)
     Pipeline(reader, pipes, writer).run()
 
-
-    # TM PREPROCESSING
+    reader = TextFileReader(path=write_to)
+    pipes = [
+        TopicModelPreprocessing(read_from='text_clean', write_to='bow'),
+        TopicModelBucketing()
+    ]
+    writer = TextFileWriter(path=write_to + '_tm_buckets')
+    Pipeline(reader, pipes, writer).run()
 
     reader = TextFileReader(path=write_to)
-    writer = TextFileWriter(path=write_to + '_bow')
-    pipe = TopicModelPreprocessing(read_from='text_clean', write_to='bow')  # should read from body_wo_signature
-    Pipeline(reader, [pipe], writer).run()
-
-
-    # TM BUCKETING
-    rdd = TextFileReader(path=write_to + '_bow').run()
-    rdd = TopicModelBucketing().run(rdd)
-    TextFileWriter(path=write_to + '_buckets').run(rdd)
-
-    # TM TRAINING
-    # rdd = TextFileReader(path=write_to + '_buckets').run()
-    # TopicModelTraining().run(rdd)
-
-    # MORE STUFF
-
-    # reader = TextFileReader(path=write_to)
-    # writer = TextFileWriter(path=write_to + '_topics')
-    # Pipeline(reader, [TopicModelPrediction()], writer).run()
+    writer = TextFileWriter(path=write_to + '_topics')
+    Pipeline(reader, [TopicModelPrediction()], writer).run()
 
     if solr:
         SolrFileWriter(write_to, solr_url=solr_url).run()

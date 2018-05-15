@@ -5,16 +5,104 @@ import ujson as json
 import pickle
 from string import punctuation
 
-from gensim.models import ldaseqmodel
-from gensim.corpora import Dictionary
+from gensim import corpora, models
 from nltk.corpus import stopwords as nltksw
 from nltk.stem.wordnet import WordNetLemmatizer
 
 from .common import Pipe
 
 
+class TopicModelTraining(Pipe):
+    """Train topic model and export it.
+
+    Train a lda topic model using gensim.
+    Export pickeled model to a textfile.
+    """
+
+    def __init__(self):
+        """TODO: set params here (iterations, num_topics, ...)!! Especially output paths."""
+        super().__init__()
+
+    def run(self, rdd):
+        """Run topic model training."""
+        iterations = 1000
+        num_topics = 100
+        alpha = 50 / num_topics
+        eta = 0.1
+        raw_corpus = rdd.collect()
+
+        stopwords = nltksw.words('english')
+
+        lemma = WordNetLemmatizer()
+        short_tokens = set()
+        numbers = set()
+
+        def clean(doc):
+            tokens = [token for token in doc.lower().split()]
+            punc_free = [token.strip(punctuation) for token in tokens]
+            empty_string_free = [token for token in punc_free if token]
+            stopword_free = [word for word in empty_string_free if word not in stopwords]
+            short_token_free = [word if len(word) > 2 else short_tokens.add(word) for word in stopword_free]
+            empty_string_free2 = [token for token in short_token_free if token]
+            numerics_free = []
+            for token in empty_string_free2:
+                if [char for char in token if not (char.isdigit() or char in punctuation)]:
+                    numerics_free.append(token)
+                else:
+                    numerics_free.append('lt_number')
+                    numbers.add(token)
+            lemmatized = [lemma.lemmatize(word) for word in numerics_free]
+            return lemmatized
+
+        docs = [clean(doc) for doc in raw_corpus]
+
+        word_doc_appearances = defaultdict(set)
+        for i, doc in enumerate(docs):
+            for token in doc:
+                word_doc_appearances[token].add(i)
+
+        high_freq_tokens = set()
+        low_freq_tokens = set()
+
+        MIN_FREQ = 3
+        MAX_PERCENTAGE = 0.05
+        max_freq = MAX_PERCENTAGE * len(docs)
+
+        def filter_by_freq(doc):
+            filtered_doc = []
+            for token in doc:
+                if token == 'lt_number':
+                    filtered_doc.append(token)
+                elif len(word_doc_appearances[token]) < MIN_FREQ:
+                    low_freq_tokens.add(token)
+                elif len(word_doc_appearances[token]) > max_freq:
+                    high_freq_tokens.add(token)
+                else:
+                    filtered_doc.append(token)
+            return filtered_doc
+
+        docs = [filter_by_freq(doc) for doc in docs]
+
+        docs = [doc for doc in docs if doc]
+
+        processed_corpus = docs
+
+        dictionary = corpora.Dictionary(processed_corpus)
+        with open('./models/pickled_lda_dictionary.p', 'wb') as pfile:
+            pickle.dump(dictionary, pfile)
+
+        bow_corpus = [dictionary.doc2bow(text) for text in processed_corpus]
+
+        lda = models.ldamodel.LdaModel(bow_corpus, num_topics=num_topics, iterations=iterations, eta=eta, alpha=alpha)
+        with open('./models/pickled_lda_model.p', 'wb') as pfile:
+            pickle.dump(lda, pfile)
+
+
 class TopicModelPreprocessing(Pipe):
+    """Preprocess documents into a bag-of-words so that it can be used to train a topic model."""
+
     def __init__(self, read_from, write_to, min_freq=0, max_percentage=1.00):
+        """Set params."""
         super().__init__()
         self.read_from = read_from
         self.write_to = write_to
@@ -27,12 +115,12 @@ class TopicModelPreprocessing(Pipe):
         self.max_freq = -1
         self.min_freq = min_freq
 
-
     def tokenize(self, body):
+        """Split the body into words."""
         return body.lower().split()
 
-
     def remove_various_words(self, bow, sender, recipients):
+        """Clean the bow from distracting words."""
         names = [part.lower() for part in sender['name'].split()]
         for recipient in recipients:
             for part in recipient['name'].split():
@@ -62,14 +150,16 @@ class TopicModelPreprocessing(Pipe):
         return True
 
     def lemmatize(self, bow):
+        """Lemmatize each word in a bow."""
         return [self.lemma.lemmatize(word) for word in bow]
 
     def count_word_frequencies(self, bow):
+        """Add the number of occurences of words in a bow to the global tracked word frequencies."""
         for word in bow:
             self.word_frequencies[word] += 1
 
     def run_on_document(self, item):
-        """Transform a document into clean text."""
+        """Run TM preprocessing on document."""
         document = json.loads(item)
         bow = self.tokenize(document[self.read_from])
 
@@ -81,6 +171,7 @@ class TopicModelPreprocessing(Pipe):
         return json.dumps(document)
 
     def filter_by_frequencies(self, item):
+        """Remove all words from a bow that are too frequent or too infrequent in the whole corpus."""
         document = json.loads(item)
         bow = document[self.write_to]
 
@@ -93,32 +184,23 @@ class TopicModelPreprocessing(Pipe):
         document[self.write_to] = filtered_bow
         return json.dumps(document)
 
-    # def filter_keys(self, item):
-    #     document = json.loads(item)
-    #     for key in list(set(document.keys()) - {'body', 'bow'}):
-    #         document.pop(key)
-    #     return json.dumps(document)
-
     def run(self, rdd):
         """Run pipe in spark context."""
         self.max_freq = self.max_percentage * rdd.count()
         rdd = rdd.map(self.run_on_document)
         return rdd.map(self.filter_by_frequencies)
-                  # .map(self.filter_dont_push)
 
 
 class TopicModelBucketing(Pipe):
-    """Train topic model and export it.
-
-    Train a lda topic model using gensim.
-    Export pickeled model to a textfile.
-    """
+    """Bucket email documents by time slices."""
 
     def __init__(self, read_from='bow'):
+        """Set params."""
         super().__init__()
         self.read_from = read_from
 
     def remove_irrelevant_keys(self, item):
+        """Remove all keys except for self.read_from (usually 'bow') as they're not needed for this task."""
         document = json.loads(item)
         date = document['header']['date']
         for key in list(set(document.keys()) - {self.read_from}):
@@ -127,6 +209,7 @@ class TopicModelBucketing(Pipe):
         return json.dumps(document)
 
     def convert_to_tuple(self, item, bucket_timeframe='month'):
+        """Convert a document to a tuple of reduce-key and document."""
         document = json.loads(item)
         splitting_key = document['date']
 
@@ -143,6 +226,7 @@ class TopicModelBucketing(Pipe):
         return splitting_key, [json.dumps(document)]
 
     def bucket_emails_by_date(self, item1, item2):
+        """Merge two buckets of emails of the same time slice into one."""
         document1 = [json.loads(subitem) for subitem in item1]
         document2 = [json.loads(subitem) for subitem in item2]
         new_count = document1[0]['count_in_bucket'] + document2[0]['count_in_bucket']
@@ -153,49 +237,25 @@ class TopicModelBucketing(Pipe):
         return [json.dumps(doc) for doc in merged_documents]
 
     def convert_from_tuple(self, document_tuple):
-        """Convert tupel entry of rdd to usual format for pipeline."""
+        """Convert tuple entry of rdd to usual format for pipeline."""
         return document_tuple[1]
 
     def dump_items(self, item):
+        """Serialize a whole bucket instead of serializing every single item in the bucket itself."""
         documents = [json.loads(subitem) for subitem in item]
         return json.dumps(documents)
 
     def run(self, rdd):
-        """Run topic model training."""
+        """Run topic model bucketing."""
         # if sorting doesn't work because buckets are too big, try sorting before
         # hopefully the use of 'filter()' can be dropped at some point when all docs have a date
         return rdd.filter(lambda item: json.loads(item)['header']['date']) \
-           .map(self.remove_irrelevant_keys) \
-           .map(self.convert_to_tuple) \
-           .reduceByKey(self.bucket_emails_by_date) \
-           .map(self.convert_from_tuple) \
-           .sortBy(lambda item: json.loads(item[0])['date']) \
-           .map(self.dump_items)
-
-
-class TopicModelTraining(Pipe):
-    def __init__(self, read_from='bow', num_topics=100, eta=0.1):
-        """TODO: set params here (iterations, num_topics, ...)!! Especially output paths."""
-        super().__init__()
-        self.read_from = read_from
-        self.num_topics = num_topics
-        self.eta = eta
-        self.alpha = 50 / num_topics
-
-    def run(self, rdd):
-        buckets = rdd.collect()
-        bows = [doc['bow'] for bucket in buckets for doc in json.loads(bucket)]
-
-        dictionary = Dictionary(bows)
-        bow_corpus = [dictionary.doc2bow(bow) for bow in bows]
-        time_slices = [int(json.loads(bucket)[0]['count_in_bucket']) for bucket in buckets]
-
-        ldaseq = ldaseqmodel.LdaSeqModel(corpus=bow_corpus, id2word=dictionary, time_slice=time_slices, num_topics=10)
-
-        with open('./models/pickled_ldaseq_dictionary.p', 'wb') as pfile:
-            pickle.dump(dictionary, pfile)
-        with open('./models/pickled_ldaseq_model.p', 'wb') as pfile:
-            pickle.dump(ldaseq, pfile)
+                  .map(self.remove_irrelevant_keys) \
+                  .map(self.convert_to_tuple) \
+                  .reduceByKey(self.bucket_emails_by_date) \
+                  .map(self.convert_from_tuple) \
+                  .sortBy(lambda item: json.loads(item[0])['date']) \
+                  .map(self.dump_items)
 
 
 class TopicModelPrediction(Pipe):
