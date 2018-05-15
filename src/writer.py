@@ -81,11 +81,9 @@ class Neo4JNodeWriter(Pipe):
         print('lt_logs', start_time, 'Start Neo4j Node Upload on partition...', flush=True)
         correspondents = [json.loads(item) for item in partition]
         graph = Graph(host=self.neo4j_host, http_port=self.http_port, bolt_port=self.bolt_port)
-        step_size = 20
-        for i in range(0, len(correspondents), step_size):
-            graph.run('UNWIND $correspondents AS correspondent '
-                      'CREATE (a:Person) SET a = correspondent',
-                      correspondents=correspondents[i:i + step_size])
+        graph.run('UNWIND $correspondents AS correspondent '
+                  'CREATE (a:Person) SET a = correspondent',
+                  correspondents=correspondents)
         print('lt_logs', datetime.now(), 'Finish Neo4j Node Upload on partition from', start_time, flush=True)
 
     def run(self, rdd):
@@ -129,11 +127,14 @@ class Neo4JEdgeWriter(Pipe):
 
             step_size = 10
             for i in range(0, len(recipients), step_size):
+                edge_start_time = datetime.now()
+                print('lt_logs', edge_start_time, 'Upload edge', mail.get('path'), 'with', recipients[i:i + step_size])
                 graph.run(
+                    'MATCH '
+                        '(a:Person {identifying_name: $sender_identifying_name}) '
                     'UNWIND $recipients AS recipient '
                     'MATCH '
-                        '(a:Person {identifying_name: $sender_identifying_name}),'  # noqa
-                        '(b:Person {identifying_name: recipient.identifying_name}) '  # noqa
+                        '(b:Person {identifying_name: recipient.identifying_name}) '
                     'MERGE (a)-[w:WRITESTO]->(b) '
                         'ON CREATE SET '
                             'w.mail_list = [$mail_id], '
@@ -145,7 +146,8 @@ class Neo4JEdgeWriter(Pipe):
                     sender_identifying_name=sender['identifying_name'],
                     mail_id=mail_id,
                     mail_timestamp=mail_timestamp
-                )
+                )  # noqa
+                print('lt_logs', datetime.now(), 'Finish uploading edge from', edge_start_time)
         print('lt_logs', datetime.now(), 'Finish Neo4j Edge Upload on partition from', start_time, flush=True)
 
     def run(self, rdd):
