@@ -45,10 +45,13 @@ def run_email_pipeline(conf):
         # TODO implement neo4j import
         pass
 
-    print(conf.get('solr', 'import'))
     if conf.get('solr', 'import'):
-        SolrFileWriter(conf, conf.get('data', 'results_dir'), conf.get('solr', 'collection')).run()
-        SolrFileWriter(conf, conf.get('topic_modelling', 'working_dir'), conf.get('solr', 'topic_collection')).run()
+        SolrFileWriter(conf,
+                       conf.get('data', 'results_dir'),
+                       conf.solr_url + conf.get('solr', 'collection')).run()
+        SolrFileWriter(conf,
+                       conf.get('topic_modelling', 'working_dir'),
+                       conf.solr_url + conf.get('solr', 'topic_collection')).run()
 
     SparkProvider.stop_spark_context()
 
