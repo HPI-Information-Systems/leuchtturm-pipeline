@@ -14,7 +14,7 @@ echo '[stage 2 of 3] Fetching data ...'
 cp ~/gitlab-runner/models/* $MODELS_DIRECTORY
 cp ~/gitlab-runner/emails/* $DATA_SOURCE_DIR
 
-export SPARK_HOME=/usr/hdp/2.6.2.0-205/spark2/
+# export SPARK_HOME=/usr/hdp/2.6.2.0-205/spark2/
 echo '[stage 3 of 3] Running pipeline ...'
 python ./run_pipeline.py -c config/testconfig.ini
 ls $DATA_RESULTS_DIR/_SUCCESS
