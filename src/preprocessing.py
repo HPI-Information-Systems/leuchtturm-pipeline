@@ -267,6 +267,7 @@ class HeaderParsing(Pipe):
         text = re.sub(r'.*-{5,} forwarded by.+-{5,}', '', text, 0, re.IGNORECASE | re.DOTALL)  # remove 2ndary header
         text = re.sub(r'^(\s|>)+', '', text, flags=re.MULTILINE)  # remove leading > and whitespace
         text = re.sub(r'\s+', ' ', text)  # normalize whitespace
+        text = text.replace('*', '')
         text = text.strip(whitespace)
 
         return text
@@ -295,13 +296,16 @@ class HeaderParsing(Pipe):
 
     def clean_email(self, email_string):
         """Clean email address."""
-        email = email_string.replace('[mailto:', '').replace(']', '')
+        email = email_string.replace('[mailto:', '').replace(']', '').replace('"', '').replace("'", '')
+        if email.count('@') > 1 and re.search(r'<[^>]+>', email):
+            email = re.sub(r'<[^>]+>', '', email)  # case: some_email@a.com<mailto:some_email@a.com>
         email = email.replace('<', '').replace('>', '')
-        email = re.search(r'\S+@\S+\.\S{2,}', email)  # get email
-        email = email.group(0) if email is not None else ''
-        email = unquote(email.lower())
+        if re.search(r'\S+@\S+\.\S{2,}', email):
+            email = re.search(r'\S+@\S+\.\S{2,}', email).group(0)
+        else:
+            email = ''
 
-        return email
+        return unquote(email.lower())
 
     def clean_name(self, name_string):
         """Normalize and clean a name. Lastname, Firstname becomes to Fn Ln."""
