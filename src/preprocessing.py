@@ -2,6 +2,7 @@
 
 from email import message_from_string
 from email.utils import unquote
+import datetime
 import ujson as json
 import re
 from string import whitespace
@@ -10,7 +11,6 @@ from html2text import HTML2Text
 from langdetect import detect
 import textacy
 import dateparser
-import datetime
 
 from .common import Pipe
 
@@ -22,9 +22,9 @@ class EmailDecoding(Pipe):
     Attachements may be considered in future.
     """
 
-    def __init__(self, get_attachment_names=True, split_header_body=False):
+    def __init__(self, conf, get_attachment_names=True, split_header_body=False):
         """Set conf."""
-        super().__init__()
+        super().__init__(conf)
         self.get_attachment_names = get_attachment_names
         self.split_header_body = split_header_body
 
@@ -117,7 +117,7 @@ class EmailSplitting(Pipe):
     begin_forwarded_message_heuristic = r'(.*Begin forwarded message:((\n|.)*?)To:.*)'
     original_message_heuristic = r'(.*-{3}.*Original Message((\n|.)*?)Subject:.*)'
     reply_seperator_heuristic = r'(.*_{3}.*Reply Separator((\n|.)*?)Date.*)'
-    date_to_subject_heuristic = r'(.*\n.*(on )?\d{2}\/\d{2}\/\d{2,4}\s\d{2}:\d{2}(:\d{2})?\s?(AM|PM|am|pm)?.*\n.*(\n.*)?To: (\n|.)*?Subject: .*)' # NOQA
+    date_to_subject_heuristic = r'(.*\n.*(on )?\d{2}\/\d{2}\/\d{2,4}\s\d{2}:\d{2}(:\d{2})?\s?(AM|PM|am|pm)?.*\n.*(\n.*)?To: (\n|.)*?Subject: .*)'  # NOQA
     from_to_subject_heuristic = r'(.*From:((\n|.)*?)Subject:.*)'
 
     header_regex = re.compile('(%s|%s|%s|%s|%s|%s)' % (
@@ -129,9 +129,9 @@ class EmailSplitting(Pipe):
         from_to_subject_heuristic
     ))
 
-    def __init__(self, keep_thread_connected=False):
+    def __init__(self, conf, keep_thread_connected=False):
         """Set params if needed here."""
-        super().__init__()
+        super().__init__(conf)
         self.keep_thread_connected = keep_thread_connected
 
     def detect_parts(self, email):
@@ -210,19 +210,13 @@ class HeaderParsing(Pipe):
     Get sender, recipients, date, subject from emails even with (common) inline headers.
     """
 
-    def __init__(self, config=None, clean_subject=False, use_unix_time=False):
+    def __init__(self, conf, clean_subject=False, use_unix_time=False):
         """Set parsing rules."""
-        super().__init__()
+        super().__init__(conf)
         self.clean_subject = clean_subject  # TODO is not implemented
         self.use_unix_time = use_unix_time
-        self.start_date = None
-        self.end_date = None
-
-        if config and 'PERIOD' in config:
-            if 'start' in config['PERIOD']:
-                self.start_date = datetime.datetime.fromtimestamp(int(config['PERIOD']['start']))
-            if 'end' in config['PERIOD']:
-                self.end_date = datetime.datetime.fromtimestamp(int(config['PERIOD']['end']))
+        self.start_date = datetime.datetime.fromtimestamp(conf.get('data', 'time_min'))
+        self.end_date = datetime.datetime.fromtimestamp(conf.get('data', 'time_max'))
 
     def prepare_header_string(self, text):
         """Remove whitespace, newlines and other noise."""
@@ -410,9 +404,9 @@ class LanguageDetection(Pipe):
     Add 2 char language code indicating language in field lang.
     """
 
-    def __init__(self, read_from='text_clean'):
+    def __init__(self, conf, read_from='text_clean'):
         """Set lang detect params."""
-        super().__init__()
+        super().__init__(conf)
         self.read_from = read_from
 
     def detect_lang(self, text):
@@ -441,9 +435,9 @@ class TextCleaning(Pipe):
     Clean from inline headers and other email specific 'noise'.
     """
 
-    def __init__(self, read_from='body', write_to='text_clean', readable=True):
+    def __init__(self, conf, read_from='body', write_to='text_clean', readable=True):
         """Set params."""
-        super().__init__()
+        super().__init__(conf)
         self.read_from = read_from
         self.write_to = write_to
         self.readable = readable
@@ -459,8 +453,9 @@ class TextCleaning(Pipe):
                    r'-----\s?original message\s?-----',
                    r'(\*|=|-){40,}\s(.|\n)+(\*|=|-){40,}\s']
 
+        text_clean = text
         for header in headers:
-            text_clean = re.sub(header, '', text, 0, re.MULTILINE | re.IGNORECASE | re.UNICODE)
+            text_clean = re.sub(header, '', text_clean, 0, re.MULTILINE | re.IGNORECASE | re.UNICODE)
 
         edrm_footer = ('***********\r\nEDRM Enron Email Data Set has been produced in EML, PST and NSF format by ZL '
                        'Technologies, Inc. This Data Set is licensed under a Creative Commons Attribution 3.0 United '

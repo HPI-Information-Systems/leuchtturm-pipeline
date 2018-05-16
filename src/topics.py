@@ -4,6 +4,7 @@ from collections import defaultdict
 import ujson as json
 import pickle
 from string import punctuation
+import os
 
 from gensim import corpora, models
 from nltk.corpus import stopwords as nltksw
@@ -19,9 +20,10 @@ class TopicModelTraining(Pipe):
     Export pickeled model to a textfile.
     """
 
-    def __init__(self):
+    def __init__(self, conf):
         """TODO: set params here (iterations, num_topics, ...)!! Especially output paths."""
-        super().__init__()
+        super().__init__(conf)
+        self.conf = conf
 
     def run(self, rdd):
         """Run topic model training."""
@@ -88,22 +90,23 @@ class TopicModelTraining(Pipe):
         processed_corpus = docs
 
         dictionary = corpora.Dictionary(processed_corpus)
-        with open('./models/pickled_lda_dictionary.p', 'wb') as pfile:
+        with open(self.conf.get('topic_modelling', 'file_dictionary'), 'wb') as pfile:
             pickle.dump(dictionary, pfile)
 
         bow_corpus = [dictionary.doc2bow(text) for text in processed_corpus]
 
         lda = models.ldamodel.LdaModel(bow_corpus, num_topics=num_topics, iterations=iterations, eta=eta, alpha=alpha)
-        with open('./models/pickled_lda_model.p', 'wb') as pfile:
+        with open(self.conf.get('topic_modelling', 'file_model'), 'wb') as pfile:
             pickle.dump(lda, pfile)
 
 
 class TopicModelPreprocessing(Pipe):
     """Preprocess documents into a bag-of-words so that it can be used to train a topic model."""
 
-    def __init__(self, read_from, write_to, min_freq=0, max_percentage=1.00):
+    def __init__(self, conf, read_from, write_to):
         """Set params."""
-        super().__init__()
+        super().__init__(conf)
+        self.conf = conf
         self.read_from = read_from
         self.write_to = write_to
         self.stopwords = nltksw.words('english')
@@ -111,9 +114,7 @@ class TopicModelPreprocessing(Pipe):
         self.word_frequencies = defaultdict(lambda: 0)
         self.high_freq_words = set()
         self.low_freq_words = set()
-        self.max_percentage = max_percentage
         self.max_freq = -1
-        self.min_freq = min_freq
 
     def tokenize(self, body):
         """Split the body into words."""
@@ -177,7 +178,7 @@ class TopicModelPreprocessing(Pipe):
 
         filtered_bow = []
         for word in bow:
-            if self.word_frequencies[word] > self.min_freq \
+            if self.word_frequencies[word] > self.conf.get('tm_preprocessing', 'min_freq') \
                and self.word_frequencies[word] < self.max_freq:
                 filtered_bow.append(word)
 
@@ -186,7 +187,7 @@ class TopicModelPreprocessing(Pipe):
 
     def run(self, rdd):
         """Run pipe in spark context."""
-        self.max_freq = self.max_percentage * rdd.count()
+        self.max_freq = self.conf.get('tm_preprocessing', 'max_percentage') * rdd.count()
         rdd = rdd.map(self.run_on_document)
         return rdd.map(self.filter_by_frequencies)
 
@@ -194,9 +195,10 @@ class TopicModelPreprocessing(Pipe):
 class TopicModelBucketing(Pipe):
     """Bucket email documents by time slices."""
 
-    def __init__(self, read_from='bow'):
+    def __init__(self, conf, read_from='bow'):
         """Set params."""
-        super().__init__()
+        super().__init__(conf)
+        self.conf = conf
         self.read_from = read_from
 
     def remove_irrelevant_keys(self, item):
@@ -208,10 +210,12 @@ class TopicModelBucketing(Pipe):
         document['date'] = date
         return json.dumps(document)
 
-    def convert_to_tuple(self, item, bucket_timeframe='month'):
+    def convert_to_tuple(self, item, bucket_timeframe=None):
         """Convert a document to a tuple of reduce-key and document."""
         document = json.loads(item)
         splitting_key = document['date']
+        if not bucket_timeframe:
+            bucket_timeframe = self.conf.get('tm_preprocessing', 'bucket_timeframe')
 
         if bucket_timeframe == 'year':
             # '2001-05-15T08:31:00Z' --> ['2001', '05-15T08:31:00Z'] --> '2001'
@@ -265,34 +269,32 @@ class TopicModelPrediction(Pipe):
     Will add topic field.
     """
 
-    def __init__(self, read_from='text_clean', path_model='./models/pickled_lda_model.p',
-                 path_dict='./models/pickled_lda_dictionary.p'):
+    def __init__(self, conf, read_from='text_clean'):
         """Set params here."""
-        super().__init__()
+        super().__init__(conf)
         self.read_from = read_from
-        self.path_model = path_model
-        self.path_dict = path_dict
+        self.conf = conf
         # TODO add variable train_topic_model=Bool to trigger tm training within the main pipeline
 
     def load_model(self):
         """Load lda model from defined path."""
-        with open(self.path_model, mode='rb') as pfile:
+        with open(os.path.abspath(self.conf.get('topic_modelling', 'file_model')), mode='rb') as pfile:
             model = pickle.load(pfile)
 
         return model
 
     def load_dictionary(self):
         """Load dict for lda tm from defined path."""
-        with open(self.path_dict, mode='rb') as pfile:
+        with open(os.path.abspath(self.conf.get('topic_modelling', 'file_dictionary')), mode='rb') as pfile:
             dictionary = pickle.load(pfile)
 
         return dictionary
 
     def get_topics_for_doc(self, doc_id, text, model, dictionary):
         """Predict topics for a text."""
-        def get_word_from_term_id_and_round(tuple):
-            term = dictionary[tuple[0]]
-            term_conf = round(float(tuple[1]), 8)
+        def get_word_from_term_id_and_round(word_tuple):
+            term = dictionary[word_tuple[0]]
+            term_conf = round(float(word_tuple[1]), 8)
             return (term, term_conf)
 
         bow = dictionary.doc2bow(text.split())

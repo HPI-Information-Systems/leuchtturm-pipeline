@@ -2,6 +2,7 @@
 
 import ujson as json
 from random import uniform
+
 from .common import Pipe
 
 
@@ -12,9 +13,9 @@ class EmailFolderClassification(Pipe):
     Assign classes to every email doc.
     """
 
-    def __init__(self):
+    def __init__(self, conf):
         """Initialization."""
-        super().__init__()
+        super().__init__(conf)
         self.fake_folders = ['personal', 'social_networks', 'advertisement', 'spam']
 
     def load_model(self):
