@@ -63,10 +63,9 @@ class SolrFileWriter(Pipe):
 
 
 class Neo4JNodeWriter(Pipe):
-    """Write a limited set of information contained in the email documents to a Neo4j instance.
+    """Write a limited set of correspondent information to a Neo4j instance.
 
-    Collect all documents of a spark rdd.
-    Extract relevant information (such as communication data) and upload it.
+    Collect all correspondent information from a spark rdd and upload it.
     NOTE: Does not run on large or highly distributed rdds. Use Neo4JFileWriter instead.
     """
 
@@ -162,7 +161,7 @@ class Neo4JFileWriter(Pipe):
     """Allow upload of large rdds to neo4j.
 
     Less performant than Neo4JWriter, but Neo4J doesn't crash for large uploads.
-    Utilizes Neo4JWriter under the hood.
+    Utilizes Neo4JNodeWriter for nodes or Neo4jEdgeWriter for edgesunder the hood.
     """
 
     def __init__(self, conf, path, mode):
