@@ -4,6 +4,9 @@
 from src.correspondent_extraction_aggregation import CorrespondentDataExtraction, CorrespondentDataAggregation
 from .data import shackleton_emails, aggregated_shackleton_correspondent_object
 import json
+from config.config import Config
+
+conf = Config(['-c', 'config/testconfig.ini'])
 
 signature_email_1 = {
     'text_clean': "Gil:\nBefore any brokerage account can be opened, you need to advise the RAC group. Please send an email to the three persons (\"Cc\") above explaining what accounts Enron North America Corp. (\"ENA\") requires and the purpose of those accounts (if you have not already done so). ENA has a brokerage agreement with Bear Stearns Compamies, Inc. but not with Bear Stearns International Limited. ENA already has resolutions for opening brokerage accounts.\nSara\nEnron Wholesale Services\n1400 Smith Street, EB3801a\nHouston, TX 77002\nPh: (777) 777-7777\nFax: (713) 646-3490",
@@ -36,7 +39,7 @@ two_aliases = {
 
 
 def test_extract_phone_numbers_from_signature_1():
-    phone_numbers = CorrespondentDataExtraction().extract_phone_numbers_from(signature_email_1['signature'])
+    phone_numbers = CorrespondentDataExtraction(conf).extract_phone_numbers_from(signature_email_1['signature'])
     assert phone_numbers['phone_numbers_office'] == ['(777) 777-7777']
     assert phone_numbers['phone_numbers_cell'] == []
     assert phone_numbers['phone_numbers_fax'] == ['(713) 646-3490']
@@ -44,7 +47,7 @@ def test_extract_phone_numbers_from_signature_1():
 
 
 def test_extract_phone_numbers_from_signature_2():
-    phone_numbers = CorrespondentDataExtraction().extract_phone_numbers_from(mcdermott_email['signature'])
+    phone_numbers = CorrespondentDataExtraction(conf).extract_phone_numbers_from(mcdermott_email['signature'])
     assert phone_numbers['phone_numbers_office'] == ['312-984-2133']
     assert phone_numbers['phone_numbers_cell'] == []
     assert phone_numbers['phone_numbers_fax'] == ['312-984-7700']
@@ -52,7 +55,7 @@ def test_extract_phone_numbers_from_signature_2():
 
 
 def test_extract_phone_numbers_from_signature_3():
-    phone_numbers = CorrespondentDataExtraction().extract_phone_numbers_from(phone_numbers_1['signature'])
+    phone_numbers = CorrespondentDataExtraction(conf).extract_phone_numbers_from(phone_numbers_1['signature'])
     assert phone_numbers['phone_numbers_office'] == ['713/345-7723']
     assert phone_numbers['phone_numbers_cell'] == []
     assert phone_numbers['phone_numbers_fax'] == ['713/853-9252']
@@ -60,7 +63,7 @@ def test_extract_phone_numbers_from_signature_3():
 
 
 def test_extract_phone_numbers_from_signature_4():
-    phone_numbers = CorrespondentDataExtraction().extract_phone_numbers_from(phone_numbers_email_addresses['signature'])
+    phone_numbers = CorrespondentDataExtraction(conf).extract_phone_numbers_from(phone_numbers_email_addresses['signature'])
     assert phone_numbers['phone_numbers_office'] == ['(770) 886-6202']
     assert phone_numbers['phone_numbers_cell'] == ['(678) 234-7644']
     assert phone_numbers['phone_numbers_fax'] == ['(770) 886-8202']
@@ -68,7 +71,7 @@ def test_extract_phone_numbers_from_signature_4():
 
 
 def test_extract_email_addresses_from_signature():
-    email_addresses = CorrespondentDataExtraction().extract_email_addresses_from(
+    email_addresses = CorrespondentDataExtraction(conf).extract_email_addresses_from(
         phone_numbers_email_addresses['signature']
     )
     assert email_addresses == ['brinconsult@aol.com', 'mbmconsult@adelphia.net']
@@ -85,7 +88,7 @@ def test_extract_aliases_from_signature():
         {'Nora J. Dobin'},
         {'Dana', 'Dana Perino'}
     ]
-    correspondentDataExtraction = CorrespondentDataExtraction()
+    correspondentDataExtraction = CorrespondentDataExtraction(conf)
     for i, email in enumerate(emails_with_aliases_in_signature):
         assert aliases[i] == set(correspondentDataExtraction.extract_aliases_from(
             email['signature'],
@@ -103,8 +106,8 @@ correspondent_object_keys = {
 def test_preparation_for_aggregation():
     for email in shackleton_emails:
         email = email.copy()
-        prepared_email = CorrespondentDataExtraction().convert_and_rename_fields(email)
-        prepared_email = CorrespondentDataAggregation().prepare_for_reduction(json.dumps(prepared_email))
+        prepared_email = CorrespondentDataExtraction(conf).convert_and_rename_fields(email)
+        prepared_email = CorrespondentDataAggregation(conf).prepare_for_reduction(json.dumps(prepared_email))
         prepared_email = json.loads(prepared_email)
         keys = prepared_email.keys()
         assert set(keys) == correspondent_object_keys
@@ -122,11 +125,11 @@ def test_aggregation_of_correspondent_data():
 
     for email in shackleton_emails:
         email = email.copy()
-        prepared_email = CorrespondentDataExtraction().convert_and_rename_fields(email)
-        prepared_email = CorrespondentDataAggregation().prepare_for_reduction(json.dumps(prepared_email))
+        prepared_email = CorrespondentDataExtraction(conf).convert_and_rename_fields(email)
+        prepared_email = CorrespondentDataAggregation(conf).prepare_for_reduction(json.dumps(prepared_email))
         prepared_emails.append(prepared_email)
 
-    aggregated_correspondent = CorrespondentDataAggregation().merge_correspondents_by_email_address(*prepared_emails)
+    aggregated_correspondent = CorrespondentDataAggregation(conf).merge_correspondents_by_email_address(*prepared_emails)
     aggregated_correspondent = json.loads(aggregated_correspondent)
     keys = aggregated_correspondent.keys()
 
