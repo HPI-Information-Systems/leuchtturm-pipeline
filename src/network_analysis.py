@@ -15,9 +15,9 @@ class NetworkAnalyser:
 
     def __init__(self,
                  solr_url='http://sopedu.hpi.uni-potsdam.de:8983/solr/emails',
-                 neo4j_host='http://sopedu.hpi.uni-potsdam.de',  # 'http://172.16.64.28',
-                 http_port=60100,
-                 bolt_port=60000):
+                 neo4j_host='http://172.16.64.28',  # 'http://sopedu.hpi.uni-potsdam.de',
+                 http_port=61100,
+                 bolt_port=61000):
         """Set solr config and path where rdd is read from."""
         self.solr_url = solr_url
         self.neo4j_host = neo4j_host
@@ -30,7 +30,7 @@ class NetworkAnalyser:
         neo_connection = py2neo.Graph(self.neo4j_host, http_port=self.http_port, bolt_port=self.bolt_port)
         edges = neo_connection.run('MATCH (source)-[r]->(target) WHERE ()-->(source)-->() AND ()-->(target)-->() \
                                     RETURN id(source), id(target), size(r.mail_list) as cnt, r.time_list as tml')
-        nodes = neo_connection.run('MATCH (p:Person) RETURN id(p), p.name, p.email')
+        nodes = neo_connection.run('MATCH (p:Person) RETURN id(p), p.identifying_name')
 
         digraph = nx.DiGraph()
 
@@ -38,7 +38,7 @@ class NetworkAnalyser:
             digraph.add_edge(edge['id(source)'], edge['id(target)'], volume=edge['cnt'], timeline=edge['tml'])
 
         for node in nodes:
-            digraph.add_node(node['id(p)'], name='|T|I|M|'.join(node['p.name']), email=node['p.email'])
+            digraph.add_node(node['id(p)'], name=node['p.identifying_name'])
 
         graph = digraph.to_undirected()
 
@@ -73,4 +73,4 @@ class NetworkAnalyser:
 
 
 na = NetworkAnalyser()
-na.analyse_network(True)
+na.analyse_network(upload=False)

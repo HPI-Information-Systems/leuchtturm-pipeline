@@ -272,9 +272,9 @@ class SocialHierarchyDetector:
     def _run_statistics(self, graph, hierarchy_scores):
         sorted_hierarchy = sorted(hierarchy_scores.values())
         top_five = sorted(hierarchy_scores, key=hierarchy_scores.get, reverse=True)[:5]
-        email_addresses = nx.get_node_attributes(graph, 'email')
+        names = nx.get_node_attributes(graph, 'name')
         for node in top_five:
-            print((hierarchy_scores[node], email_addresses[node], node))
+            print((hierarchy_scores[node], names[node], node))
 
         # plot line diagram
         x = y = sorted_hierarchy
