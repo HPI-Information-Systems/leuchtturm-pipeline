@@ -63,7 +63,6 @@ class EmailDecoding(Pipe):
             pass
 
         # else assume 'text/plain':
-
         return text
 
     def remove_html_tags(self, text):
@@ -100,7 +99,11 @@ class EmailDecoding(Pipe):
         filtered_headers = [header for header in message.items() if keys.match(header[0])]
         headers = ''
         for header in filtered_headers:
-            headers += header[0] + ': ' + str(make_header(decode_header(header[1]))) + '\n'
+            try:
+                header_dec = str(make_header(decode_header(header[1])))
+            except UnicodeDecodeError:
+                header_dec = header[1]
+            headers += header[0] + ': ' + header_dec + '\n'
 
         return headers
 
