@@ -19,9 +19,10 @@ class CorrespondentDataExtraction(Pipe):
     - writes_to relationship
     """
 
-    def __init__(self):
+    def __init__(self, conf):
         """Set constant regex patterns for class access."""
-        super().__init__()
+        super().__init__(conf)
+        self.conf = conf
 
     phone_pattern = r'(\(?\b[0-9]{3}\)?(?:-|\.|/| {1,2}| - )?[0-9]{3}(?:-|\.|/| {1,2}| - )?[0-9]{4,5}\b)'
     phone_types = {
@@ -164,9 +165,10 @@ class CorrespondentDataAggregation(Pipe):
     - this allows for simple merging of correspondent objects into a single object afterwards
     """
 
-    def __init__(self):
+    def __init__(self, conf):
         """Set params."""
-        super().__init__()
+        super().__init__(conf)
+        self.conf = conf
 
     def prepare_for_reduction(self, data):
         """Remove irrelevant key-values, make all fields lists except for identifying name."""
@@ -286,9 +288,10 @@ class CorrespondentDataAggregation(Pipe):
 class CorrespondentIdInjection(Pipe):
     """Write the identifying_name back onto sender/recipient entries of each email to enable proper linking in FE."""
 
-    def __init__(self, correspondent_rdd):
+    def __init__(self, conf, correspondent_rdd):
         """Set up class attributes."""
-        super().__init__()
+        super().__init__(conf)
+        self.conf = conf
         self.correspondent_rdd = [json.loads(corr) for corr in correspondent_rdd.value]
 
     def _find_matching_correspondent(self, original_name, original_email_address):

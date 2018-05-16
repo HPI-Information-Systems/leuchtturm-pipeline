@@ -16,13 +16,15 @@ class SignatureExtraction(Pipe):
 
     def __init__(
             self,
+            conf,
             read_from='text_clean_original_ws',
             write_body_without_signature_to='body_without_signature',
             write_signature_to='signature',
             write_sent_from_mobile_to='sent_from_mobile'
     ):
         """Set params."""
-        super().__init__()
+        super().__init__(conf)
+        self.conf = conf
         self.read_from = read_from
         self.write_body_without_signature_to = write_body_without_signature_to
         self.write_signature_to = write_signature_to

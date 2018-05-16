@@ -12,15 +12,16 @@ from .mock_preprocessing import (header_raw_indent, header_parsed_indent, header
                                  header_parsed_high_date)  # header parsing
 from .mock_preprocessing import lang_en_raw, lang_de_raw  # lang detection
 from .mock_preprocessing import clean_raw
-from src.util import get_config
+from config.config import Config
 
-config_enron = get_config('enron')
-config_dnc = get_config('dnc')
+conf = Config(['-c', 'config/testconfig.ini'])
+config_enron = Config(['-c', 'config/testconfig.ini', '--data-time-min=880934400', '--data-time-max=1041379199'])
+config_dnc = Config(['-c', 'config/testconfig.ini', '--data-time-min=1377990000', '--data-time-max=1464735599'])
 
 
 def test_email_decoding_simple():
     """Simple emails should be decoded correctly."""
-    tool = EmailDecoding()
+    tool = EmailDecoding(conf)
     decoded = tool.run_on_document(decode_raw_simple)
     assert len(decode_raw_simple) >= len(decoded)
     assert 'Any questions, contact Debra Kimmel at 212-723-9472' in decoded
@@ -28,7 +29,7 @@ def test_email_decoding_simple():
 
 def test_email_decoding_mime():
     """Multipart emails should be decoded correctly."""
-    tool = EmailDecoding()
+    tool = EmailDecoding(conf)
     decoded = tool.run_on_document(decode_raw_multipart)
     assert len(decode_raw_multipart) > len(decoded)
     assert 'fkBgWKkHnKAH8cgSedunGBcGh4k6QNbXVCFh1+FLXQefWeg' not in decoded
@@ -37,19 +38,19 @@ def test_email_decoding_mime():
 
 def test_email_splitting_on_org_msg():
     """Emails should be splitted into their parts. Standard inline headers should be recognised."""
-    tool = EmailSplitting()
+    tool = EmailSplitting(conf)
     assert len(tool.run_on_document(splitting_raw_org_msg)) == 2
 
 
 def test_email_splitting_on_fwd():
     """Emails should be splitted into their parts. Fwd headers should be recognised."""
-    tool = EmailSplitting()
+    tool = EmailSplitting(conf)
     assert len(tool.run_on_document(splitting_raw_fwd)) == 2
 
 
 def test_email_splitting_on_dnc():
     """Emails should be splitted into their parts. Dnc headers should be recognised."""
-    tool = EmailSplitting()
+    tool = EmailSplitting(conf)
     assert len(tool.run_on_document(splitting_raw_dnc)) == 3
 
 
@@ -97,14 +98,14 @@ def test_header_parsing_high_date():
 
 def test_language_detection():
     """Language should be detected correctly on at least English and German texts."""
-    tool = LanguageDetection(read_from='body')
+    tool = LanguageDetection(conf, read_from='body')
     assert json.loads(tool.run_on_document(lang_en_raw))['lang'] == 'en'
     assert json.loads(tool.run_on_document(lang_de_raw))['lang'] == 'de'
 
 
 def test_text_cleaning():
     """Text cleaning should normalize whitespace and replace unicode chars."""
-    tool = TextCleaning(read_from='body', write_to='body')
+    tool = TextCleaning(conf, read_from='body', write_to='body')
     cleaned = tool.run_on_document(clean_raw)
     assert '🎨' not in cleaned
     assert '\n\n' not in cleaned
@@ -112,7 +113,7 @@ def test_text_cleaning():
 
 def test_text_cleaning_strict():
     """Text cleaning strict should additionally remove emails, urls, telephone numbers, ..."""
-    tool = TextCleaning(read_from='body', write_to='body', readable=False)
+    tool = TextCleaning(conf, read_from='body', write_to='body', readable=False)
     cleaned = tool.run_on_document(clean_raw)
     assert '@enron.com' not in cleaned
     assert 'https://' not in cleaned
