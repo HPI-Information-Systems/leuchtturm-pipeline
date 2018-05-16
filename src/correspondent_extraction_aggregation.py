@@ -280,7 +280,8 @@ class CorrespondentDataAggregation(Pipe):
         rdd = rdd.map(self.convert_to_name_tuple) \
                  .reduceByKey(self.merge_correspondents_by_name) \
                  .map(self.extract_data_from_tuple) \
-                 .map(self.convert_identifying_names_field)
+                 .map(self.convert_identifying_names_field) \
+                 .coalesce(self.conf.get('spark', 'parallelism'))
 
         return rdd
 
