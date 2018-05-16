@@ -103,7 +103,7 @@ class CorrespondentDataExtraction(Pipe):
     def convert_and_rename_fields(self, document):
         """Convert all fields to list types for easier two-phase merging, rename fields to correspondent-semantic."""
         document['email_addresses'] = [e for e in [document.pop('sender_email_address')] if e]
-        document['identifying_names'] = [e for e in [document.pop('sender_name')] if e]
+        document['identifying_names'] = [document.pop('sender_name')]
         document['aliases_from_signature'] = document.pop('sender_aliases')
         document['signatures'] = [document.pop('signature')]
         document['aliases'] = []
@@ -115,7 +115,7 @@ class CorrespondentDataExtraction(Pipe):
             return {
                 'signatures': [],
                 'email_addresses': [recipient_email_address] if recipient_email_address else [],
-                'identifying_names': [recipient_name] if recipient_name else ['asdf'],
+                'identifying_names': [recipient_name],
                 'aliases_from_signature': [],
                 'aliases': [],
                 'phone_numbers_office': [],
@@ -202,17 +202,37 @@ class CorrespondentDataAggregation(Pipe):
         for key in correspondent1:
             if key not in ['email_addresses', 'source_count']:
                 unified_person[key] = list(set(correspondent1[key] + correspondent2[key]))
-
-        if not unified_person['identifying_names'] and unified_person['aliases_from_signature']:
-            unified_person['identifying_names'] = [max(unified_person['aliases_from_signature'])]
-
-        if len(unified_person['identifying_names']) > 1:
-            identifying_name = max(unified_person['identifying_names'])
-            unified_person['aliases'] = unified_person['identifying_names']
-            unified_person['aliases'].remove(identifying_name)
-            unified_person['identifying_names'] = [identifying_name]
-
         return json.dumps(unified_person)
+
+    def force_find_identifying_names(self, data):
+        """In case identifying_names is still empty at this point, use the email_addresses property as a backup."""
+        correspondent = json.loads(data)
+        if correspondent['identifying_names'] and max(correspondent['identifying_names']) != '':
+            return json.dumps(correspondent)
+        if correspondent['aliases_from_signature']:
+            correspondent['identifying_names'] = correspondent['aliases_from_signature']
+        elif correspondent.get('email_addresses'):
+            correspondent['identifying_names'] = correspondent['email_addresses']
+        else:
+            correspondent['identifying_names'] = ['']
+        return json.dumps(correspondent)
+
+    def remove_multiple_identifying_names(self, data):
+        """Make sure there is exactly one entry in identifying_names."""
+        correspondent = json.loads(data)
+
+        if len(correspondent['identifying_names']) == 1:
+            return json.dumps(correspondent)
+        elif len(correspondent['identifying_names']) == 0:
+            print('lt_logs', datetime.now(), "Warning: identifying_names shouldn't be empty", correspondent, flush=True)
+            correspondent['identifying_names'] = ['']
+            return json.dumps(correspondent)
+
+        identifying_name = max(correspondent['identifying_names'])
+        correspondent['aliases'] = correspondent['identifying_names']
+        correspondent['aliases'].remove(identifying_name)
+        correspondent['identifying_names'] = [identifying_name]
+        return json.dumps(correspondent)
 
     def convert_to_name_tuple(self, data):
         """Convert to tuple as preparation for reduceByKey to work right."""
@@ -235,21 +255,10 @@ class CorrespondentDataAggregation(Pipe):
                 unified_person[key] = list(set(correspondent1[key] + correspondent2[key]))
         return json.dumps(unified_person)
 
-    def use_email_addresses_as_identifying_names(self, data):
-        """In case identifying_names is still empty at this point, use the email_addresses property as a backup."""
-        document = json.loads(data)
-        document['identifying_names'] = document['email_addresses']
-        return json.dumps(document)
-
     def convert_identifying_names_field(self, data):
         """Convert from 'identifying_nameS' of type list to 'identifying_name' of type str."""
         document = json.loads(data)
-        if len(document['identifying_names']) != 1:
-            print('lt_logs', datetime.now(),
-                  'Warning in Correspondent Aggregation: there should be exactly 1 identifying name but found',
-                  document['identifying_names'], ' - choosing maxmum now.',
-                  flush=True)
-        document['identifying_name'] = max(document.pop('identifying_names') or [''])
+        document['identifying_name'] = max(document.pop('identifying_names'))
         return json.dumps(document)
 
     def run(self, rdd):
@@ -263,14 +272,13 @@ class CorrespondentDataAggregation(Pipe):
         rdd_without_email_addresses = rdd.filter(lambda data: not json.loads(data)['email_addresses'])
         rdd = rdd_with_email_addresses.union(rdd_without_email_addresses)
 
-        rdd_with_identifying_names = rdd.filter(lambda data: json.loads(data)['identifying_names']) \
-                                        .map(self.convert_to_name_tuple) \
-                                        .reduceByKey(self.merge_correspondents_by_name) \
-                                        .map(self.extract_data_from_tuple)
-        rdd_without_identifying_names = rdd.filter(lambda data: not json.loads(data)['identifying_names']) \
-                                           .map(self.use_email_addresses_as_identifying_names)
-        rdd = rdd_with_identifying_names.union(rdd_without_identifying_names) \
-                                        .map(self.convert_identifying_names_field)
+        rdd = rdd.map(self.force_find_identifying_names) \
+                 .map(self.remove_multiple_identifying_names)
+
+        rdd = rdd.map(self.convert_to_name_tuple) \
+                 .reduceByKey(self.merge_correspondents_by_name) \
+                 .map(self.extract_data_from_tuple) \
+                 .map(self.convert_identifying_names_field)
 
         return rdd
 
