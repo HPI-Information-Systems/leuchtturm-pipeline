@@ -86,7 +86,7 @@ class SocialHierarchyDetector:
             for metric in metrics:
                 score += metric[node]
             score = score / len(metrics)
-            hierarchy_scores[node] = score
+            hierarchy_scores[node] = round(score)
 
         print(hierarchy_scores)
         return hierarchy_scores
