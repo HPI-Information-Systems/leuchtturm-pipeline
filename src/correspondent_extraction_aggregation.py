@@ -149,7 +149,7 @@ class CorrespondentDataExtraction(Pipe):
         document = self.convert_and_rename_fields(document)
         documents = [document] + self.extract_receiving_correspondents(document)
 
-        return [json.dumps(document) for document in documents]
+        return [json.dumps(document, ensure_ascii=False) for document in documents]
 
     def run(self, rdd):
         """Run pipe in spark context."""
@@ -178,7 +178,7 @@ class CorrespondentDataAggregation(Pipe):
         for key in irrelevant_keys:
             del document[key]
 
-        return json.dumps(document)
+        return json.dumps(document, ensure_ascii=False)
 
     def extract_data_from_tuple(self, data):
         """Transform the generated tuple back into leuchtturm document."""
@@ -188,7 +188,7 @@ class CorrespondentDataAggregation(Pipe):
         """Convert to tuple as preparation for reduceByKey to work right."""
         document = json.loads(data)
         # we know that there can only be one element in document['email_addresses']
-        splitting_keys = json.dumps(document['email_addresses'])
+        splitting_keys = json.dumps(document['email_addresses'], ensure_ascii=False)
         return splitting_keys, data
 
     def merge_correspondents_by_email_address(self, data1, data2):
@@ -204,42 +204,42 @@ class CorrespondentDataAggregation(Pipe):
         for key in correspondent1:
             if key not in ['email_addresses', 'source_count']:
                 unified_person[key] = list(set(correspondent1[key] + correspondent2[key]))
-        return json.dumps(unified_person)
+        return json.dumps(unified_person, ensure_ascii=False)
 
     def force_find_identifying_names(self, data):
         """In case identifying_names is still empty at this point, use the email_addresses property as a backup."""
         correspondent = json.loads(data)
         if correspondent['identifying_names'] and max(correspondent['identifying_names']) != '':
-            return json.dumps(correspondent)
+            return json.dumps(correspondent, ensure_ascii=False)
         if correspondent['aliases_from_signature']:
             correspondent['identifying_names'] = correspondent['aliases_from_signature']
         elif correspondent.get('email_addresses'):
             correspondent['identifying_names'] = correspondent['email_addresses']
         else:
             correspondent['identifying_names'] = ['']
-        return json.dumps(correspondent)
+        return json.dumps(correspondent, ensure_ascii=False)
 
     def remove_multiple_identifying_names(self, data):
         """Make sure there is exactly one entry in identifying_names."""
         correspondent = json.loads(data)
 
         if len(correspondent['identifying_names']) == 1:
-            return json.dumps(correspondent)
+            return json.dumps(correspondent, ensure_ascii=False)
         elif len(correspondent['identifying_names']) == 0:
             print('lt_logs', datetime.now(), "Warning: identifying_names shouldn't be empty", correspondent, flush=True)
             correspondent['identifying_names'] = ['']
-            return json.dumps(correspondent)
+            return json.dumps(correspondent, ensure_ascii=False)
 
         identifying_name = max(correspondent['identifying_names'])
         correspondent['aliases'] = correspondent['identifying_names']
         correspondent['aliases'].remove(identifying_name)
         correspondent['identifying_names'] = [identifying_name]
-        return json.dumps(correspondent)
+        return json.dumps(correspondent, ensure_ascii=False)
 
     def convert_to_name_tuple(self, data):
         """Convert to tuple as preparation for reduceByKey to work right."""
         document = json.loads(data)
-        splitting_keys = json.dumps(document['identifying_names'])
+        splitting_keys = json.dumps(document['identifying_names'], ensure_ascii=False)
         return splitting_keys, data
 
     def merge_correspondents_by_name(self, data1, data2):
@@ -255,13 +255,13 @@ class CorrespondentDataAggregation(Pipe):
         for key in correspondent1:
             if key not in ['identifying_names', 'source_count']:
                 unified_person[key] = list(set(correspondent1[key] + correspondent2[key]))
-        return json.dumps(unified_person)
+        return json.dumps(unified_person, ensure_ascii=False)
 
     def convert_identifying_names_field(self, data):
         """Convert from 'identifying_nameS' of type list to 'identifying_name' of type str."""
         document = json.loads(data)
         document['identifying_name'] = max(document.pop('identifying_names'))
-        return json.dumps(document)
+        return json.dumps(document, ensure_ascii=False)
 
     def run(self, rdd):
         """Run pipe in spark context."""
@@ -345,7 +345,7 @@ class CorrespondentIdInjection(Pipe):
         document = json.loads(data)
         document = self.assign_identifying_name_for_sender(document)
         document = self.assign_identifying_name_for_recipients(document)
-        return json.dumps(document)
+        return json.dumps(document, ensure_ascii=False)
 
     def run(self, rdd):
         """Run on RDD."""

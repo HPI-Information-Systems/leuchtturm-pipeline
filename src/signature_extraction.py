@@ -149,7 +149,7 @@ class SignatureExtraction(Pipe):
                   'Finish extraction on single body from', timestamp,
                   'Time diff (in s) was', (datetime.now() - timestamp).total_seconds(),
                   flush=True)
-            yield json.dumps(document)
+            yield json.dumps(document, ensure_ascii=False)
 
         print('lt_logs', datetime.now(),
               'Finished running signature extraction on partition.',
@@ -165,7 +165,7 @@ class SignatureExtraction(Pipe):
         document[self.write_body_without_signature_to], document[self.write_sent_from_mobile_to] = \
             self.remove_standard_signatures(document[self.write_body_without_signature_to])
 
-        return json.dumps(document)
+        return json.dumps(document, ensure_ascii=False)
 
     def run(self, rdd):
         """Run pipe in spark context."""
