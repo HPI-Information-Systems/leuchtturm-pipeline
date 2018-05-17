@@ -1,12 +1,11 @@
 """Exit points for leuchtturm pipelines."""
 
 import ujson as json
-import datetime
+from datetime import datetime
 import time
 
 from py2neo import Graph
 from pysolr import Solr
-
 from .common import Pipe, SparkProvider
 
 
@@ -63,7 +62,38 @@ class SolrFileWriter(Pipe):
             self.solr_writer.run(results)
 
 
-class Neo4JWriter(Pipe):
+class Neo4JNodeWriter(Pipe):
+    """Write a limited set of correspondent information to a Neo4j instance.
+
+    Collect all correspondent information from a spark rdd and upload it.
+    NOTE: Does not run on large or highly distributed rdds. Use Neo4JFileWriter instead.
+    """
+
+    def __init__(self, conf):
+        """Set Neo4j instance config."""
+        super().__init__(conf)
+        self.neo4j_host = conf.get('neo4j', 'host')
+        self.http_port = conf.get('neo4j', 'http_port')
+        self.bolt_port = conf.get('neo4j', 'bolt_port')
+
+    def run_on_partition(self, partition):
+        """Collect docs partitionwise and upload them."""
+        start_time = datetime.now()
+        print('lt_logs', start_time, 'Start Neo4j Node Upload on partition...', flush=True)
+        correspondents = [json.loads(item) for item in partition]
+        graph = Graph(host=self.neo4j_host, http_port=self.http_port, bolt_port=self.bolt_port)
+        graph.run('UNWIND $correspondents AS correspondent '
+                  'CREATE (a:Person) SET a = correspondent',
+                  correspondents=correspondents)
+        print('lt_logs', datetime.now(), 'Finish Neo4j Node Upload on partition from', start_time, flush=True)
+
+    def run(self, rdd):
+        """Run task in spark context."""
+        rdd.coalesce(1) \
+           .foreachPartition(self.run_on_partition)
+
+
+class Neo4JEdgeWriter(Pipe):
     """Write a limited set of information contained in the email documents to a Neo4j instance.
 
     Collect all documents of a spark rdd.
@@ -80,81 +110,72 @@ class Neo4JWriter(Pipe):
 
     def run_on_partition(self, partition):
         """Collect docs partitionwise and upload them."""
-        session = Graph(self.neo4j_host, http_port=self.http_port, bolt_port=self.bolt_port)
-        for document in partition:
-            if (len(document) != 0):
-                sender = {"name": "", "email": ""}
-                recipients = []
-                mail_id = ""
-                mail_timestamp = ""
-                mail = json.loads(document)
-                if 'sender' in mail['header'].keys():
-                    sender = mail['header']['sender']
-                if 'recipients' in mail['header'].keys():
-                    recipients = mail['header']['recipients']
-                if 'doc_id' in mail.keys():
-                    mail_id = mail['doc_id']
-                if 'header' in mail.keys():
-                    if "date" in mail["header"]:
-                        try:
-                            mail_timestamp = time.mktime(datetime.datetime.
-                                                         strptime(mail['header']["date"], "%Y-%m-%dT%H:%M:%SZ")
-                                                         .timetuple())
-                        except Exception:
-                            mail_timestamp = 0.0  # timestamp for 1970-01-01T00:00:00+00:00
+        start_time = datetime.now()
+        print('lt_logs', start_time, 'Start Neo4j Edge Upload on partition...', flush=True)
+        documents = [json.loads(item) for item in partition]
+        graph = Graph(host=self.neo4j_host, http_port=self.http_port, bolt_port=self.bolt_port)
+        for mail in documents:
+            mail_id = mail.get('doc_id', '')
+            header = mail.get('header', {})
+            sender = header.get('sender', {'identifying_name': '', 'name': '', 'email': ''})
+            recipients = header.get('recipients', [{'identifying_name': ''}])
+            try:
+                mail_timestamp = time.mktime(
+                    datetime.strptime(header.get('date', ''), "%Y-%m-%dT%H:%M:%SZ").timetuple()
+                )
+            except Exception:
+                mail_timestamp = 0.0  # timestamp for 1970-01-01T00:00:00+00:00'
 
-                for recipient in recipients:
-                    session.run("MERGE (sender:Person {email: $email_sender}) "
-                                "ON CREATE SET sender.name = [$name_sender] "
-                                "ON MATCH SET sender.name = "
-                                "CASE WHEN NOT $name_sender IN sender.name "
-                                "THEN sender.name + $name_sender "
-                                "ELSE sender.name END "
-                                "MERGE (recipient:Person {email: $email_recipient}) "
-                                "ON CREATE SET recipient.name = [$name_recipient] "
-                                "ON MATCH SET recipient.name = "
-                                "CASE WHEN NOT $name_recipient IN recipient.name "
-                                "THEN recipient.name + $name_recipient "
-                                "ELSE recipient.name END "
-                                "MERGE (sender)-[w:WRITESTO]->(recipient) "
-                                "ON CREATE SET w.mail_list = [$mail_id], w.time_list = [$mail_timestamp] "
-                                "ON MATCH SET w.mail_list = "
-                                "CASE WHEN NOT $mail_id IN w.mail_list "
-                                "THEN w.mail_list + $mail_id "
-                                "ELSE w.mail_list END, "
-                                "w.time_list = "
-                                "CASE WHEN NOT $mail_timestamp IN w.time_list "
-                                "THEN w.time_list + $mail_timestamp "
-                                "ELSE w.time_list END",
-                                name_sender=sender['name'],
-                                email_sender=sender['email'],
-                                name_recipient=recipient['name'],
-                                email_recipient=recipient['email'],
-                                mail_id=mail_id,
-                                mail_timestamp=mail_timestamp)
+            step_size = 10
+            for i in range(0, len(recipients), step_size):
+                edge_start_time = datetime.now()
+                print('lt_logs', edge_start_time, 'Upload edge', mail.get('path'), 'with', recipients[i:i + step_size])
+                graph.run(
+                    'MATCH '
+                        '(a:Person {identifying_name: $sender_identifying_name}) '
+                    'UNWIND $recipients AS recipient '
+                    'MATCH '
+                        '(b:Person {identifying_name: recipient.identifying_name}) '
+                    'MERGE (a)-[w:WRITESTO]->(b) '
+                        'ON CREATE SET '
+                            'w.mail_list = [$mail_id], '
+                            'w.time_list = [$mail_timestamp] '
+                        'ON MATCH SET '
+                            'w.mail_list = w.mail_list + $mail_id, '
+                            'w.time_list = w.time_list + $mail_timestamp',
+                    recipients=recipients[i:i + step_size],
+                    sender_identifying_name=sender['identifying_name'],
+                    mail_id=mail_id,
+                    mail_timestamp=mail_timestamp
+                )  # noqa
+                print('lt_logs', datetime.now(), 'Finish uploading edge from', edge_start_time)
+        print('lt_logs', datetime.now(), 'Finish Neo4j Edge Upload on partition from', start_time, flush=True)
 
     def run(self, rdd):
         """Run task in spark context."""
         rdd.coalesce(1) \
-           .foreachPartition(lambda x: self.run_on_partition(x))
+           .foreachPartition(self.run_on_partition)
 
 
 class Neo4JFileWriter(Pipe):
     """Allow upload of large rdds to neo4j.
 
     Less performant than Neo4JWriter, but Neo4J doesn't crash for large uploads.
-    Utilizes Neo4JWriter under the hood.
+    Utilizes Neo4JNodeWriter for nodes or Neo4jEdgeWriter for edgesunder the hood.
     """
 
-    def __init__(self, conf, path):
+    def __init__(self, conf, path, mode):
         """Set Neo4j instance config."""
         super().__init__(conf)
         self.conf = conf
         self.path = path
-        self.neo4j_host = conf.get('neo4j', 'host')
-        self.http_port = conf.get('neo4j', 'http_port')
-        self.bolt_port = conf.get('neo4j', 'bolt_port')
-        self.neo4j_writer = Neo4JWriter(conf)
+        self.mode = mode
+        if self.mode == 'nodes':
+            self.neo4j_writer = Neo4JNodeWriter(conf)
+        elif self.mode == 'edges':
+            self.neo4j_writer = Neo4JEdgeWriter(conf)
+        else:
+            raise Exception
 
     def run(self):
         """Run task in spark context."""
@@ -162,6 +183,13 @@ class Neo4JFileWriter(Pipe):
         for part in sc.wholeTextFiles(self.path).map(lambda x: x[0]).collect():
             results = sc.textFile(part)
             self.neo4j_writer.run(results)
+        if self.mode == 'nodes' and self.conf.get('neo4j', 'create_node_index'):
+            graph = Graph(
+                host=self.conf.get('neo4j', 'host'),
+                http_port=self.conf.get('neo4j', 'http_port'),
+                bolt_port=self.conf.get('neo4j', 'bolt_port')
+            )
+            graph.schema.create_index('Person', 'identifying_name')
 
 
 class TextFileWriter(Pipe):

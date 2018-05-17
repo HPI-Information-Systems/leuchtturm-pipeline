@@ -199,6 +199,7 @@ class EmailSplitting(Pipe):
         """Run pipe in spark context."""
         if self.keep_thread_connected:
             return rdd.map(lambda x: self.run_on_document(x))
+
         else:
             return rdd.flatMap(lambda x: self.run_on_document(x))
 
@@ -435,16 +436,27 @@ class TextCleaning(Pipe):
     Clean from inline headers and other email specific 'noise'.
     """
 
-    def __init__(self, conf, read_from='body', write_to='text_clean', readable=True):
+    def __init__(
+            self,
+            conf,
+            read_from='body',
+            write_to='text_clean',
+            write_to_original_ws='text_clean_original_ws',
+            readable=True
+    ):
         """Set params."""
         super().__init__(conf)
         self.read_from = read_from
         self.write_to = write_to
+        self.write_to_original_ws = write_to_original_ws
         self.readable = readable
 
     def convert_to_ascii(self, text):
         """Replace unicode chars with their closest ascii char."""
-        return textacy.preprocess.preprocess_text(text, fix_unicode=True, transliterate=True, no_contractions=True)
+        text = textacy.preprocess.fix_bad_unicode(text, normalization='NFC')
+        text = textacy.preprocess.transliterate_unicode(text)
+        text = textacy.preprocess.unpack_contractions(text)
+        return text
 
     def remove_header(self, text):
         """Remove email and enron specific noise from texts."""
@@ -466,10 +478,6 @@ class TextCleaning(Pipe):
 
         return text_clean
 
-    def normalize_whitespace(self, text):
-        """Replace 2+ spaces/newlines with 1 char."""
-        return textacy.preprocess.normalize_whitespace(text)
-
     def remove_strict(self, text):
         """Remove everything(!) that could disturb tm tasks. Won't be readable afterwards."""
         return textacy.preprocess.preprocess_text(text, no_urls=True, no_emails=True, no_phone_numbers=True,
@@ -479,11 +487,19 @@ class TextCleaning(Pipe):
         """Transform a document into clean text."""
         document = json.loads(raw_message)
         clean = document[self.read_from]
-        for func in [self.remove_header, self.convert_to_ascii, self.normalize_whitespace]:
-            clean = func(clean)
-        clean = self.remove_strict(clean) if not self.readable else clean
-        document[self.write_to] = clean
 
+        for func in [self.remove_header, self.convert_to_ascii]:
+            clean = func(clean)
+
+        clean_original_ws = clean
+        clean = textacy.preprocess.normalize_whitespace(clean)  # Replace 2+ spaces/newlines with 1 char
+
+        if not self.readable:
+            clean_original_ws = self.remove_strict(clean_original_ws)
+            clean = self.remove_strict(clean)
+
+        document[self.write_to_original_ws] = clean_original_ws
+        document[self.write_to] = clean
         return json.dumps(document)
 
     def run(self, rdd):
