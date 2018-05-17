@@ -18,3 +18,5 @@ h5py
 pysolr
 py2neo
 nltk
+talon
+regex
