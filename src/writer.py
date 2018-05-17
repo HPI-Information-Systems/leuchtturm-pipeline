@@ -169,9 +169,10 @@ class Neo4JFileWriter(Pipe):
         super().__init__(conf)
         self.conf = conf
         self.path = path
-        if mode == 'nodes':
+        self.mode = mode
+        if self.mode == 'nodes':
             self.neo4j_writer = Neo4JNodeWriter(conf)
-        elif mode == 'edges':
+        elif self.mode == 'edges':
             self.neo4j_writer = Neo4JEdgeWriter(conf)
         else:
             raise Exception
@@ -182,6 +183,13 @@ class Neo4JFileWriter(Pipe):
         for part in sc.wholeTextFiles(self.path).map(lambda x: x[0]).collect():
             results = sc.textFile(part)
             self.neo4j_writer.run(results)
+        if self.mode == 'nodes' and self.conf.get('neo4j', 'create_node_index'):
+            graph = Graph(
+                host=self.conf.get('neo4j', 'host'),
+                http_port=self.conf.get('neo4j', 'http_port'),
+                bolt_port=self.conf.get('neo4j', 'bolt_port')
+            )
+            graph.schema.create_index('Person', 'identifying_name')
 
 
 class TextFileWriter(Pipe):

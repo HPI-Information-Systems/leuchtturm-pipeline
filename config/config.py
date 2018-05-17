@@ -47,7 +47,8 @@ class Config:
             'http_port': 7474,
             'bolt_port': 7687,
             'data_location': './data/neo4j',
-            'log_location': './data/logs/neo4j'
+            'log_location': './data/logs/neo4j',
+            'create_node_index': True
         },
         'spark': {
             'driver_memory': '6g',
