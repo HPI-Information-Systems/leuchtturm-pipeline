@@ -56,7 +56,7 @@ class SpacyNer(Pipe):
         document = json.loads(raw_message)
         document['entities'] = self.extract_entities(document[self.read_from], spacy_model)
 
-        return json.dumps(document)
+        return json.dumps(document, ensure_ascii=False)
 
     def run_on_partition(self, partition):
         """Run task in spark context. Partitionwise for performance reasosn."""

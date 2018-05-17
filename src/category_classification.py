@@ -85,7 +85,7 @@ class EmailCategoryClassification(Pipe):
         category = self.get_category_for_document(document, model)
         document['category'] = category
 
-        return json.dumps(document)
+        return json.dumps(document, ensure_ascii=False)
 
     def run_on_partition(self, partition):
         """Run task in spark context. Partitionwise for performance reasons."""

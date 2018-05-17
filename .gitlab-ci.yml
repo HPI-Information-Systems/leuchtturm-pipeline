@@ -43,7 +43,7 @@ deploy-sopedu-enron:
     - export SPARK_HOME=/usr/hdp/2.6.2.0-205/spark2/
     - ./deploy_sopedu_pipeline.sh config/sopedu-deploy-enron.ini
   environment:
-    name: sopedu_pipeline_master
+    name: sopedu-enron
     url: http://sopedu.hpi.uni-potsdam.de:8983/solr/#/enron
 
 deploy-sopedu-enron-dev:
@@ -56,7 +56,7 @@ deploy-sopedu-enron-dev:
     - export SPARK_HOME=/usr/hdp/2.6.2.0-205/spark2/
     - ./deploy_sopedu_pipeline.sh config/sopedu-deploy-enron-dev.ini
   environment:
-    name: sopedu_pipeline_dev
+    name: sopedu-enron-dev
     url: http://sopedu.hpi.uni-potsdam.de:8983/solr/#/enron_dev
 
 deploy-sopedu-dnc:
@@ -69,5 +69,5 @@ deploy-sopedu-dnc:
     - export SPARK_HOME=/usr/hdp/2.6.2.0-205/spark2/
     - ./deploy_sopedu_pipeline.sh config/sopedu-deploy-dnc.ini
   environment:
-    name: sopedu_pipeline_mr
+    name: sopedu-dnc
     url: http://sopedu.hpi.uni-potsdam.de:8983/solr/#/dnc
