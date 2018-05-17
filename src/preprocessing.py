@@ -151,15 +151,17 @@ class EmailSplitting(Pipe):
     reply_seperator_heuristic = r'(.*_{3}.*Reply Separator((\n|.)*?)Date.*)'
     date_to_subject_heuristic = r'(.*\n.*(on )?\d{2}\/\d{2}\/\d{2,4}\s\d{2}:\d{2}(:\d{2})?\s?(AM|PM|am|pm)?.*\n.*(\n.*)?To: (\n|.)*?Subject: .*)'  # NOQA
     from_to_subject_heuristic = r'(.*From:((\n|.)*?)Subject:.*)'
+    date_to_mime_boundary_heuristic = r'(.*Date:((\n|.)*?)(Content-Type)|(Content-Disposition):.*)'
 
-    header_regex = re.compile('(%s|%s|%s|%s|%s|%s)' % (
+    header_regex = re.compile('(%s|%s|%s|%s|%s|%s|%s)' % (
         forwarded_by_heuristic,
         begin_forwarded_message_heuristic,
         original_message_heuristic,
         reply_seperator_heuristic,
         date_to_subject_heuristic,
-        from_to_subject_heuristic
-    ))
+        from_to_subject_heuristic,
+        date_to_mime_boundary_heuristic
+    ), re.I)
 
     def __init__(self, conf, keep_thread_connected=False, use_quagga=False):
         """Set params if needed here."""
@@ -508,15 +510,23 @@ class TextCleaning(Pipe):
 
     def remove_header(self, text):
         """Remove email and enron specific noise from texts."""
+        # these rules primarily exist to cleanup things we didn't extract properly previously, use carefully!
         headers = [r'^(((subject:)|(from:)|(sent:)|(date:)|(to:)|(cc:))(\s.*\n)){3,}\s+',
-                   r'----- forwarded.*((from:.*)|subject:(.)*|to:(.)*|sent:(.)*|cc:(.)*|\n)*\n',
-                   r'-----\s?original message\s?-----',
-                   r'(\*|=|-){40,}\s(.|\n)+(\*|=|-){40,}\s']
+                   r'---+ forwarded.*((from:.*)|subject:(.)*|to:(.)*|sent:(.)*|cc:(.)*|\n)*\n',
+                   r'-----+\s?original message\s?-----+',
+                   r'(\*|=|-){40,}\s(.|\n)+(\*|=|-){40,}\s',
+                   r'^[>\s]*on.+wrote:',
+                   r'^[>\s]+',
+                   r'(sent from my )|(sent via the samsung).+',
+                   r'^MIME-Version: .\..',
+                   r'^Content-Type: .+;',
+                   r'^boundary="----_=.+']
 
         text_clean = text
         for header in headers:
-            text_clean = re.sub(header, '', text_clean, 0, re.MULTILINE | re.IGNORECASE | re.UNICODE)
+            text_clean = re.sub(header, '', text_clean, 0, re.M | re.I)
 
+        # the enron edrm dataset has this footer in every email
         edrm_footer = ('***********\r\nEDRM Enron Email Data Set has been produced in EML, PST and NSF format by ZL '
                        'Technologies, Inc. This Data Set is licensed under a Creative Commons Attribution 3.0 United '
                        'States License <http://creativecommons.org/licenses/by/3.0/us/> . To provide attribution, '
@@ -536,11 +546,10 @@ class TextCleaning(Pipe):
         document = json.loads(raw_message)
         clean = document[self.read_from]
 
-        for func in [self.remove_header, self.convert_to_ascii]:
+        for func in [self.convert_to_ascii, self.remove_header]:
             clean = func(clean)
 
         clean_original_ws = clean
-        clean = textacy.preprocess.normalize_whitespace(clean)  # Replace 2+ spaces/newlines with 1 char
 
         if not self.readable:
             clean_original_ws = self.remove_strict(clean_original_ws)
@@ -548,6 +557,7 @@ class TextCleaning(Pipe):
 
         document[self.write_to_original_ws] = clean_original_ws
         document[self.write_to] = clean
+
         return json.dumps(document, ensure_ascii=False)
 
     def run(self, rdd):
