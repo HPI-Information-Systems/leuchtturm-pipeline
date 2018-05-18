@@ -10,6 +10,9 @@ from gensim import corpora, models
 from nltk.corpus import stopwords as nltksw
 from nltk.stem.wordnet import WordNetLemmatizer
 
+import numpy as np
+from scipy.linalg import norm
+from scipy.spatial.distance import euclidean
 from .common import Pipe
 
 
