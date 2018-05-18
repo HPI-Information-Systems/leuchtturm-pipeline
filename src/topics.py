@@ -177,3 +177,105 @@ class TopicModelPrediction(Pipe):
         """Run task in spark context."""
         return rdd.mapPartitions(lambda x: self.run_on_partition(x)) \
                   .flatMap(lambda x: x)
+class TopicSimilarity(Pipe):
+    """Train topic model and export it.
+
+    Train a lda topic model using gensim.
+    Export pickeled model to a textfile.
+    """
+
+    def __init__(self, conf):
+        """TODO: set params here (iterations, num_topics, ...)!! Especially output paths."""
+        super().__init__(conf)
+        self.conf = conf
+
+    def load_model(self):
+        """Load lda model from defined path."""
+        with open(os.path.abspath(self.conf.get('topic_modelling', 'file_model')), mode='rb') as pfile:
+            model = pickle.load(pfile)
+
+        return model
+
+    def load_dictionary(self):
+        """Load dict for lda tm from defined path."""
+        with open(os.path.abspath(self.conf.get('topic_modelling', 'file_dictionary')), mode='rb') as pfile:
+            dictionary = pickle.load(pfile)
+
+        return dictionary
+
+    def run(self):
+        model = self.load_model()
+        dict = self.load_dictionary()
+        model_topics = model.get_topics()
+
+        _SQRT2 = np.sqrt(2)     # sqrt(2) with default precision np.float64
+
+        def hellinger(p, q):
+            return norm(np.sqrt(p) - np.sqrt(q)) / _SQRT2
+        
+        # get similarites with first topic and top terms
+        dists = []
+
+        dists = sorted(dists, key=lambda k: k['dist'], reverse=True) 
+
+        # 1 topic, 10 words, first item in list, id
+        most_significant_topic_id = model.print_topics(1, 10)[0][0]
+
+        def calculate_all_distances_to_reference(current_topic, remaining_topics): 
+
+            smallest_distace = (-1, 1)
+
+            for topic_id in remaining_topics:
+                dist_to_reference = hellinger(model_topics[current_topic], model_topics[topic_id])
+
+                smallest_distace = (topic_id, dist_to_reference) if dist_to_reference <= smallest_distace[1] else smallest_distace
+
+            return smallest_distace
+    
+
+        # starting with most significant topic:
+            # for every topic in remaining
+                # calculate distance to all remaining
+                    # neighbor = topic with smallest distance
+                    # remove topic from remaining
+        # continue with neighbor
+
+        ordered_topics = []
+        remaining_topics = list(range(len(model_topics)))
+        count = 0
+
+        current_topic = most_significant_topic_id
+
+        while remaining_topics:
+            print(current_topic)
+            remaining_topics.remove(current_topic)
+
+            smallest_distance_to_current = calculate_all_distances_to_reference(current_topic, remaining_topics)
+
+            ordered_topics.append({
+                'rank': count,
+                'id': current_topic,
+                'words': [dict[word[0]] for word in model.get_topic_terms(current_topic, 10)],
+                'distance_to_next': smallest_distance_to_current[1]
+            })
+
+            current_topic = smallest_distance_to_current[0]
+            count += 1
+
+        for topic in ordered_topics:
+            pprint(topic)
+            pprint('********')
+
+        print(sum([topic['distance_to_next'] for topic in ordered_topics]) / len(ordered_topics))
+        
+        distances = []
+
+        for i in list(range(100))[:-1]:
+            print('WHAT')
+            distances.append(hellinger(model_topics[i], model_topics[i + 1]))
+
+        print(sum(distances)/len(distances))
+
+
+
+        
