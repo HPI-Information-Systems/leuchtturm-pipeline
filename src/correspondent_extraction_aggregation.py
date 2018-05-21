@@ -230,7 +230,11 @@ class CorrespondentDataAggregation(Pipe):
             correspondent['identifying_names'] = ['']
             return json.dumps(correspondent, ensure_ascii=False)
 
-        identifying_name = max(correspondent['identifying_names'])
+        identifying_names_splits = [name.split(' ') for name in correspondent['identifying_names']]
+        identifying_names_splits_filtered = [
+            ' '.join(name_split) for name_split in identifying_names_splits if name_split[0] > 1 and name_split[1] > 1
+        ]
+        identifying_name = max(identifying_names_splits_filtered)
         correspondent['aliases'] = correspondent['identifying_names']
         correspondent['aliases'].remove(identifying_name)
         correspondent['identifying_names'] = [identifying_name]
