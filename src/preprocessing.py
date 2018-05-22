@@ -314,7 +314,7 @@ class HeaderParsing(Pipe):
         """Normalize and clean a name. Lastname, Firstname becomes to Fn Ln."""
         name = re.sub(r'(on )?\d{2}\/\d{2}\/\d{2,4}\s\d{2}:\d{2}(:\d{2})?\s?(am|pm)?.*', '', name_string, flags=re.I)
         name = re.sub(r'(<.+>)|(\[.+\])|(\(.+\))', '', name)  # remove [FI] flags and similar
-        name = re.sub(r'\S+@\S+', '', name)  # remove email
+        name = re.sub(r'\S+@\S+\.\S+', '', name)  # remove email
         name = re.sub(r'(?<=\w)(/|@).*', '', name)  # normalize weird enron names (beau ratliff/hou/ees@ees)
         name = name.replace('<', '').replace('>', '').replace('|', '')
         name = name.replace('"', '').replace("'", '').split(',')
