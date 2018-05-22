@@ -1,7 +1,11 @@
 """Pipes to preprocess emails, extract their meta-data, segmentation, ... for leuchtturm pipelines."""
 
+import ast
 from email import message_from_string
 from email.utils import unquote
+from email.header import make_header, decode_header
+import codecs
+import datetime
 import ujson as json
 import re
 from string import whitespace
@@ -10,7 +14,6 @@ from html2text import HTML2Text
 from langdetect import detect
 import textacy
 import dateparser
-import datetime
 
 from .common import Pipe
 
@@ -22,9 +25,9 @@ class EmailDecoding(Pipe):
     Attachements may be considered in future.
     """
 
-    def __init__(self, get_attachment_names=True, split_header_body=False):
+    def __init__(self, conf, get_attachment_names=True, split_header_body=False):
         """Set conf."""
-        super().__init__()
+        super().__init__(conf)
         self.get_attachment_names = get_attachment_names
         self.split_header_body = split_header_body
 
@@ -33,7 +36,34 @@ class EmailDecoding(Pipe):
         if encoding is None:
             encoding = 'utf-8'
 
-        return text.decode(encoding, 'ignore')
+        try:
+            text = text.decode(encoding, 'replace')
+        except LookupError:
+            try:
+                text = text.decode('utf-8', 'strict')
+            except UnicodeDecodeError:
+                text = text.decode('iso-8859-1')
+            except Exception:
+                text = str(text)
+
+        # sometimes the string contains unicode to ascii artifacts, clean that up!
+        try:
+            text = re.sub(r'=([A-Z0-9]{2})', lambda x: ast.literal_eval('"\\x' + x.group(1).lower() + '"'), text)
+        except SyntaxError:
+            pass
+
+        # sometimes the string was actually encoded in iso-8859-1,
+        # but the encoding is declared to be utf-8
+        try:
+            if encoding == 'iso-8859-1':
+                text = codecs.decode(text, 'raw_unicode_escape').encode('iso-8859-1', errors='replace').decode()
+            else:
+                text = codecs.decode(text, 'unicode_escape').encode('iso-8859-1', errors='replace').decode()
+        except UnicodeDecodeError:
+            pass
+
+        # else assume 'text/plain':
+        return text
 
     def remove_html_tags(self, text):
         """Convert html to corresponding md."""
@@ -49,29 +79,31 @@ class EmailDecoding(Pipe):
         body_text = ''
         for part in message.walk():
             charset = part.get_content_charset()
-            if part.get_content_type() == 'text/plain':
+            if part.get_content_type() == 'text/plain' or part.get_content_type() == 'text/html':
                 text = part.get_payload(decode=True)
                 body_text = self.decode_part(text, encoding=charset)
-                break
-            elif part.get_content_type() == 'text/html':
-                text = part.get_payload(decode=True)
-                body_text = self.remove_html_tags(self.decode_part(text, encoding=charset))
+                if re.search(r'<[^>]+>', body_text) and re.search(r'</[^>]+>', body_text):
+                    body_text = self.remove_html_tags(body_text)
                 break
 
         if not body_text:
-            body_text = 'Empty body'
+            body_text = '[Empty message]'
 
         return body_text
 
     def get_main_header(self, message):
         """Return main header of email."""
-        keys = re.compile(r'((x-)?from)|(((x-)|reply-)?to)|((x-)?b?cc)|(subject)|(date)|(sent)', re.IGNORECASE)
+        keys = re.compile(r'(from)|((reply-)?to)|(b?cc)|(subject)|(date)|(sent(-by)?)', re.IGNORECASE)
 
         # filter headers for following splitting task
         filtered_headers = [header for header in message.items() if keys.match(header[0])]
         headers = ''
         for header in filtered_headers:
-            headers += header[0] + ': ' + header[1] + '\n'
+            try:
+                header_dec = str(make_header(decode_header(header[1])))
+            except UnicodeDecodeError:
+                header_dec = header[1]
+            headers += header[0] + ': ' + header_dec + '\n'
 
         return headers
 
@@ -99,7 +131,7 @@ class EmailDecoding(Pipe):
         if self.get_attachment_names:
             doc['attachments'] = self.get_attachments(message)
 
-        return json.dumps(doc)
+        return json.dumps(doc, ensure_ascii=False)
 
     def run(self, rdd):
         """Run task in spark context."""
@@ -117,7 +149,7 @@ class EmailSplitting(Pipe):
     begin_forwarded_message_heuristic = r'(.*Begin forwarded message:((\n|.)*?)To:.*)'
     original_message_heuristic = r'(.*-{3}.*Original Message((\n|.)*?)Subject:.*)'
     reply_seperator_heuristic = r'(.*_{3}.*Reply Separator((\n|.)*?)Date.*)'
-    date_to_subject_heuristic = r'(.*\n.*(on )?\d{2}\/\d{2}\/\d{2,4}\s\d{2}:\d{2}(:\d{2})?\s?(AM|PM|am|pm)?.*\n.*(\n.*)?To: (\n|.)*?Subject: .*)' # NOQA
+    date_to_subject_heuristic = r'(.*\n.*(on )?\d{2}\/\d{2}\/\d{2,4}\s\d{2}:\d{2}(:\d{2})?\s?(AM|PM|am|pm)?.*\n.*(\n.*)?To: (\n|.)*?Subject: .*)'  # NOQA
     from_to_subject_heuristic = r'(.*From:((\n|.)*?)Subject:.*)'
 
     header_regex = re.compile('(%s|%s|%s|%s|%s|%s)' % (
@@ -129,10 +161,17 @@ class EmailSplitting(Pipe):
         from_to_subject_heuristic
     ))
 
-    def __init__(self, keep_thread_connected=False):
+    def __init__(self, conf, keep_thread_connected=False, use_quagga=False):
         """Set params if needed here."""
-        super().__init__()
+        super().__init__(conf)
         self.keep_thread_connected = keep_thread_connected
+        self.use_quagga = use_quagga
+
+    def detect_parts_quagga(self, email):
+        """Split email into its parts using quagga. This is experimental."""
+        from .libs.quagga import detect_parts
+
+        return detect_parts(email)
 
     def detect_parts(self, email):
         """Split email into its parts and return list of parts."""
@@ -168,7 +207,11 @@ class EmailSplitting(Pipe):
         """Apply email splitting to a leuchtturm document. Return list of leuchtturm documents."""
         document = json.loads(raw_message)
 
-        parts = self.detect_parts(document['raw'])
+        parts = []
+        if self.use_quagga:
+            parts = self.detect_parts_quagga(document['raw'])
+        else:
+            parts = self.detect_parts(document['raw'])
 
         part_docs = []
         splitted_emails = []
@@ -177,7 +220,7 @@ class EmailSplitting(Pipe):
         for index, (header, body) in enumerate(parts):
             obj = document
             obj['header'] = header
-            obj['body'] = body
+            obj['body'] = body.strip(whitespace)
 
             if len(parts) > 1:  # if there are multiple parts, add an identifier to the original document id
                 obj['doc_id'] = original_doc_id + '_part_' + str(index + 1) + '_of_' + str(len(parts))
@@ -191,14 +234,15 @@ class EmailSplitting(Pipe):
 
         if self.keep_thread_connected:
             document['parts'] = splitted_emails
-            return json.dumps(document)
+            return json.dumps(document, ensure_ascii=False)
         else:
-            return [json.dumps(email) for email in splitted_emails]
+            return [json.dumps(email, ensure_ascii=False) for email in splitted_emails]
 
     def run(self, rdd):
         """Run pipe in spark context."""
         if self.keep_thread_connected:
             return rdd.map(lambda x: self.run_on_document(x))
+
         else:
             return rdd.flatMap(lambda x: self.run_on_document(x))
 
@@ -210,19 +254,13 @@ class HeaderParsing(Pipe):
     Get sender, recipients, date, subject from emails even with (common) inline headers.
     """
 
-    def __init__(self, config=None, clean_subject=False, use_unix_time=False):
+    def __init__(self, conf, clean_subject=False, use_unix_time=False):
         """Set parsing rules."""
-        super().__init__()
-        self.clean_subject = clean_subject  # TODO is not implemented
+        super().__init__(conf)
+        self.clean_subject = clean_subject
         self.use_unix_time = use_unix_time
-        self.start_date = None
-        self.end_date = None
-
-        if config and 'PERIOD' in config:
-            if 'start' in config['PERIOD']:
-                self.start_date = datetime.datetime.fromtimestamp(int(config['PERIOD']['start']))
-            if 'end' in config['PERIOD']:
-                self.end_date = datetime.datetime.fromtimestamp(int(config['PERIOD']['end']))
+        self.start_date = datetime.datetime.fromtimestamp(conf.get('data', 'time_min'))
+        self.end_date = datetime.datetime.fromtimestamp(conf.get('data', 'time_max'))
 
     def prepare_header_string(self, text):
         """Remove whitespace, newlines and other noise."""
@@ -230,6 +268,7 @@ class HeaderParsing(Pipe):
         text = re.sub(r'.*-{5,} forwarded by.+-{5,}', '', text, 0, re.IGNORECASE | re.DOTALL)  # remove 2ndary header
         text = re.sub(r'^(\s|>)+', '', text, flags=re.MULTILINE)  # remove leading > and whitespace
         text = re.sub(r'\s+', ' ', text)  # normalize whitespace
+        text = text.replace('*', '')
         text = text.strip(whitespace)
 
         return text
@@ -238,7 +277,7 @@ class HeaderParsing(Pipe):
         """Split a string that is likely a header into its fields."""
         header_string = self.prepare_header_string(header_string)
 
-        separator_re = re.compile(r'\s((?=(x-)?from:\s)|(?=((x|reply)-)?to:\s)|(?=(x-)?b?cc:\s)|(?=date:\s)|(?=sent:\s)|(?=subject:\s))', re.IGNORECASE)  # NOQA
+        separator_re = re.compile(r'\s((?=(x-)?from:\s)|(?=((x|reply)-)?to:\s)|(?=(x-)?b?cc:\s)|(?=date:\s)|(?=sent(-by)?:\s)|(?=subject:\s))', re.IGNORECASE)  # NOQA
         header_fields = separator_re.split(header_string)  # split into separate headers
         header_fields = [header_field for header_field in header_fields if header_field]  # filter none and empty
         for index, header_field in enumerate(header_fields):
@@ -250,7 +289,7 @@ class HeaderParsing(Pipe):
 
     def get_header_value(self, transformed_header, field):
         """Get value from a transformed header list."""
-        field = [header for header in transformed_header if header[0].lower() == field.lower()]
+        field = [header_value for header_value in transformed_header if header_value[0].lower() == field.lower()]
         try:
             return field[0][1]
         except IndexError:
@@ -258,18 +297,22 @@ class HeaderParsing(Pipe):
 
     def clean_email(self, email_string):
         """Clean email address."""
-        email = email_string.replace('[mailto:', '').replace(']', '')
-        email = re.search(r'\S+@\S+\.\S{2,}', email)  # get email
-        email = email.group(0) if email is not None else ''
-        email = unquote(email.lower())
+        email = email_string.replace('[mailto:', '').replace(']', '').replace('"', '').replace("'", '')
+        if email.count('@') > 1 and re.search(r'<[^>]+>', email):
+            email = re.sub(r'<[^>]+>', '', email)  # case: some_email@a.com<mailto:some_email@a.com>
+        email = email.replace('<', '').replace('>', '')
+        if re.search(r'\S+@\S+\.\S{2,}', email):
+            email = re.search(r'\S+@\S+\.\S{2,}', email).group(0)
+        else:
+            email = ''
 
-        return email
+        return unquote(email.lower())
 
     def clean_name(self, name_string):
         """Normalize and clean a name. Lastname, Firstname becomes to Fn Ln."""
-        name = re.sub(r'\S+@\S+\.\S{2,}', '', name_string)  # remove email
+        name = re.sub(r'(<.+>)|(\[.+\])', '', name_string)  # remove [FI] flags and similar
+        name = re.sub(r'\S+@\S+\.\S{2,}', '', name)  # remove email
         name = re.sub(r'(?<=\w)(/|@).*', '', name)  # normalize weird enron names (beau ratliff/hou/ees@ees)
-        name = re.sub(r'\[\w+\]', '', name)  # remove [FI] flags and similar
         name = name.replace('"', '').replace("'", '').split(',')
         name.reverse()
         name = ' '.join(name).strip(whitespace)
@@ -355,7 +398,7 @@ class HeaderParsing(Pipe):
 
         if self.get_header_value(headers, 'from'):
             header['sender'] = self.parse_correspondent(self.get_header_value(headers, 'from'))
-        elif len(headers[0]) == 1:  # special header, missing from key in first line
+        elif headers and len(headers[0]) == 1:  # special header, missing from key in first line
             sender = re.sub(r'(on )?\d{2}/\d{2}/\d{2,4}\s\d{2}:\d{2}(:\d{2})?\s?(am|pm)?', '',
                             headers[0][0], flags=re.IGNORECASE)  # rm date
             header['sender'] = self.parse_correspondent(sender)
@@ -375,9 +418,9 @@ class HeaderParsing(Pipe):
             header['date'], header['date_changed'] = self.parse_date(self.get_header_value(headers, 'date'))
         elif self.get_header_value(headers, 'sent'):
             header['date'], header['date_changed'] = self.parse_date(self.get_header_value(headers, 'sent'))
-        else:
+        elif headers:
             date = re.search(r'\d{2}/\d{2}/\d{2,4}\s\d{2}:\d{2}(:\d{2})?\s?(am|pm)?',
-                             headers[0][0], flags=re.IGNORECASE)  # get date
+                             self.prepare_header_string(header_string), flags=re.IGNORECASE)  # get date
             if date is not None:
                 header['date'], header['date_changed'] = self.parse_date(date.group(0))
 
@@ -396,7 +439,7 @@ class HeaderParsing(Pipe):
         else:
             document['header'] = self.parse_header(document['header'])
 
-        return json.dumps(document)
+        return json.dumps(document, ensure_ascii=False)
 
     def run(self, rdd):
         """Run task in spark context."""
@@ -410,9 +453,9 @@ class LanguageDetection(Pipe):
     Add 2 char language code indicating language in field lang.
     """
 
-    def __init__(self, read_from='text_clean'):
+    def __init__(self, conf, read_from='text_clean'):
         """Set lang detect params."""
-        super().__init__()
+        super().__init__(conf)
         self.read_from = read_from
 
     def detect_lang(self, text):
@@ -427,7 +470,7 @@ class LanguageDetection(Pipe):
         document = json.loads(raw_message)
         document['lang'] = self.detect_lang(document[self.read_from])
 
-        return json.dumps(document)
+        return json.dumps(document, ensure_ascii=False)
 
     def run(self, rdd):
         """Run task in spark context."""
@@ -441,16 +484,27 @@ class TextCleaning(Pipe):
     Clean from inline headers and other email specific 'noise'.
     """
 
-    def __init__(self, read_from='body', write_to='text_clean', readable=True):
+    def __init__(
+            self,
+            conf,
+            read_from='body',
+            write_to='text_clean',
+            write_to_original_ws='text_clean_original_ws',
+            readable=True
+    ):
         """Set params."""
-        super().__init__()
+        super().__init__(conf)
         self.read_from = read_from
         self.write_to = write_to
+        self.write_to_original_ws = write_to_original_ws
         self.readable = readable
 
     def convert_to_ascii(self, text):
         """Replace unicode chars with their closest ascii char."""
-        return textacy.preprocess.preprocess_text(text, fix_unicode=True, transliterate=True, no_contractions=True)
+        text = textacy.preprocess.fix_bad_unicode(text, normalization='NFC')
+        text = textacy.preprocess.transliterate_unicode(text)
+        text = textacy.preprocess.unpack_contractions(text)
+        return text
 
     def remove_header(self, text):
         """Remove email and enron specific noise from texts."""
@@ -459,8 +513,9 @@ class TextCleaning(Pipe):
                    r'-----\s?original message\s?-----',
                    r'(\*|=|-){40,}\s(.|\n)+(\*|=|-){40,}\s']
 
+        text_clean = text
         for header in headers:
-            text_clean = re.sub(header, '', text, 0, re.MULTILINE | re.IGNORECASE | re.UNICODE)
+            text_clean = re.sub(header, '', text_clean, 0, re.MULTILINE | re.IGNORECASE | re.UNICODE)
 
         edrm_footer = ('***********\r\nEDRM Enron Email Data Set has been produced in EML, PST and NSF format by ZL '
                        'Technologies, Inc. This Data Set is licensed under a Creative Commons Attribution 3.0 United '
@@ -471,10 +526,6 @@ class TextCleaning(Pipe):
 
         return text_clean
 
-    def normalize_whitespace(self, text):
-        """Replace 2+ spaces/newlines with 1 char."""
-        return textacy.preprocess.normalize_whitespace(text)
-
     def remove_strict(self, text):
         """Remove everything(!) that could disturb tm tasks. Won't be readable afterwards."""
         return textacy.preprocess.preprocess_text(text, no_urls=True, no_emails=True, no_phone_numbers=True,
@@ -484,12 +535,20 @@ class TextCleaning(Pipe):
         """Transform a document into clean text."""
         document = json.loads(raw_message)
         clean = document[self.read_from]
-        for func in [self.remove_header, self.convert_to_ascii, self.normalize_whitespace]:
-            clean = func(clean)
-        clean = self.remove_strict(clean) if not self.readable else clean
-        document[self.write_to] = clean
 
-        return json.dumps(document)
+        for func in [self.remove_header, self.convert_to_ascii]:
+            clean = func(clean)
+
+        clean_original_ws = clean
+        clean = textacy.preprocess.normalize_whitespace(clean)  # Replace 2+ spaces/newlines with 1 char
+
+        if not self.readable:
+            clean_original_ws = self.remove_strict(clean_original_ws)
+            clean = self.remove_strict(clean)
+
+        document[self.write_to_original_ws] = clean_original_ws
+        document[self.write_to] = clean
+        return json.dumps(document, ensure_ascii=False)
 
     def run(self, rdd):
         """Run pipe in spark context."""

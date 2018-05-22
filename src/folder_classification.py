@@ -2,6 +2,7 @@
 
 import ujson as json
 from random import uniform
+
 from .common import Pipe
 
 
@@ -12,9 +13,9 @@ class EmailFolderClassification(Pipe):
     Assign classes to every email doc.
     """
 
-    def __init__(self):
+    def __init__(self, conf):
         """Initialization."""
-        super().__init__()
+        super().__init__(conf)
         self.fake_folders = ['personal', 'social_networks', 'advertisement', 'spam']
 
     def load_model(self):
@@ -58,7 +59,7 @@ class EmailFolderClassification(Pipe):
         folder = self.get_folder_for_document(document, model)
         document['folder'] = folder
 
-        return json.dumps(document)
+        return json.dumps(document, ensure_ascii=False)
 
     def run_on_partition(self, partition):
         """Run task in spark context. Partitionwise for performance reasosn."""

@@ -1,1 +1,1 @@
-"""Required __init__ file."""
+"""Some docstring."""

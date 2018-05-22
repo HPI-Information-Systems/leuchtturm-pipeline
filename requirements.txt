@@ -11,10 +11,14 @@ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-2.0.0
 textacy
 matplotlib
 numpy
-# keras
-# git+https://www.github.com/keras-team/keras-contrib.git
-# sklearn
+keras
+git+https://www.github.com/keras-team/keras-contrib.git
+sklearn
+tensorflow
+h5py
 pandas
 pysolr
 py2neo
 nltk
+talon
+regex

@@ -15,9 +15,9 @@ class SpacyNer(Pipe):
     Recognize entities of type person, location, organization and assign others to category miscellaneous.
     """
 
-    def __init__(self, read_from='text_clean'):
+    def __init__(self, conf, read_from='text_clean'):
         """Set params. read_from: field to search entities in."""
-        super().__init__()
+        super().__init__(conf)
         self.read_from = read_from
 
     def extract_entities(self, text, spacy_model):
@@ -56,7 +56,7 @@ class SpacyNer(Pipe):
         document = json.loads(raw_message)
         document['entities'] = self.extract_entities(document[self.read_from], spacy_model)
 
-        return json.dumps(document)
+        return json.dumps(document, ensure_ascii=False)
 
     def run_on_partition(self, partition):
         """Run task in spark context. Partitionwise for performance reasosn."""

@@ -3,14 +3,16 @@
 import json
 
 from src.ner import SpacyNer
+from config.config import Config
 
 
 def test_entity_extraction():
     """Test some examples."""
-    task = SpacyNer(read_from='text')
+    conf = Config(['-c', 'config/testconfig.ini'])
+    task = SpacyNer(conf, read_from='text')
     task.load_spacy()
 
-    doc = json.dumps({'text': 'London is the capital of the United Kingdom.'})
+    doc = json.dumps({'text': 'London is the capital of the United Kingdom.'}, ensure_ascii=False)
     ents = task.run_on_document(doc)
 
     assert 'entities' in json.loads(ents)
