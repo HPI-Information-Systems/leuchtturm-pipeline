@@ -312,8 +312,9 @@ class HeaderParsing(Pipe):
 
     def clean_name(self, name_string):
         """Normalize and clean a name. Lastname, Firstname becomes to Fn Ln."""
-        name = re.sub(r'(<.+>)|(\[.+\])|(\(.+\))', '', name_string)  # remove [FI] flags and similar
-        name = re.sub(r'\S+@\S+\.\S{2,}', '', name)  # remove email
+        name = re.sub(r'(on )?\d{2}\/\d{2}\/\d{2,4}\s\d{2}:\d{2}(:\d{2})?\s?(am|pm)?.*', '', name_string, flags=re.I)
+        name = re.sub(r'(<.+>)|(\[.+\])|(\(.+\))', '', name)  # remove [FI] flags and similar
+        name = re.sub(r'\S+@\S+', '', name)  # remove email
         name = re.sub(r'(?<=\w)(/|@).*', '', name)  # normalize weird enron names (beau ratliff/hou/ees@ees)
         name = name.replace('<', '').replace('>', '').replace('|', '')
         name = name.replace('"', '').replace("'", '').split(',')
@@ -349,9 +350,11 @@ class HeaderParsing(Pipe):
 
         recipients = []
         for recipient in field_splitted:
-            recipient_obj = self.parse_correspondent(recipient)
-            recipient_obj['type'] = kind
-            recipients.append(recipient_obj.copy())
+            parsed = self.parse_correspondent(recipient)
+            if parsed['name'] or parsed['email']:
+                recipient_obj = parsed
+                recipient_obj['type'] = kind
+                recipients.append(recipient_obj.copy())
 
         return recipients
 
@@ -404,7 +407,7 @@ class HeaderParsing(Pipe):
         if self.get_header_value(headers, 'from'):
             header['sender'] = self.parse_correspondent(self.get_header_value(headers, 'from'))
         elif headers and len(headers[0]) == 1:  # special header, missing from key in first line
-            sender = re.sub(r'(on )?\d{2}/\d{2}/\d{2,4}\s\d{2}:\d{2}(:\d{2})?\s?(am|pm)?', '',
+            sender = re.sub(r'(on )?\d{2}\/\d{2}\/\d{2,4}\s\d{2}:\d{2}(:\d{2})?\s?(am|pm)?', '',
                             headers[0][0], flags=re.IGNORECASE)  # rm date
             header['sender'] = self.parse_correspondent(sender)
 
@@ -424,7 +427,7 @@ class HeaderParsing(Pipe):
         elif self.get_header_value(headers, 'sent'):
             header['date'], header['date_changed'] = self.parse_date(self.get_header_value(headers, 'sent'))
         elif headers:
-            date = re.search(r'\d{2}/\d{2}/\d{2,4}\s\d{2}:\d{2}(:\d{2})?\s?(am|pm)?',
+            date = re.search(r'\d{2}\/\d{2}\/\d{2,4}\s\d{2}:\d{2}(:\d{2})?\s?(am|pm)?',
                              self.prepare_header_string(header_string), flags=re.IGNORECASE)  # get date
             if date is not None:
                 header['date'], header['date_changed'] = self.parse_date(date.group(0))
@@ -514,13 +517,13 @@ class TextCleaning(Pipe):
     def remove_header(self, text):
         """Remove email and enron specific noise from texts."""
         # these rules primarily exist to cleanup things we didn't extract properly previously, use carefully!
-        headers = [r'^(((subject:)|(from:)|(sent:)|(date:)|(to:)|(cc:))(\s.*\n)){3,}\s+',
-                   r'---+ forwarded.*((from:.*)|subject:(.)*|to:(.)*|sent:(.)*|cc:(.)*|\n)*\n',
-                   r'-----+\s?original message\s?-----+',
-                   r'(\*|=|-){40,}\s(.|\n)+(\*|=|-){40,}\s',
+        headers = [r'^(((subject:)|(from:)|(sent:)|(date:)|(to:)|(cc:))(\s.*\n))+\s+',
+                   r'---+ forwarded.*',
+                   r'-----+\s?(original)|(inline).+-----+',
+                   r'^(\*|=|-){20,}\s(.|\n)+(\*|=|-){20,}\s',
                    r'^[>\s]*on.+wrote:',
                    r'^[>\s]+',
-                   r'(sent from my )|(sent via the samsung).+',
+                   r'(sent from my .+)|(sent via the samsung .+)',
                    r'^MIME-Version: .\..',
                    r'^Content-Type: .+;',
                    r'^boundary="----_=.+']
