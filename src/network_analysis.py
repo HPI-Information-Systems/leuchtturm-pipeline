@@ -22,8 +22,8 @@ class NetworkAnalyser:
         """Set solr config and path where rdd is read from."""
         self.conf = conf
         self.solr_url = conf.get('solr', 'protocol') + '://' + conf.get('solr', 'host') + ':' + \
-                        conf.get('solr', 'port') + '/' + conf.get('solr', 'url_path') + '/' + \
-                        conf.get('solr', 'collection')
+            conf.get('solr', 'port') + '/' + conf.get('solr', 'url_path') + '/' + \
+            conf.get('solr', 'collection')
         self.neo4j_host = conf.get('neo4j', 'protocol') + '://' + conf.get('neo4j', 'host')
         self.http_port = conf.get('neo4j', 'http_port')
         self.bolt_port = conf.get('neo4j', 'bolt_port')
