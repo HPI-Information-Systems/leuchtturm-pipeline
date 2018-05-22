@@ -246,7 +246,7 @@ class CorrespondentDataAggregation(Pipe):
                 most_frequent_filtered_name = key
 
         if not most_frequent_filtered_name:
-            return [max(list(identifying_names.keys()))]
+            return [max(list(identifying_names.keys()), key=len)]
         return [most_frequent_filtered_name]
 
     def remove_multiple_identifying_names(self, data):
@@ -254,10 +254,11 @@ class CorrespondentDataAggregation(Pipe):
         correspondent = json.loads(data)
 
         if len(correspondent['identifying_names']) == 1:
+            correspondent['identifying_names'] = list(correspondent['identifying_names'].keys())
             return json.dumps(correspondent, ensure_ascii=False)
         elif len(correspondent['identifying_names']) == 0:
             print('lt_logs', datetime.now(), "Warning: identifying_names shouldn't be empty", correspondent, flush=True)
-            correspondent['identifying_names'] = {'': -1}
+            correspondent['identifying_names'] = ['']
             return json.dumps(correspondent, ensure_ascii=False)
 
         correspondent['aliases'] = list(correspondent['identifying_names'].keys())
