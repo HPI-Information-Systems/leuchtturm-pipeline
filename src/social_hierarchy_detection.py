@@ -15,11 +15,6 @@ def _three_business_days(timestamp):
 class SocialHierarchyDetector:
     """Class for the social hierarchy score."""
 
-    def __init__(self,
-                 solr_url='http://sopedu.hpi.uni-potsdam.de:8983/solr/emails'):
-        """Set solr config and path where rdd is read from."""
-        self.solr_url = solr_url
-
     def detect_social_hierarchy(self, graph):
         """
         Trigger social hierarchy score detection.
@@ -89,7 +84,6 @@ class SocialHierarchyDetector:
             score = score / len(metrics)
             hierarchy_scores[node] = round(score)
 
-        print(hierarchy_scores)
         return hierarchy_scores
 
     def _format_for_upload(self, metric):

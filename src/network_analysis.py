@@ -14,17 +14,21 @@ class NetworkAnalyser:
     """
 
     def __init__(self,
-                 solr_url='http://sopedu.hpi.uni-potsdam.de:8983/solr/emails',
-                 neo4j_host='http://172.16.64.28',  # 'http://sopedu.hpi.uni-potsdam.de',
-                 http_port=61100,
-                 bolt_port=61000):
+                 conf):
+                #  solr_url='http://sopedu.hpi.uni-potsdam.de:8983/solr/emails',
+                #  neo4j_host='http://172.16.64.28',  # 'http://sopedu.hpi.uni-potsdam.de',
+                #  http_port=61100,
+                #  bolt_port=61000):
         """Set solr config and path where rdd is read from."""
-        self.solr_url = solr_url
-        self.neo4j_host = neo4j_host
-        self.http_port = http_port
-        self.bolt_port = bolt_port
+        self.conf = conf
+        self.solr_url = conf.get('solr', 'protocol') + '://' + conf.get('solr', 'host') + ':' + \
+                        conf.get('solr', 'port') + '/' + conf.get('solr', 'url_path') + '/' + \
+                        conf.get('solr', 'collection')
+        self.neo4j_host = conf.get('neo4j', 'protocol') + '://' + conf.get('neo4j', 'host')
+        self.http_port = conf.get('neo4j', 'http_port')
+        self.bolt_port = conf.get('neo4j', 'bolt_port')
 
-    def analyse_network(self, upload=False):
+    def analyse_network(self):
         """Analyse the network. Parameter upload decides if data in neo4j will be updated."""
         print(self.neo4j_host)
         neo_connection = py2neo.Graph(self.neo4j_host, http_port=self.http_port, bolt_port=self.bolt_port)
@@ -54,10 +58,10 @@ class NetworkAnalyser:
         role_detector = RoleDetector()
         role_labels = role_detector.rolx(graph)
 
-        if upload:
-            self.update_network(community_labels, "community")
-            self.update_network(role_labels, "role")
-            self.update_network(social_hierarchy_labels, "hierarchy")
+        # always upload
+        self.update_network(community_labels, "community")
+        self.update_network(role_labels, "role")
+        self.update_network(social_hierarchy_labels, "hierarchy")
 
     def update_network(self, labelled_nodes, attribute):
         """Update neo4j's data with the detected labels."""
@@ -70,7 +74,3 @@ class NetworkAnalyser:
                            'SET node.' + attribute + ' = ln.' + attribute,
                            labelled_nodes=labelled_nodes, attribute=attribute)
         print('- finished upload of ' + attribute + ' labels.')
-
-
-na = NetworkAnalyser()
-na.analyse_network(upload=True)
