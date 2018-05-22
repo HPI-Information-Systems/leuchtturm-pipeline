@@ -104,7 +104,7 @@ class CorrespondentDataExtraction(Pipe):
     def convert_and_rename_fields(self, document):
         """Convert all fields to list types for easier two-phase merging, rename fields to correspondent-semantic."""
         document['email_addresses'] = [e for e in [document.pop('sender_email_address')] if e]
-        document['identifying_names'] = [document.pop('sender_name')]
+        document['identifying_names'] = {document.pop('sender_name'): 1}
         document['aliases_from_signature'] = document.pop('sender_aliases')
         document['signatures'] = [document.pop('signature')]
         document['aliases'] = []
@@ -116,7 +116,7 @@ class CorrespondentDataExtraction(Pipe):
             return {
                 'signatures': [],
                 'email_addresses': [recipient_email_address] if recipient_email_address else [],
-                'identifying_names': [recipient_name],
+                'identifying_names': {recipient_name: 1},
                 'aliases_from_signature': [],
                 'aliases': [],
                 'phone_numbers_office': [],
@@ -201,39 +201,70 @@ class CorrespondentDataAggregation(Pipe):
             'source_count': correspondent1['source_count'] + correspondent2['source_count'],
         }
 
+        for name in correspondent2['identifying_names']:
+            if name in correspondent1['identifying_names']:
+                correspondent1['identifying_names'][name] += 1
+            else:
+                correspondent1['identifying_names'][name] = 1
+        unified_person['identifying_names'] = correspondent1['identifying_names']
+
         for key in correspondent1:
-            if key not in ['email_addresses', 'source_count']:
+            if key not in ['email_addresses', 'source_count', 'identifying_names']:
                 unified_person[key] = list(set(correspondent1[key] + correspondent2[key]))
         return json.dumps(unified_person, ensure_ascii=False)
 
     def force_find_identifying_names(self, data):
         """In case identifying_names is still empty at this point, use the email_addresses property as a backup."""
         correspondent = json.loads(data)
-        if correspondent['identifying_names'] and max(correspondent['identifying_names']) != '':
+        if correspondent['identifying_names'] and max(len(name) for name in correspondent['identifying_names']) > 0:
             return json.dumps(correspondent, ensure_ascii=False)
         if correspondent['aliases_from_signature']:
-            correspondent['identifying_names'] = correspondent['aliases_from_signature']
+            correspondent['identifying_names'] = {alias: 1 for alias in correspondent['aliases_from_signature']}
         elif correspondent.get('email_addresses'):
-            correspondent['identifying_names'] = correspondent['email_addresses']
+            correspondent['identifying_names'] = {address: 1 for address in correspondent['email_addresses']}
         else:
-            correspondent['identifying_names'] = ['']
+            correspondent['identifying_names'] = {'': 1}
         return json.dumps(correspondent, ensure_ascii=False)
+
+    def find_best_identifying_name(self, identifying_names):
+        """From a number of candidates for identifying_names, return the best suited candidate."""
+        split_names = [name.split(' ') for name in list(identifying_names.keys())]
+        names_filtered = []
+        for split in split_names:
+            if len(split) >= 2 and len(split[0].strip('.')) > 1 and len(split[1].strip('.')) > 1:
+                names_filtered.append(' '.join(split))
+
+        names_filtered = sorted(names_filtered, key=lambda name: len(name))  # prefer shorter names
+
+        max_frequency = 0
+        most_frequent_filtered_name = ''
+        for key in identifying_names.keys():
+            if key not in names_filtered:
+                continue
+            if identifying_names[key] > max_frequency:
+                max_frequency = identifying_names[key]
+                most_frequent_filtered_name = key
+
+        if not most_frequent_filtered_name:
+            return [max(list(identifying_names.keys()), key=len)]
+        return [most_frequent_filtered_name]
 
     def remove_multiple_identifying_names(self, data):
         """Make sure there is exactly one entry in identifying_names."""
         correspondent = json.loads(data)
 
         if len(correspondent['identifying_names']) == 1:
+            correspondent['identifying_names'] = list(correspondent['identifying_names'].keys())
             return json.dumps(correspondent, ensure_ascii=False)
         elif len(correspondent['identifying_names']) == 0:
             print('lt_logs', datetime.now(), "Warning: identifying_names shouldn't be empty", correspondent, flush=True)
             correspondent['identifying_names'] = ['']
             return json.dumps(correspondent, ensure_ascii=False)
 
-        identifying_name = max(correspondent['identifying_names'])
-        correspondent['aliases'] = correspondent['identifying_names']
-        correspondent['aliases'].remove(identifying_name)
-        correspondent['identifying_names'] = [identifying_name]
+        correspondent['aliases'] = list(correspondent['identifying_names'].keys())
+        correspondent['identifying_names'] = self.find_best_identifying_name(correspondent['identifying_names'])
+        correspondent['aliases'].remove(correspondent['identifying_names'][0])
+
         return json.dumps(correspondent, ensure_ascii=False)
 
     def convert_to_name_tuple(self, data):
