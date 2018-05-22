@@ -28,9 +28,9 @@ class NetworkAnalyser:
         """Analyse the network. Parameter upload decides if data in neo4j will be updated."""
         print(self.neo4j_host)
         neo_connection = py2neo.Graph(self.neo4j_host, http_port=self.http_port, bolt_port=self.bolt_port)
-        edges = neo_connection.run('MATCH (source)-[r]->(target) WHERE ()-->(source)-->() AND ()-->(target)-->() \
+        edges = neo_connection.run('MATCH (source)-[r]->(target) \
                                     RETURN id(source), id(target), size(r.mail_list) as cnt, r.time_list as tml')
-        nodes = neo_connection.run('MATCH (p:Person) RETURN id(p), p.identifying_name')
+        nodes = neo_connection.run('MATCH (p:Person) RETURN id(p), p.email_addresses')
 
         digraph = nx.DiGraph()
 
@@ -38,7 +38,7 @@ class NetworkAnalyser:
             digraph.add_edge(edge['id(source)'], edge['id(target)'], volume=edge['cnt'], timeline=edge['tml'])
 
         for node in nodes:
-            digraph.add_node(node['id(p)'], name=node['p.identifying_name'])
+            digraph.add_node(node['id(p)'], email=node['p.email_addresses'])
 
         graph = digraph.to_undirected()
 
@@ -73,4 +73,4 @@ class NetworkAnalyser:
 
 
 na = NetworkAnalyser()
-na.analyse_network(upload=False)
+na.analyse_network(upload=True)

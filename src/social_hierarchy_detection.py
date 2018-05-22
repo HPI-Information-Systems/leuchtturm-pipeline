@@ -3,6 +3,7 @@ import networkx as nx
 import time
 import datetime
 import pandas as pd
+import numpy as np
 import matplotlib.pyplot as plt
 from pandas.tseries.offsets import BDay
 
@@ -59,11 +60,11 @@ class SocialHierarchyDetector:
         #     1919: 13.63277835046198, 1976: 9.093374266557147, 2072: 0.17968440078391315, 2114: 0.019437401197172747,
         #     2777: 0.0018654467347532571, 3126: 0.01015105652432728
         # }
-        self._run_statistics(graph, hierarchy_scores)
         hierarchy_scores_formatted = self._format_for_upload(hierarchy_scores)
 
         end = time.time()
         print('Calculated ' + str(len(graph.nodes)) + ' social hierarchy scores, took: ' + str(end - start) + 's')
+        # self._run_statistics(graph, hierarchy_scores)
         return hierarchy_scores_formatted
 
     def _normalize(self, metric, high=True):
@@ -272,21 +273,22 @@ class SocialHierarchyDetector:
     def _run_statistics(self, graph, hierarchy_scores):
         sorted_hierarchy = sorted(hierarchy_scores.values())
         top_five = sorted(hierarchy_scores, key=hierarchy_scores.get, reverse=True)[:5]
-        names = nx.get_node_attributes(graph, 'name')
+        email_addresses = nx.get_node_attributes(graph, 'email')
         for node in top_five:
-            print((hierarchy_scores[node], names[node], node))
+            print((hierarchy_scores[node], email_addresses[node], node))
 
         # plot line diagram
-        x = y = sorted_hierarchy
-        plt.plot(x, y, '.-')
-        plt.title('Hierarchy scores')
-        plt.xlabel('Scores')
-        plt.ylabel('Hierarchy values')
+        y = sorted_hierarchy
+        x = np.random.randint(0, high=100, size=len(y))
+        # plt.plot(x, y, '.-')
+        # plt.title('Hierarchy scores')
+        # plt.xlabel('Scores')
+        # plt.ylabel('Hierarchy values')
 
         # plot histogram
         plt.figure()
         num_bins = 40
-        n, bins, patches = plt.hist(x, num_bins, alpha=0.75)
+        n, bins, patches = plt.hist(y, num_bins, alpha=0.75)
         plt.title('Distribution of Hierarchy scores')
         plt.xlabel('Scores')
         plt.ylabel('Hierarchy values')
@@ -296,15 +298,25 @@ class SocialHierarchyDetector:
         axes.get_yaxis().grid(color='gray', linestyle='dashed')
 
         # plot histogram
-        plt.figure()
-        num_bins = 3
-        n, bins, patches = plt.hist(x, num_bins, alpha=0.75)
-        plt.title('Distribution of Hierarchy scores')
-        plt.xlabel('Scores')
-        plt.ylabel('Hierarchy values')
+        # plt.figure()
+        # num_bins = 3
+        # n, bins, patches = plt.hist(x, num_bins, alpha=0.75)
+        # plt.title('Distribution of Hierarchy scores')
+        # plt.xlabel('Scores')
+        # plt.ylabel('Hierarchy values')
+        #
+        # plt.rcParams['axes.axisbelow'] = True
+        # axes = plt.gca()
+        # axes.get_yaxis().grid(color='gray', linestyle='dashed')
 
-        plt.rcParams['axes.axisbelow'] = True
-        axes = plt.gca()
-        axes.get_yaxis().grid(color='gray', linestyle='dashed')
+        # plot boxplot diagram
+        fig1, ax1 = plt.subplots()
+        ax1.set_title('Basic Plot')
+        ax1.boxplot(y)
+
+        # plot scatter plot
+        fig, ax = plt.subplots()
+        ax.scatter(x, y, c=y, alpha=1, cmap='rainbow')
+        ax.set_title('Distribution of Hierarchy scores')
 
         plt.show()

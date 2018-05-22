@@ -24,6 +24,8 @@ class Snap:
         self.graph = graph
         self.quiet = quiet
 
+        print('Number of Nodes: ' + str(len(self.graph.nodes())))
+
         if not os.path.exists(self.TMP_FOLDER):
             os.makedirs(self.TMP_FOLDER)
 
@@ -32,7 +34,7 @@ class Snap:
             for edge in self.graph.edges():
                 if edge[0] != edge[1]:
                     f.write(str(edge[0]) + '\t' + str(edge[1]) + '\n')
-
+                    
     def _read_result(self):
         with open(os.path.join(self.TMP_FOLDER, self.TMP_FILE_OUTPUT), 'r') as f:
             for line in f:
