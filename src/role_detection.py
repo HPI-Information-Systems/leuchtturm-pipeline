@@ -1,6 +1,6 @@
 """This Module makes the role detection methods available."""
 
-from snap import Snap
+from .snap import Snap
 
 
 class RoleDetector:
