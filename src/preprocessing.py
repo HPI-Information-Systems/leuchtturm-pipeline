@@ -517,8 +517,7 @@ class TextCleaning(Pipe):
     def remove_header(self, text):
         """Remove email and enron specific noise from texts."""
         # these rules primarily exist to cleanup things we didn't extract properly previously, use carefully!
-        headers = [r'^(((subject:)|(from:)|(sent:)|(date:)|(to:)|(cc:))(\s.*\n))+\s+',
-                   r'---+ forwarded.*',
+        headers = [r'---+ forwarded.*',
                    r'-----+\s?(original)|(inline).+-----+',
                    r'^(\*|=|-){20,}\s(.|\n)+(\*|=|-){20,}\s',
                    r'^[>\s]*on.+wrote:',
