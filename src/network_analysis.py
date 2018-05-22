@@ -2,9 +2,9 @@
 
 import py2neo
 import networkx as nx
-from community_detection import CommunityDetector
-from role_detection import RoleDetector
-from social_hierarchy_detection import SocialHierarchyDetector
+from .community_detection import CommunityDetector
+from .role_detection import RoleDetector
+from .social_hierarchy_detection import SocialHierarchyDetector
 
 
 class NetworkAnalyser:
