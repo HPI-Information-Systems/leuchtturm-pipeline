@@ -11,6 +11,7 @@ from nltk.corpus import stopwords as nltksw
 from nltk.stem.wordnet import WordNetLemmatizer
 
 from .common import Pipe
+from .common import ensure_path
 
 
 class TopicModelTraining(Pipe):
@@ -90,12 +91,14 @@ class TopicModelTraining(Pipe):
         processed_corpus = docs
 
         dictionary = corpora.Dictionary(processed_corpus)
+        ensure_path(self.conf.get('topic_modelling', 'file_dictionary'))
         with open(self.conf.get('topic_modelling', 'file_dictionary'), 'wb') as pfile:
             pickle.dump(dictionary, pfile)
 
         bow_corpus = [dictionary.doc2bow(text) for text in processed_corpus]
 
         lda = models.ldamodel.LdaModel(bow_corpus, num_topics=num_topics, iterations=iterations, eta=eta, alpha=alpha)
+        ensure_path(self.conf.get('topic_modelling', 'file_model'))
         with open(self.conf.get('topic_modelling', 'file_model'), 'wb') as pfile:
             pickle.dump(lda, pfile)
 

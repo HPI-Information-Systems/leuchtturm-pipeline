@@ -2,6 +2,17 @@
 
 from glob import glob
 from pyspark import SparkContext, SparkConf
+import os
+import errno
+
+
+def ensure_path(filename):
+    if not os.path.exists(os.path.dirname(filename)):
+        try:
+            os.makedirs(os.path.dirname(filename))
+        except OSError as e:
+            if e.errno != errno.EEXIST:
+                raise
 
 
 class SparkProvider(object):
