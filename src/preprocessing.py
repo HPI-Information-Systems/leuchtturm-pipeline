@@ -151,16 +151,14 @@ class EmailSplitting(Pipe):
     reply_seperator_heuristic = r'(.*_{3}.*Reply Separator((\n|.)*?)Date.*)'
     date_to_subject_heuristic = r'(.*\n.*(on )?\d{2}\/\d{2}\/\d{2,4}\s\d{2}:\d{2}(:\d{2})?\s?(AM|PM|am|pm)?.*\n.*(\n.*)?To: (\n|.)*?Subject: .*)'  # NOQA
     from_to_subject_heuristic = r'(.*From:((\n|.)*?)Subject:.*)'
-    date_to_mime_boundary_heuristic = r'(.*Date:((\n|.)*?)(Content-Type)|(Content-Disposition):.*)'
 
-    header_regex = re.compile('(%s|%s|%s|%s|%s|%s|%s)' % (
+    header_regex = re.compile('(%s|%s|%s|%s|%s|%s)' % (
         forwarded_by_heuristic,
         begin_forwarded_message_heuristic,
         original_message_heuristic,
         reply_seperator_heuristic,
         date_to_subject_heuristic,
-        from_to_subject_heuristic,
-        date_to_mime_boundary_heuristic
+        from_to_subject_heuristic
     ), re.I)
 
     def __init__(self, conf, keep_thread_connected=False, use_quagga=False):
@@ -266,7 +264,7 @@ class HeaderParsing(Pipe):
 
     def prepare_header_string(self, text):
         """Remove whitespace, newlines and other noise."""
-        text = re.sub(r'.*-----*', '', text, 0, re.IGNORECASE | re.DOTALL)
+        text = re.sub(r'.+-----', '', text, 0, re.IGNORECASE | re.DOTALL)
         text = re.sub(r'^(\s|>)+', '', text, flags=re.MULTILINE)  # remove leading > and whitespace
         text = re.sub(r'\s+', ' ', text)  # normalize whitespace
         text = text.replace('*', '').replace('follows ---------', '')
@@ -311,8 +309,7 @@ class HeaderParsing(Pipe):
 
     def clean_name(self, name_string):
         """Normalize and clean a name. Lastname, Firstname becomes to Fn Ln."""
-        name = re.sub(r'(on )?\d{2}\/\d{2}\/\d{2,4}\s\d{2}:\d{2}(:\d{2})?\s?(am|pm)?.*', '', name_string, flags=re.I)
-        name = re.sub(r'(<.+>)|(\[.+\])|(\(.+\))', '', name)  # remove [FI] flags and similar
+        name = re.sub(r'(<.+>)|(\[.+\])|(\(.+\))', '', name_string)  # remove [FI] flags and similar
         name = re.sub(r'\S+@\S+\.\S+', '', name)  # remove email
         name = re.sub(r'(?<=\w)(/|@).*', '', name)  # normalize weird enron names (beau ratliff/hou/ees@ees)
         name = name.replace('<', '').replace('>', '').replace('|', '').replace('"', '').replace("'", '')
