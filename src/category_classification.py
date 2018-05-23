@@ -1,10 +1,9 @@
 """Classification of emails in the pipeline."""
 
 import ujson as json
-import pickle
 
 from .common import Pipe
-from .libs import clf_export
+from .libs import email_classification
 
 
 class EmailCategoryClassification(Pipe):
@@ -19,35 +18,25 @@ class EmailCategoryClassification(Pipe):
         super().__init__(conf)
         self.conf = conf
 
-    def load_clf(self):
+    def load_clf_tool(self):
         """Load classifier and required vectorizers."""
-        with open(self.conf.get('classification', 'file_clf'), 'rb') as f:
-            clf = pickle.load(f)
+        return email_classification.EmailClassificationTool.load_from_file(
+            self.conf.get('classification', 'file_clf_tool')
+        )
 
-        with open(self.conf.get('classification', 'file_body_vectorizer'), 'rb') as f:
-            vectorizer_body = pickle.load(f)
-
-        with open(self.conf.get('classification', 'file_subject_vectorizer'), 'rb') as f:
-            vectorizer_subject = pickle.load(f)
-
-        with open(self.conf.get('classification', 'file_label_encoder'), 'rb') as f:
-            label_encoder = pickle.load(f)
-
-        return clf_export.EmailClfInterface(clf, vectorizer_body, vectorizer_subject, label_encoder)
-
-    def run_on_document(self, email_doc, email_clf):
+    def run_on_document(self, email_doc, email_clf_tool):
         """Predict classes for a document."""
         document = json.loads(email_doc)
 
-        prediction = {'top_category': email_clf.predict_top_category(document['raw']),
-                      'prob_category': email_clf.predict_proba(document['raw'])}
+        prediction = {'top_category': email_clf_tool.predict_top_category(document['raw']),
+                      'prob_category': email_clf_tool.predict_proba(document['raw'])}
         document['category'] = prediction
 
         return json.dumps(document, ensure_ascii=False)
 
     def run_on_partition(self, partition):
         """Load models partitionwise for performance reasons."""
-        predictor = self.load_clf()
+        predictor = self.load_clf_tool()
 
         for elem in partition:
             yield self.run_on_document(elem, predictor)

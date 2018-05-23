@@ -38,8 +38,7 @@ def run_email_pipeline(conf):
         ),
         LanguageDetection(conf, read_from='text_clean'),
         SpacyNer(conf, read_from='text_clean'),
-        EmailCategoryClassification(conf),
-        EmailFolderClassification(conf)
+        EmailCategoryClassification(conf)
     ]
 
     writer = TextFileWriter(conf, path=conf.get('data', 'results_dir'))
