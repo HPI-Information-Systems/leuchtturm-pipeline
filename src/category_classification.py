@@ -43,7 +43,7 @@ class EmailCategoryClassification(Pipe):
                       'prob_category': email_clf.predict_proba(document['raw'])}
         document['category'] = prediction
 
-        return json.dumps(document)
+        return json.dumps(document, ensure_ascii=False)
 
     def run_on_partition(self, partition):
         """Load models partitionwise for performance reasons."""

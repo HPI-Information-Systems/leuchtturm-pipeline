@@ -28,3 +28,20 @@ And you're ready to go!
 (It's recommended to set `spark-parallelism` to 1 if you're running the pipeline non-distributed.)
 
 Check Solr or the `data/processed` folder for the results! To deploy the pipeline on a yarn cluster, consult [this Guide](https://hpi.de/naumann/leuchtturm/gitlab/leuchtturm/meta/wikis/Pipeline/Pipeline-Architektur).
+
+## Debugging
+
+Connect to Sopedu and run one of the following commands.
+
+#### View logs for `<application_id>` (e.g. application_1515508285553_0375)
+
+`yarn logs -applicationId <application_id>`
+
+#### Download logs for `<application_id>` to local folder `lt_logs`
+
+`yarn logs -applicationId <application_id> -out lt_logs`
+
+#### More useful options
+
+- Limit which log file types should be downloaded: `-log_files stderr`
+- Limit from which container logs should be downloaded: `-containerId <container_id>`

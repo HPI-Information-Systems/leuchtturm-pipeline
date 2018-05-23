@@ -24,6 +24,8 @@ class Config:
             'source_dir': './data/input',
             'working_dir': './data/processed',
             'results_dir': '${data:working_dir}/pipeline_results',
+            'results_correspondent_dir': '${results_dir}_correspondent',
+            'results_injected_dir': '${results_dir}_injected',
             'time_min': 0,
             'time_max': 2147483647
         },
@@ -45,7 +47,8 @@ class Config:
             'http_port': 7474,
             'bolt_port': 7687,
             'data_location': './data/neo4j',
-            'log_location': './data/logs/neo4j'
+            'log_location': './data/logs/neo4j',
+            'create_node_index': True
         },
         'spark': {
             'driver_memory': '6g',

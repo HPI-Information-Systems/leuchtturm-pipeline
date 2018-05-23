@@ -43,7 +43,7 @@ class EmlReader(Pipe):
 
         return json.dumps({'doc_id': doc_id,
                            'path': path,
-                           'raw': document})
+                           'raw': document}, ensure_ascii=False)
 
     def run(self):
         """Run task in a spark context. Return rdd."""
