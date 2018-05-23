@@ -151,16 +151,16 @@ class EmailSplitting(Pipe):
     reply_seperator_heuristic = r'(.*_{3}.*Reply Separator((\n|.)*?)Date.*)'
     date_to_subject_heuristic = r'(.*\n.*(on )?\d{2}\/\d{2}\/\d{2,4}\s\d{2}:\d{2}(:\d{2})?\s?(AM|PM|am|pm)?.*\n.*(\n.*)?To: (\n|.)*?Subject: .*)'  # NOQA
     from_to_subject_heuristic = r'(.*From:((\n|.)*?)Subject:.*)'
-    # date_to_mime_boundary_heuristic = r'(.*Date:((\n|.)*?)(Content-Type)|(Content-Disposition):.*)'
+    date_to_mime_boundary_heuristic = r'(.*Date:((\n|.)*?)(Content-Type)|(Content-Disposition):.*)'
 
-    header_regex = re.compile('(%s|%s|%s|%s|%s|%s)' % (
+    header_regex = re.compile('(%s|%s|%s|%s|%s|%s|%s)' % (
         forwarded_by_heuristic,
         begin_forwarded_message_heuristic,
         original_message_heuristic,
         reply_seperator_heuristic,
         date_to_subject_heuristic,
-        from_to_subject_heuristic
-        # date_to_mime_boundary_heuristic
+        from_to_subject_heuristic,
+        date_to_mime_boundary_heuristic
     ), re.I)
 
     def __init__(self, conf, keep_thread_connected=False, use_quagga=False):
@@ -266,9 +266,7 @@ class HeaderParsing(Pipe):
 
     def prepare_header_string(self, text):
         """Remove whitespace, newlines and other noise."""
-        # text = re.sub(r'.*----- ?.+\n?.+ ?-----', '', text, flags=re.IGNORECASE)
-        text = re.sub(r'.*----- ?original message ?-----', '', text, 0, re.IGNORECASE)
-        text = re.sub(r'.*-{5,} forwarded by.+-{5,}', '', text, 0, re.IGNORECASE | re.DOTALL)  # remove 2ndary header
+        text = re.sub(r'.*-----*', '', text, 0, re.IGNORECASE | re.DOTALL)
         text = re.sub(r'^(\s|>)+', '', text, flags=re.MULTILINE)  # remove leading > and whitespace
         text = re.sub(r'\s+', ' ', text)  # normalize whitespace
         text = text.replace('*', '').replace('follows ---------', '')
@@ -278,9 +276,9 @@ class HeaderParsing(Pipe):
 
     def transform_header_string(self, header_string):
         """Split a string that is likely a header into its fields."""
-        header_string = self.prepare_header_string(header_string)
+        header_string = self.prepare_header_string(header_string) + ' '
 
-        separator_re = re.compile(r'\s((?=(x-)?from:)|(?=((x|reply)-)?to:)|(?=(x-)?b?cc:)|(?=date:)|(?=sent(-by)?:)|(?=subject:))', re.IGNORECASE)  # NOQA
+        separator_re = re.compile(r'\s((?=(x-)?from:\s)|(?=((x|reply)-)?to:\s)|(?=(x-)?b?cc:\s)|(?=date:\s)|(?=sent(-by)?:\s)|(?=subject:\s))', re.IGNORECASE)  # NOQA
         header_fields = separator_re.split(header_string)  # split into separate headers
         header_fields = [header_field for header_field in header_fields if header_field]  # filter none and empty
         for index, header_field in enumerate(header_fields):
@@ -313,9 +311,8 @@ class HeaderParsing(Pipe):
 
     def clean_name(self, name_string):
         """Normalize and clean a name. Lastname, Firstname becomes to Fn Ln."""
-        # name = re.sub(r'(on )?\d{2}\/\d{2}\/\d{2,4}\s\d{2}:\d{2}(:\d{2})?\s?(am|pm)?.*', '', name_string, flags=re.I)
-        # name = re.sub(r'(<.+>)|(\[.+\])|(\(.+\))', '', name)  # remove [FI] flags and similar
-        name = re.sub(r'(<.+>)|(\[.+\])', '', name_string)
+        name = re.sub(r'(on )?\d{2}\/\d{2}\/\d{2,4}\s\d{2}:\d{2}(:\d{2})?\s?(am|pm)?.*', '', name_string, flags=re.I)
+        name = re.sub(r'(<.+>)|(\[.+\])|(\(.+\))', '', name)  # remove [FI] flags and similar
         name = re.sub(r'\S+@\S+\.\S+', '', name)  # remove email
         name = re.sub(r'(?<=\w)(/|@).*', '', name)  # normalize weird enron names (beau ratliff/hou/ees@ees)
         name = name.replace('<', '').replace('>', '').replace('|', '').replace('"', '').replace("'", '')
@@ -379,13 +376,11 @@ class HeaderParsing(Pipe):
         """Normalize date to given period of time."""
         date = original_date.replace(tzinfo=None)
 
-        if self.start_date:
-            if date < self.start_date:
-                return self.start_date, True
+        if self.start_date and date < self.start_date:
+            return self.start_date, True
 
-        if self.end_date:
-            if date > self.end_date:
-                return self.end_date, True
+        if self.end_date and date > self.end_date:
+            return self.end_date, True
 
         return original_date, False
 
