@@ -5,10 +5,12 @@ from .snap import Snap
 
 class CommunityDetector:
     """This class holds the Community detection methods."""
-    def __init__():
+
+    def __init__(self, graph):
+        """Initialize."""
         self.snap = Snap(graph, quiet=False)
 
-    def clauset_newman_moore(self, graph):
+    def clauset_newman_moore(self):
         """Detect communities using clauset-newman-moore from snap.
 
         Input: networkX graph
@@ -16,7 +18,7 @@ class CommunityDetector:
         print('starting community detection using clauset-newman-moore:')
         return self.run_snap_community_detection(self.snap.communities, 2)
 
-    def girvan_newman(self, graph):
+    def girvan_newman(self):
         """Detect communities using girvan-newman from snap.
 
         Input: networkX graph
@@ -24,7 +26,7 @@ class CommunityDetector:
         print('starting community detection using girvan-newman:')
         return self.run_snap_community_detection(self.snap.communities, 1)
 
-    def bigclam(self, graph):
+    def bigclam(self):
         """Detect communities using bigclam from snap.
 
         Input: networkX graph

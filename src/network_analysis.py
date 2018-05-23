@@ -21,7 +21,7 @@ class NetworkAnalyser(Pipe):
                 #  http_port=61100,
                 #  bolt_port=61000):
         """Set solr config and path where rdd is read from."""
-        super().__init__()
+        super().__init__(conf)
         self.conf = conf
         self.solr_url = conf.get('solr', 'protocol') + '://' + str(conf.get('solr', 'host')) + ':' + \
             str(conf.get('solr', 'port')) + '/' + conf.get('solr', 'url_path') + '/' + \
@@ -58,8 +58,8 @@ class NetworkAnalyser(Pipe):
         social_hierarchy_detector = SocialHierarchyDetector()
         social_hierarchy_labels = social_hierarchy_detector.detect_social_hierarchy(digraph)
 
-        community_detector = CommunityDetector()
-        community_labels = community_detector.clauset_newman_moore(graph)
+        community_detector = CommunityDetector(graph)
+        community_labels = community_detector.clauset_newman_moore()
 
         role_detector = RoleDetector()
         role_labels = role_detector.rolx(graph)
