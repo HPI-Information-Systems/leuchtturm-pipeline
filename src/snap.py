@@ -7,12 +7,12 @@ import subprocess
 class Snap:
     """This class contains the information about the snap binaries and holds the functionality to execute them."""
 
-    BIN_BIGCLAM = os.path.abspath('./libs/snap/bigclam')
-    BIN_CENTRALITY = os.path.abspath('./libs/snap/centrality')
-    BIN_COMMUNITY = os.path.abspath('./libs/snap/community')
-    BIN_ROLX = os.path.abspath('./libs/snap/testrolx')
+    BIN_BIGCLAM = os.path.abspath('./src/libs/snap/bigclam')
+    BIN_CENTRALITY = os.path.abspath('./src/libs/snap/centrality')
+    BIN_COMMUNITY = os.path.abspath('./src/libs/snap/community')
+    BIN_ROLX = os.path.abspath('./src/libs/snap/testrolx')
 
-    TMP_FOLDER = os.path.abspath('./snap-tmp/')
+    TMP_FOLDER = os.path.abspath('./tmp/snap-tmp/')
     TMP_FILE_EDGES = 'edges'
     TMP_FILE_OUTPUT = 'out'
 

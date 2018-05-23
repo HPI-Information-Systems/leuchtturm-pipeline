@@ -21,8 +21,8 @@ class NetworkAnalyser:
                 #  bolt_port=61000):
         """Set solr config and path where rdd is read from."""
         self.conf = conf
-        self.solr_url = conf.get('solr', 'protocol') + '://' + conf.get('solr', 'host') + ':' + \
-            conf.get('solr', 'port') + '/' + conf.get('solr', 'url_path') + '/' + \
+        self.solr_url = conf.get('solr', 'protocol') + '://' + str(conf.get('solr', 'host')) + ':' + \
+            str(conf.get('solr', 'port')) + '/' + conf.get('solr', 'url_path') + '/' + \
             conf.get('solr', 'collection')
         self.neo4j_host = conf.get('neo4j', 'protocol') + '://' + conf.get('neo4j', 'host')
         self.http_port = conf.get('neo4j', 'http_port')
@@ -50,7 +50,7 @@ class NetworkAnalyser:
         print('Number of Nodes: ' + str(graph.number_of_nodes()))
         print('Number of Edges: ' + str(graph.number_of_edges()))
 
-        social_hierarchy_detector = SocialHierarchyDetector(self.solr_url)
+        social_hierarchy_detector = SocialHierarchyDetector()
         social_hierarchy_labels = social_hierarchy_detector.detect_social_hierarchy(digraph)
 
         community_detector = CommunityDetector()
@@ -59,10 +59,10 @@ class NetworkAnalyser:
         role_detector = RoleDetector()
         role_labels = role_detector.rolx(graph)
 
-        # always upload
-        self.update_network(community_labels, "community")
-        self.update_network(role_labels, "role")
-        self.update_network(social_hierarchy_labels, "hierarchy")
+        if self.conf.get('neo4j', 'upload'):
+            self.update_network(community_labels, "community")
+            self.update_network(role_labels, "role")
+            self.update_network(social_hierarchy_labels, "hierarchy")
 
     def update_network(self, labelled_nodes, attribute):
         """Update neo4j's data with the detected labels."""
