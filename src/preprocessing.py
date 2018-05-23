@@ -267,8 +267,8 @@ class HeaderParsing(Pipe):
     def prepare_header_string(self, text):
         """Remove whitespace, newlines and other noise."""
         # text = re.sub(r'.*----- ?.+\n?.+ ?-----', '', text, flags=re.IGNORECASE)
-        text = re.sub(r'.*-----', '', text, flags=re.IGNORECASE)
-        text = re.sub(r'.*-{5,} forwarded by.+-{5,}', '', text, 0, re.IGNORECASE | re.DOTALL)  # remove 2ndary header
+        text = re.sub(r'.+-----', '', text, 0, re.IGNORECASE | re.DOTALL)
+        # text = re.sub(r'.*-{5,} forwarded by.+-{5,}', '', text, 0, re.IGNORECASE | re.DOTALL)  # remove 2ndary header
         text = re.sub(r'^(\s|>)+', '', text, flags=re.MULTILINE)  # remove leading > and whitespace
         text = re.sub(r'\s+', ' ', text)  # normalize whitespace
         text = text.replace('*', '').replace('follows ---------', '')
