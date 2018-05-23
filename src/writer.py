@@ -108,6 +108,33 @@ class Neo4JEdgeWriter(Pipe):
         self.http_port = conf.get('neo4j', 'http_port')
         self.bolt_port = conf.get('neo4j', 'bolt_port')
 
+    def prepare_for_upload(self, data):
+        print('lt_logs', datetime.now(), 'Start preparation for Neo4j Edge Upload for document...', flush=True)
+        document = json.loads(data)
+
+        mail_id = document.get('doc_id', '')
+        header = document.get('header', {})
+        sender = header.get('sender', {})
+        recipients = header.get('recipients', [{}])
+        path = document.get('path', '')
+        try:
+            mail_timestamp = time.mktime(
+                datetime.strptime(header.get('date', ''), "%Y-%m-%dT%H:%M:%SZ").timetuple()
+            )
+        except Exception:
+            mail_timestamp = 0.0  # timestamp for 1970-01-01T00:00:00+00:00'
+
+        result_document = {
+            'mail_id': mail_id,
+            'sender_identifying_name': sender.get('identifying_name', ''),
+            'recipient_identifying_names': [recipient.get('identifying_name', '') for recipient in recipients],
+            'path': path,
+            'mail_timestamp': mail_timestamp
+        }
+
+        print('lt_logs', datetime.now(), 'End preparation for Neo4j Edge Upload for document.', flush=True)
+        return json.dumps(result_document)
+
     def run_on_partition(self, partition):
         """Collect docs partitionwise and upload them."""
         start_time = datetime.now()
@@ -115,27 +142,16 @@ class Neo4JEdgeWriter(Pipe):
         documents = [json.loads(item) for item in partition]
         graph = Graph(host=self.neo4j_host, http_port=self.http_port, bolt_port=self.bolt_port)
         for mail in documents:
-            mail_id = mail.get('doc_id', '')
-            header = mail.get('header', {})
-            sender = header.get('sender', {'identifying_name': '', 'name': '', 'email': ''})
-            recipients = header.get('recipients', [{'identifying_name': ''}])
-            try:
-                mail_timestamp = time.mktime(
-                    datetime.strptime(header.get('date', ''), "%Y-%m-%dT%H:%M:%SZ").timetuple()
-                )
-            except Exception:
-                mail_timestamp = 0.0  # timestamp for 1970-01-01T00:00:00+00:00'
-
             step_size = 10
-            for i in range(0, len(recipients), step_size):
+            for i in range(0, len(mail['recipient_identifying_names']), step_size):
                 edge_start_time = datetime.now()
-                print('lt_logs', edge_start_time, 'Upload edge', mail.get('path'), 'with', recipients[i:i + step_size])
+                print('lt_logs', edge_start_time, 'Upload edge', mail['path'])
                 graph.run(
                     'MATCH '
                         '(a:Person {identifying_name: $sender_identifying_name}) '
-                    'UNWIND $recipients AS recipient '
+                    'UNWIND $recipient_identifying_names AS recipient_identifying_name '
                     'MATCH '
-                        '(b:Person {identifying_name: recipient.identifying_name}) '
+                        '(b:Person {identifying_name: recipient_identifying_name}) '
                     'MERGE (a)-[w:WRITESTO]->(b) '
                         'ON CREATE SET '
                             'w.mail_list = [$mail_id], '
@@ -143,17 +159,18 @@ class Neo4JEdgeWriter(Pipe):
                         'ON MATCH SET '
                             'w.mail_list = w.mail_list + $mail_id, '
                             'w.time_list = w.time_list + $mail_timestamp',
-                    recipients=recipients[i:i + step_size],
-                    sender_identifying_name=sender['identifying_name'],
-                    mail_id=mail_id,
-                    mail_timestamp=mail_timestamp
+                    recipient_identifying_names=mail['recipient_identifying_names'][i:i + step_size],
+                    sender_identifying_name=mail['sender_identifying_name'],
+                    mail_id=mail['mail_id'],
+                    mail_timestamp=mail['mail_timestamp']
                 )  # noqa
                 print('lt_logs', datetime.now(), 'Finish uploading edge from', edge_start_time)
         print('lt_logs', datetime.now(), 'Finish Neo4j Edge Upload on partition from', start_time, flush=True)
 
     def run(self, rdd):
         """Run task in spark context."""
-        rdd.coalesce(1) \
+        rdd.map(self.prepare_for_upload) \
+           .coalesce(1) \
            .foreachPartition(self.run_on_partition)
 
 
