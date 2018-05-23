@@ -40,7 +40,8 @@ def run_email_pipeline(conf):
         LanguageDetection(conf, read_from='text_clean'),
         SpacyNer(conf, read_from='text_clean'),
         EmailCategoryClassification(conf),
-        EmailFolderClassification(conf)
+        EmailFolderClassification(conf),
+        NetworkAnalyser(conf)
     ]
 
     writer = TextFileWriter(conf, path=conf.get('data', 'results_dir'))
@@ -81,9 +82,6 @@ def run_email_pipeline(conf):
     if conf.get('neo4j', 'import'):
         Neo4JFileWriter(conf, conf.get('data', 'results_correspondent_dir'), mode='nodes').run()
         Neo4JFileWriter(conf, conf.get('data', 'results_injected_dir'), mode='edges').run()
-
-    network_analyser = NetworkAnalyser(conf)
-    network_analyser.analyse_network()
 
     SparkProvider.stop_spark_context()
 

@@ -5,9 +5,10 @@ import networkx as nx
 from .community_detection import CommunityDetector
 from .role_detection import RoleDetector
 from .social_hierarchy_detection import SocialHierarchyDetector
+from .common import Pipe
 
 
-class NetworkAnalyser:
+class NetworkAnalyser(Pipe):
     """This class holds the network functionality and gets the needed data.
 
     Initialize with needed parameters for solr_url, neo4j_host, http_port, bolt_port (for neo4j)
@@ -20,6 +21,7 @@ class NetworkAnalyser:
                 #  http_port=61100,
                 #  bolt_port=61000):
         """Set solr config and path where rdd is read from."""
+        super().__init__()
         self.conf = conf
         self.solr_url = conf.get('solr', 'protocol') + '://' + str(conf.get('solr', 'host')) + ':' + \
             str(conf.get('solr', 'port')) + '/' + conf.get('solr', 'url_path') + '/' + \
@@ -28,9 +30,12 @@ class NetworkAnalyser:
         self.http_port = conf.get('neo4j', 'http_port')
         self.bolt_port = conf.get('neo4j', 'bolt_port')
 
+    def run(self):
+        """Run network analysis. Obligatory for Pipe inheritence."""
+        self.analyse_network()
+
     def analyse_network(self):
         """Analyse the network. Parameter upload decides if data in neo4j will be updated."""
-        print(self.neo4j_host)
         neo_connection = py2neo.Graph(self.neo4j_host, http_port=self.http_port, bolt_port=self.bolt_port)
         edges = neo_connection.run('MATCH (source)-[r]->(target) \
                                     RETURN id(source), id(target), size(r.mail_list) as cnt, r.time_list as tml')
