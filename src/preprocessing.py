@@ -266,7 +266,8 @@ class HeaderParsing(Pipe):
 
     def prepare_header_string(self, text):
         """Remove whitespace, newlines and other noise."""
-        text = re.sub(r'.*----- ?.+\n?.+ ?-----', '', text, flags=re.IGNORECASE)
+        # text = re.sub(r'.*----- ?.+\n?.+ ?-----', '', text, flags=re.IGNORECASE)
+        text = re.sub(r'.*-----', '', text, flags=re.IGNORECASE)
         text = re.sub(r'.*-{5,} forwarded by.+-{5,}', '', text, 0, re.IGNORECASE | re.DOTALL)  # remove 2ndary header
         text = re.sub(r'^(\s|>)+', '', text, flags=re.MULTILINE)  # remove leading > and whitespace
         text = re.sub(r'\s+', ' ', text)  # normalize whitespace
@@ -313,7 +314,8 @@ class HeaderParsing(Pipe):
     def clean_name(self, name_string):
         """Normalize and clean a name. Lastname, Firstname becomes to Fn Ln."""
         name = re.sub(r'(on )?\d{2}\/\d{2}\/\d{2,4}\s\d{2}:\d{2}(:\d{2})?\s?(am|pm)?.*', '', name_string, flags=re.I)
-        name = re.sub(r'(<.+>)|(\[.+\])|(\(.+\))', '', name)  # remove [FI] flags and similar
+        # name = re.sub(r'(<.+>)|(\[.+\])|(\(.+\))', '', name)  # remove [FI] flags and similar
+        name = re.sub(r'(<.+>)|(\[.+\])', '', name)
         name = re.sub(r'\S+@\S+\.\S+', '', name)  # remove email
         name = re.sub(r'(?<=\w)(/|@).*', '', name)  # normalize weird enron names (beau ratliff/hou/ees@ees)
         name = name.replace('<', '').replace('>', '').replace('|', '')
