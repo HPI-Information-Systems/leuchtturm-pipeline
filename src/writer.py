@@ -109,6 +109,7 @@ class Neo4JEdgeWriter(Pipe):
         self.bolt_port = conf.get('neo4j', 'bolt_port')
 
     def prepare_for_upload(self, data):
+        """Reduce complexity of an email object so that it can be easier consumed by Neo4j."""
         print('lt_logs', datetime.now(), 'Start preparation for Neo4j Edge Upload for document...', flush=True)
         document = json.loads(data)
 
@@ -141,25 +142,22 @@ class Neo4JEdgeWriter(Pipe):
         print('lt_logs', start_time, 'Start Neo4j Edge Upload on partition...', flush=True)
         documents = [json.loads(item) for item in partition]
         graph = Graph(host=self.neo4j_host, http_port=self.http_port, bolt_port=self.bolt_port)
-        for mail in documents:
-            graph.run(
+        graph.run(
+            'UNWIND $mails AS mail '
                 'MATCH '
-                    '(a:Person {identifying_name: $sender_identifying_name}) '
-                'UNWIND $recipient_identifying_names AS recipient_identifying_name '
-                'MATCH '
-                    '(b:Person {identifying_name: recipient_identifying_name}) '
-                'MERGE (a)-[w:WRITESTO]->(b) '
-                    'ON CREATE SET '
-                        'w.mail_list = [$mail_id], '
-                        'w.time_list = [$mail_timestamp] '
-                    'ON MATCH SET '
-                        'w.mail_list = w.mail_list + $mail_id, '
-                        'w.time_list = w.time_list + $mail_timestamp',
-                recipient_identifying_names=mail['recipient_identifying_names'],
-                sender_identifying_name=mail['sender_identifying_name'],
-                mail_id=mail['mail_id'],
-                mail_timestamp=mail['mail_timestamp']
-            )  # noqa
+                    '(a:Person {identifying_name: mail.sender_identifying_name}) '
+                'UNWIND mail.recipient_identifying_names AS recipient_identifying_name '
+                    'MATCH '
+                        '(b:Person {identifying_name: recipient_identifying_name}) '
+                    'MERGE (a)-[w:WRITESTO]->(b) '
+                        'ON CREATE SET '
+                            'w.mail_list = [mail.mail_id], '
+                            'w.time_list = [mail.mail_timestamp] '
+                        'ON MATCH SET '
+                            'w.mail_list = w.mail_list + mail.mail_id, '
+                            'w.time_list = w.time_list + mail.mail_timestamp',
+            mails=documents
+        )  # noqa
         print('lt_logs', datetime.now(), 'Finish Neo4j Edge Upload on partition from', start_time, flush=True)
 
     def run(self, rdd):
