@@ -315,7 +315,7 @@ class HeaderParsing(Pipe):
         name = re.sub(r'(<.+>)|(\[.+\])', '', name_string)
         name = re.sub(r'\S+@\S+\.\S{2,}', '', name)  # remove email
         name = re.sub(r'(?<=\w)(/|@).*', '', name)  # normalize weird enron names (beau ratliff/hou/ees@ees)
-        name = name.split(',')
+        name = name.replace('<', '').replace('>', '').replace('|', '').split(',')
         name.reverse()
         name = ' '.join(name).strip(whitespace)
         name = re.sub(r'\s+', ' ', name)
@@ -326,7 +326,7 @@ class HeaderParsing(Pipe):
                 name_parts = [part for part in email_without_domain.split('.') if part]
                 name = ' '.join(name_parts)
 
-        name = re.sub(r'[^a-zA-Z0-9-_\.\+ ]', '', name)  # replace non alphanumeric chars leaving some chars out
+        # name = re.sub(r'[^a-zA-Z0-9-_\.\+ ]', '', name)  # replace non alphanumeric chars leaving some chars out
 
         return name.title()
 
