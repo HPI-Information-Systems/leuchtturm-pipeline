@@ -312,7 +312,7 @@ class HeaderParsing(Pipe):
     def clean_name(self, name_string):
         """Normalize and clean a name. Lastname, Firstname becomes to Fn Ln."""
         # name = re.sub(r'(<.+>)|(\[.+\])|(\(.+\))', '', name_string)  # remove [FI] flags and similar
-        name = re.sub(r'(<.+>)|(\[.+\]))', '', name_string)
+        name = re.sub(r'(<.+>)|(\[.+\])', '', name_string)
         name = re.sub(r'\S+@\S+\.\S{2,}', '', name)  # remove email
         name = re.sub(r'(?<=\w)(/|@).*', '', name)  # normalize weird enron names (beau ratliff/hou/ees@ees)
         name = name.split(',')
