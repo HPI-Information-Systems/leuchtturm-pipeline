@@ -282,7 +282,7 @@ class HeaderParsing(Pipe):
         for index, header_field in enumerate(header_fields):
             if header_field[-1:] == ':':
                 header_field += ' '  # if key without value is included in header, add empty value
-            header_fields[index] = header_field.split(':', 1)  # make key value pair of a header
+            header_fields[index] = re.split(r':[\? ]+', header_field, maxsplit=1)  # make key value pair of a header
 
         return header_fields
 
