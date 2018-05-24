@@ -264,10 +264,12 @@ class HeaderParsing(Pipe):
 
     def prepare_header_string(self, text):
         """Remove whitespace, newlines and other noise."""
-        text = re.sub(r'.+-----', '', text, 0, re.IGNORECASE | re.DOTALL)
+        text = re.sub(r'.*----- ?original message ?-----', '', text, flags=re.IGNORECASE)
+        text = re.sub(r'.*-{5,} forwarded by.+-{5,}', '', text, 0, re.IGNORECASE | re.DOTALL)  # remove 2ndary header
+        # text = re.sub(r'.+-----', '', text, 0, re.IGNORECASE | re.DOTALL)
         text = re.sub(r'^(\s|>)+', '', text, flags=re.MULTILINE)  # remove leading > and whitespace
         text = re.sub(r'\s+', ' ', text)  # normalize whitespace
-        text = text.replace('*', '').replace('follows ---------', '')
+        text = text.replace('follows ---------', '')
         text = text.strip(whitespace)
 
         return text
@@ -309,10 +311,10 @@ class HeaderParsing(Pipe):
 
     def clean_name(self, name_string):
         """Normalize and clean a name. Lastname, Firstname becomes to Fn Ln."""
-        name = re.sub(r'(<.+>)|(\[.+\])|(\(.+\))', '', name_string)  # remove [FI] flags and similar
-        name = re.sub(r'\S+@\S+\.\S+', '', name)  # remove email
+        # name = re.sub(r'(<.+>)|(\[.+\])|(\(.+\))', '', name_string)  # remove [FI] flags and similar
+        name = re.sub(r'(<.+>)|(\[.+\]))', '', name_string)
+        name = re.sub(r'\S+@\S+\.\S{2,}', '', name)  # remove email
         name = re.sub(r'(?<=\w)(/|@).*', '', name)  # normalize weird enron names (beau ratliff/hou/ees@ees)
-        name = name.replace('<', '').replace('>', '').replace('|', '').replace('"', '').replace("'", '')
         name = name.split(',')
         name.reverse()
         name = ' '.join(name).strip(whitespace)
@@ -401,7 +403,7 @@ class HeaderParsing(Pipe):
         if self.get_header_value(headers, 'from'):
             header['sender'] = self.parse_correspondent(self.get_header_value(headers, 'from'))
         elif headers and len(headers[0]) == 1:  # special header, missing from key in first line
-            sender = re.sub(r'(on )?\d{2}\/\d{2}\/\d{2,4}\s\d{2}:\d{2}(:\d{2})?\s?(am|pm)?', '',
+            sender = re.sub(r'(on )?\d{2}/\d{2}/\d{2,4}\s\d{2}:\d{2}(:\d{2})?\s?(am|pm)?', '',
                             headers[0][0], flags=re.IGNORECASE)  # rm date
             header['sender'] = self.parse_correspondent(sender)
 
@@ -421,7 +423,7 @@ class HeaderParsing(Pipe):
         elif self.get_header_value(headers, 'sent'):
             header['date'], header['date_changed'] = self.parse_date(self.get_header_value(headers, 'sent'))
         elif headers:
-            date = re.search(r'\d{2}\/\d{2}\/\d{2,4}\s\d{2}:\d{2}(:\d{2})?\s?(am|pm)?',
+            date = re.search(r'\d{2}/\d{2}/\d{2,4}\s\d{2}:\d{2}(:\d{2})?\s?(am|pm)?',
                              self.prepare_header_string(header_string), flags=re.IGNORECASE)  # get date
             if date is not None:
                 header['date'], header['date_changed'] = self.parse_date(date.group(0))
