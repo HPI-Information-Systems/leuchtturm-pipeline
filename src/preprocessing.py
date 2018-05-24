@@ -274,7 +274,7 @@ class HeaderParsing(Pipe):
 
     def transform_header_string(self, header_string):
         """Split a string that is likely a header into its fields."""
-        header_string = self.prepare_header_string(header_string) + ' '
+        header_string = self.prepare_header_string(header_string)
 
         separator_re = re.compile(r'\s((?=(x-)?from:)|(?=((x|reply)-)?to:)|(?=(x-)?b?cc:)|(?=date:)|(?=sent(-by)?:)|(?=subject:))', re.IGNORECASE)  # NOQA
         header_fields = separator_re.split(header_string)  # split into separate headers
@@ -282,7 +282,7 @@ class HeaderParsing(Pipe):
         for index, header_field in enumerate(header_fields):
             if header_field[-1:] == ':':
                 header_field += ' '  # if key without value is included in header, add empty value
-            header_fields[index] = header_field.split(': ', 1)  # make key value pair of a header
+            header_fields[index] = header_field.split(':', 1)  # make key value pair of a header
 
         return header_fields
 
@@ -316,7 +316,6 @@ class HeaderParsing(Pipe):
         name = name.split(',')
         name.reverse()
         name = ' '.join(name).strip(whitespace)
-        name = re.sub(r'\s+', ' ', name)
 
         if not name:  # parse name from email address if else unavailable
             email_without_domain = re.sub(r'@.+', '', self.clean_email(name_string))
@@ -324,6 +323,7 @@ class HeaderParsing(Pipe):
                 name_parts = [part for part in email_without_domain.split('.') if part]
                 name = ' '.join(name_parts)
 
+        name = re.sub(r'\s+', ' ', name)
         name = re.sub(r'[^a-zA-Z0-9-_\.\+ ]', '', name)  # replace non alphanumeric chars leaving some chars out
 
         return name.title()
