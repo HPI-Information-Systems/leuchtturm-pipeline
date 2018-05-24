@@ -56,7 +56,7 @@ class NetworkAnalyser(Pipe):
         print('Number of Edges: ' + str(graph.number_of_edges()))
 
         social_hierarchy_detector = SocialHierarchyDetector()
-        social_hierarchy_labels = social_hierarchy_detector.detect_social_hierarchy(digraph)
+        social_hierarchy_labels = social_hierarchy_detector.detect_social_hierarchy(digraph, graph)
 
         community_detector = CommunityDetector(graph)
         community_labels = community_detector.clauset_newman_moore()

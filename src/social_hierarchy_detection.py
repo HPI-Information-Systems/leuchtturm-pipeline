@@ -3,8 +3,6 @@ import networkx as nx
 import time
 import datetime
 import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
 from pandas.tseries.offsets import BDay
 
 
@@ -15,7 +13,7 @@ def _three_business_days(timestamp):
 class SocialHierarchyDetector:
     """Class for the social hierarchy score."""
 
-    def detect_social_hierarchy(self, graph):
+    def detect_social_hierarchy(self, graph, undirected_graph):
         """
         Trigger social hierarchy score detection.
 
@@ -25,13 +23,13 @@ class SocialHierarchyDetector:
         start = time.time()
         number_of_emails = self._number_of_emails(graph)
         response_scores, response_avg_times = self._response_score_and_average_time(graph)
-        number_of_cliques, cliques = self._number_of_cliques(graph)
+        number_of_cliques, cliques = self._number_of_cliques(undirected_graph)
         raw_clique_score = self._raw_clique_score(graph, cliques)
         weighted_clique_score = self._weighted_clique_score(graph, cliques, number_of_emails, response_avg_times)
-        betweenness_values = self._betweenness_centrality(graph)
+        betweenness_values = self._betweenness_centrality(undirected_graph)
         degree_values = self._degree_centrality(graph)
         hub_values, authority_values = self._hubs_and_authorities(graph)
-        clustering_coefficients = self._clustering_coefficient(graph)
+        clustering_coefficients = self._clustering_coefficient(undirected_graph)
         mean_shortest_paths = self._mean_shortest_paths(graph)
 
         metrics = []
@@ -59,7 +57,6 @@ class SocialHierarchyDetector:
 
         end = time.time()
         print('Calculated ' + str(len(graph.nodes)) + ' social hierarchy scores, took: ' + str(end - start) + 's')
-        # self._run_statistics(graph, hierarchy_scores)
         return hierarchy_scores_formatted
 
     def _normalize(self, metric, high=True):
@@ -109,7 +106,6 @@ class SocialHierarchyDetector:
 
     def _response_score_and_average_time(self, graph):
         print('Start computing response scores and average time')
-        # graph = graph.to_directed()
         start = time.time()
         metric_response_score = dict()
         metric_average_time = dict()
@@ -157,7 +153,6 @@ class SocialHierarchyDetector:
     def _clustering_coefficient(self, graph):
         print('Start calculating clustering coefficients')
         start = time.time()
-        graph = graph.to_undirected()
         clustering_values = nx.clustering(graph)
         n = len(clustering_values)
         end = time.time()
@@ -167,7 +162,6 @@ class SocialHierarchyDetector:
     def _number_of_cliques(self, graph):
         print('Start counting cliques')
         start = time.time()
-        graph = graph.to_undirected()
         cliques = list(nx.find_cliques(graph))
         n = 0
         for clique in cliques:
@@ -186,7 +180,6 @@ class SocialHierarchyDetector:
     def _raw_clique_score(self, graph, cliques):
         print('Start computing raw clique score')
         start = time.time()
-        graph = graph.to_undirected()
         metric = dict()
         for node in graph.nodes:
             score = 0
@@ -263,54 +256,3 @@ class SocialHierarchyDetector:
         end = time.time()
         print('Calculated ' + str(n) + ' mean shortest paths, took: ' + str(end - start) + 's')
         return table_of_means
-
-    def _run_statistics(self, graph, hierarchy_scores):
-        sorted_hierarchy = sorted(hierarchy_scores.values())
-        top_five = sorted(hierarchy_scores, key=hierarchy_scores.get, reverse=True)[:5]
-        email_addresses = nx.get_node_attributes(graph, 'email')
-        for node in top_five:
-            print((hierarchy_scores[node], email_addresses[node], node))
-
-        # plot line diagram
-        y = sorted_hierarchy
-        x = np.random.randint(0, high=100, size=len(y))
-        # plt.plot(x, y, '.-')
-        # plt.title('Hierarchy scores')
-        # plt.xlabel('Scores')
-        # plt.ylabel('Hierarchy values')
-
-        # plot histogram
-        plt.figure()
-        num_bins = 40
-        n, bins, patches = plt.hist(y, num_bins, alpha=0.75)
-        plt.title('Distribution of Hierarchy scores')
-        plt.xlabel('Scores')
-        plt.ylabel('Hierarchy values')
-
-        plt.rcParams['axes.axisbelow'] = True
-        axes = plt.gca()
-        axes.get_yaxis().grid(color='gray', linestyle='dashed')
-
-        # plot histogram
-        # plt.figure()
-        # num_bins = 3
-        # n, bins, patches = plt.hist(x, num_bins, alpha=0.75)
-        # plt.title('Distribution of Hierarchy scores')
-        # plt.xlabel('Scores')
-        # plt.ylabel('Hierarchy values')
-        #
-        # plt.rcParams['axes.axisbelow'] = True
-        # axes = plt.gca()
-        # axes.get_yaxis().grid(color='gray', linestyle='dashed')
-
-        # plot boxplot diagram
-        fig1, ax1 = plt.subplots()
-        ax1.set_title('Basic Plot')
-        ax1.boxplot(y)
-
-        # plot scatter plot
-        fig, ax = plt.subplots()
-        ax.scatter(x, y, c=y, alpha=1, cmap='rainbow')
-        ax.set_title('Distribution of Hierarchy scores')
-
-        plt.show()
