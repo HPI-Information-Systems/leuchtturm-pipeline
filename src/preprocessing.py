@@ -315,7 +315,7 @@ class HeaderParsing(Pipe):
         name = re.sub(r'(<.+>)|(\[.+\])', '', name_string)
         name = re.sub(r'\S+@\S+\.\S{2,}', '', name)  # remove email
         name = re.sub(r'(?<=\w)(/|@).*', '', name)  # normalize weird enron names (beau ratliff/hou/ees@ees)
-        name = name.replace('<', '').replace('>', '').replace('|', '').split(',')
+        name = name.replace('<', '').replace('>', '').replace('|', '').replace('"', '').replace("'", '').split(',')
         name.reverse()
         name = ' '.join(name).strip(whitespace)
         name = re.sub(r'\s+', ' ', name)
