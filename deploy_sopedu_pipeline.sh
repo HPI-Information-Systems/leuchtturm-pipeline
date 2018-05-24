@@ -11,7 +11,7 @@ echo '[stage 1 of 2] Building environment ...'
 conda create -n leuchtturm_env python=3.6 -y --copy || true
 source activate leuchtturm_env
 pip install --quiet -r requirements.txt
-conda install -c conda-forge nltk_data
+conda install -c conda-forge nltk_data -y
 # zip py environment
 cp -r ~/anaconda2/envs/leuchtturm_env . && cd leuchtturm_env && zip -r --quiet leuchtturm_env.zip * && mv leuchtturm_env.zip .. && cd .. || return
 rm -r leuchtturm_env
