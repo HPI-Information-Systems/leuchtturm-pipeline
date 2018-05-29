@@ -42,7 +42,6 @@ class Config:
         },
         'neo4j': {
             'import': False,
-            'upload': False,
             'protocol': 'http',
             'host': '0.0.0.0',
             'http_port': 7474,
