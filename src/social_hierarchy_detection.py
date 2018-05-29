@@ -19,14 +19,14 @@ class SocialHierarchyDetector:
 
         Returns dict of nodes as keys and their hierarchy scores as values.
         """
-        print('Start detecting social hierarchy scores')
+        print(datetime.now(), 'lt_logs', 'Start detecting social hierarchy scores', flush=True)
         start = time.time()
         number_of_emails = self._number_of_emails(graph)
         response_scores, response_avg_times = self._response_score_and_average_time(graph)
         number_of_cliques, cliques = self._number_of_cliques(undirected_graph)
         raw_clique_score = self._raw_clique_score(graph, cliques)
         weighted_clique_score = self._weighted_clique_score(graph, cliques, number_of_emails, response_avg_times)
-        betweenness_values = self._betweenness_centrality(undirected_graph)
+        # betweenness_values = self._betweenness_centrality(undirected_graph)
         degree_values = self._degree_centrality(graph)
         hub_values, authority_values = self._hubs_and_authorities(graph)
         clustering_coefficients = self._clustering_coefficient(undirected_graph)
@@ -36,7 +36,7 @@ class SocialHierarchyDetector:
         for metric in [response_avg_times, mean_shortest_paths]:
             metrics.append(self._normalize(metric, high=False))
 
-        for metric in [number_of_cliques, raw_clique_score, betweenness_values, degree_values,
+        for metric in [number_of_cliques, raw_clique_score, degree_values,
                        hub_values, authority_values, number_of_emails, clustering_coefficients, weighted_clique_score]:
             metrics.append(self._normalize(metric))
 
@@ -56,7 +56,10 @@ class SocialHierarchyDetector:
         hierarchy_scores_formatted = self._format_for_upload(hierarchy_scores)
 
         end = time.time()
-        print('Calculated ' + str(len(graph.nodes)) + ' social hierarchy scores, took: ' + str(end - start) + 's')
+        print(datetime.now(),
+              'lt_logs',
+              'Calculated ' + str(len(graph.nodes)) + ' social hierarchy scores, took: ' + str(end - start) + 's',
+              flush=True)
         return hierarchy_scores_formatted
 
     def _normalize(self, metric, high=True):
@@ -91,7 +94,7 @@ class SocialHierarchyDetector:
         return scores_formatted
 
     def _number_of_emails(self, graph):
-        print('Start counting emails')
+        print(datetime.now(), 'lt_logs', 'Start counting emails', flush=True)
         start = time.time()
         metric = dict()
         for node in graph.nodes:
@@ -101,11 +104,14 @@ class SocialHierarchyDetector:
                 total_volume += neighbours[neighbour]['volume']
             metric[node] = total_volume
         end = time.time()
-        print('Found ' + str(len(graph.nodes)) + ' email volumes, took: ' + str(end - start) + 's')
+        print(datetime.now(),
+              'lt_logs',
+              'Found ' + str(len(graph.nodes)) + ' email volumes, took: ' + str(end - start) + 's',
+              flush=True)
         return metric
 
     def _response_score_and_average_time(self, graph):
-        print('Start computing response scores and average time')
+        print(datetime.now(), 'lt_logs', Start computing response scores and average time', flush=True)
         start = time.time()
         metric_response_score = dict()
         metric_average_time = dict()
@@ -147,20 +153,26 @@ class SocialHierarchyDetector:
 
             metric_average_time[node] = avg_time
         end = time.time()
-        print('Found ' + str(len(graph.nodes)) + ' response scores, took: ' + str(end - start) + 's')
+        print(datetime.now(),
+              'lt_logs',
+              'Found ' + str(len(graph.nodes)) + ' response scores, took: ' + str(end - start) + 's',
+              flush=True)
         return metric_response_score, metric_average_time
 
     def _clustering_coefficient(self, graph):
-        print('Start calculating clustering coefficients')
+        print(datetime.now(), 'lt_logs', 'Start calculating clustering coefficients', flush=True)
         start = time.time()
         clustering_values = nx.clustering(graph)
         n = len(clustering_values)
         end = time.time()
-        print('Found ' + str(n) + ' clustering coefficients, took: ' + str(end - start) + 's')
+        print(datetime.now(),
+              'lt_logs',
+              'Found ' + str(n) + ' clustering coefficients, took: ' + str(end - start) + 's',
+              flush=True)
         return clustering_values
 
     def _number_of_cliques(self, graph):
-        print('Start counting cliques')
+        print(datetime.now(), 'lt_logs', 'Start counting cliques', flush=True)
         start = time.time()
         cliques = list(nx.find_cliques(graph))
         n = 0
@@ -174,11 +186,11 @@ class SocialHierarchyDetector:
                     count += 1
             metric[node] = count
         end = time.time()
-        print('Found ' + str(n) + ' cliques, took: ' + str(end - start) + 's')
+        print(datetime.now(), 'lt_logs', 'Found ' + str(n) + ' cliques, took: ' + str(end - start) + 's', flush=True)
         return metric, cliques
 
     def _raw_clique_score(self, graph, cliques):
-        print('Start computing raw clique score')
+        print(datetime.now(), 'lt_logs', 'Start computing raw clique score', flush=True)
         start = time.time()
         metric = dict()
         for node in graph.nodes:
@@ -189,11 +201,14 @@ class SocialHierarchyDetector:
                     score += 2 ** (size - 1)
             metric[node] = score
         end = time.time()
-        print('Found ' + str(len(graph.nodes)) + ' raw clique scores, took: ' + str(end - start) + 's')
+        print(datetime.now(),
+              'lt_logs',
+              'Found ' + str(len(graph.nodes)) + ' raw clique scores, took: ' + str(end - start) + 's',
+              flush=True)
         return metric
 
     def _weighted_clique_score(self, graph, cliques, email_metric, response_metric):
-        print('Start computing weighted clique score')
+        print(datetime.now(), 'lt_logs', 'Start computing weighted clique score', flush=True)
         start = time.time()
         metric = dict()
         for node in graph.nodes:
@@ -209,38 +224,47 @@ class SocialHierarchyDetector:
                     score += time_score * (2 ** (size - 1))
             metric[node] = score
         end = time.time()
-        print('Found ' + str(len(graph.nodes)) + ' weighted clique scores, took: ' + str(end - start) + 's')
+        print(datetime.now(),
+              'lt_logs',
+              'Found ' + str(len(graph.nodes)) + ' weighted clique scores, took: ' + str(end - start) + 's',
+              flush=True)
         return metric
 
     def _betweenness_centrality(self, graph):
-        print('Start calculating betweenness values')
+        print(datetime.now(), 'lt_logs', 'Start calculating betweenness values', flush=True)
         start = time.time()
         betweenness_values = nx.betweenness_centrality(graph)
         n = len(betweenness_values)
         end = time.time()
-        print('Calculated ' + str(n) + ' betweenness values, took: ' + str(end - start) + 's')
+        print(datetime.now(),
+              'lt_logs',
+              'Calculated ' + str(n) + ' betweenness values, took: ' + str(end - start) + 's',
+              flush=True)
         return betweenness_values
 
     def _degree_centrality(self, graph):
-        print('Start calculating degree values')
+        print(datetime.now(), 'lt_logs', 'Start calculating degree values', flush=True)
         start = time.time()
         degree_values = nx.degree_centrality(graph)
         n = len(degree_values)
         end = time.time()
-        print('Calculated ' + str(n) + ' degree values, took: ' + str(end - start) + 's')
+        print(datetime.now(),
+              'lt_logs',
+              'Calculated ' + str(n) + ' degree values, took: ' + str(end - start) + 's',
+              flush=True)
         return degree_values
 
     def _hubs_and_authorities(self, graph):
-        print('Start calculating hubs and authorities values')
+        print(datetime.now(), 'lt_logs', 'Start calculating hubs and authorities values', flush=True)
         start = time.time()
         h_a_values = nx.hits(graph)
         n = len(h_a_values)
         end = time.time()
-        print('Calculated ' + str(n) + ' hubs and authorities values, took: ' + str(end - start) + 's')
+        print(datetime.now(), 'lt_logs', 'Calculated ' + str(n) + ' hubs and authorities values, took: ' + str(end - start) + 's', flush=True)
         return h_a_values[0], h_a_values[1]
 
     def _mean_shortest_paths(self, graph):
-        print('Start calculating mean shortest paths')
+        print(datetime.now(), 'lt_logs', 'Start calculating mean shortest paths', flush=True)
         start = time.time()
         table_of_means = dict()
         for node in graph.nodes:
@@ -254,5 +278,8 @@ class SocialHierarchyDetector:
             table_of_means[node] = mean
         n = len(table_of_means)
         end = time.time()
-        print('Calculated ' + str(n) + ' mean shortest paths, took: ' + str(end - start) + 's')
+        print(datetime.now(),
+              'lt_logs',
+              'Calculated ' + str(n) + ' mean shortest paths, took: ' + str(end - start) + 's',
+              flush=True)
         return table_of_means

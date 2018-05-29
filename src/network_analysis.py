@@ -52,8 +52,8 @@ class NetworkAnalyser(Pipe):
 
         graph = digraph.to_undirected()
 
-        print('Number of Nodes: ' + str(graph.number_of_nodes()))
-        print('Number of Edges: ' + str(graph.number_of_edges()))
+        print(datetime.now(), 'lt_logs', 'Number of Nodes: ' + str(graph.number_of_nodes()), flush=True)
+        print(datetime.now(), 'lt_logs', 'Number of Edges: ' + str(graph.number_of_edges()), flush=True)
 
         social_hierarchy_detector = SocialHierarchyDetector()
         social_hierarchy_labels = social_hierarchy_detector.detect_social_hierarchy(digraph, graph)
@@ -72,11 +72,13 @@ class NetworkAnalyser(Pipe):
     def update_network(self, labelled_nodes, attribute):
         """Update neo4j's data with the detected labels."""
         if labelled_nodes:
-            print('---------------- finished ' + attribute + ' analysis ----------------')
+            print(datetime.now(),
+                  'lt_logs', '---------------- finished ' + attribute + ' analysis ----------------',
+                  flush=True)
 
         neo_connection = py2neo.Graph(self.neo4j_host, http_port=self.http_port, bolt_port=self.bolt_port)
         neo_connection.run('UNWIND $labelled_nodes AS ln '
                            'MATCH (node) WHERE ID(node) = ln.node_id '
                            'SET node.' + attribute + ' = ln.' + attribute,
                            labelled_nodes=labelled_nodes, attribute=attribute)
-        print('- finished upload of ' + attribute + ' labels.')
+        print(datetime.now(), 'lt_logs', '- finished upload of ' + attribute + ' labels.', flush=True)

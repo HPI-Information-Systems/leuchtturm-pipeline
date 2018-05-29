@@ -11,7 +11,7 @@ class RoleDetector:
 
         Input: networkX graph
         """
-        print('starting role detection using rolx:')
+        print(datetime.now(), 'lt_logs', 'starting role detection using rolx:', flush=True)
         snap = Snap(graph, quiet=False)
         role_labels = []
         for labelled_node in enumerate(snap.rolx()):

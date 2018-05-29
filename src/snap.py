@@ -24,7 +24,7 @@ class Snap:
         self.graph = graph
         self.quiet = quiet
 
-        print('Number of Nodes: ' + str(len(self.graph.nodes())))
+        print(datetime.now(), 'lt_logs', 'Number of Nodes: ' + str(len(self.graph.nodes())), flush=True)
 
         if not os.path.exists(self.TMP_FOLDER):
             os.makedirs(self.TMP_FOLDER)
@@ -40,7 +40,7 @@ class Snap:
             for line in f:
                 if line.startswith('#'):
                     if not self.quiet:
-                        print(line, end='')
+                        print(datetime.now(), 'lt_logs', line, end='', flush=True)
                 else:
                     yield line.replace('\n', '').split('\t')
 

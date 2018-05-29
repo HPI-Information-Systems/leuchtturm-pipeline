@@ -15,7 +15,7 @@ class CommunityDetector:
 
         Input: networkX graph
         """
-        print('starting community detection using clauset-newman-moore:')
+        print(datetime.now(), 'lt_logs', 'starting community detection using clauset-newman-moore:', flush=True)
         return self.run_snap_community_detection(self.snap.communities, 2)
 
     def girvan_newman(self):
@@ -23,7 +23,7 @@ class CommunityDetector:
 
         Input: networkX graph
         """
-        print('starting community detection using girvan-newman:')
+        print(datetime.now(), 'lt_logs', 'starting community detection using girvan-newman:', flush=True)
         return self.run_snap_community_detection(self.snap.communities, 1)
 
     def bigclam(self):
@@ -31,7 +31,7 @@ class CommunityDetector:
 
         Input: networkX graph
         """
-        print('starting community detection using bigclam:')
+        print(datetime.now(), 'lt_logs', 'starting community detection using bigclam:', flush=True)
         return self.run_snap_community_detection(self.snap.bigclam)
 
     def run_snap_community_detection(self, func, *args):
