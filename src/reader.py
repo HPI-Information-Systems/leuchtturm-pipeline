@@ -38,11 +38,11 @@ class EmlReader(Pipe):
 
     def create_document(self, document, path):
         """Create json entry for a document."""
-        doc_id = path.split('/')[-1].split('.') if self.filename_is_doc_id else str(uuid.uuid4())
+        doc_id = path.split('/')[-1].split('.')[0] if self.filename_is_doc_id else str(uuid.uuid4())
 
         return json.dumps({'doc_id': doc_id,
                            'path': path,
-                           'raw': document})
+                           'raw': document}, ensure_ascii=False)
 
     def run(self):
         """Run task in a spark context. Return rdd."""

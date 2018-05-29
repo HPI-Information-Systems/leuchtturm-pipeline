@@ -28,7 +28,7 @@ class EmailDeduplication(Pipe):
         else:
             splitting_key = json.dumps([document_norm['header']['sender']['name'],
                                         document_norm['header']['date'],
-                                        document_norm['header']['subject']])
+                                        document_norm['header']['subject']], ensure_ascii=False)
 
         return (splitting_key, document)
 
@@ -66,7 +66,7 @@ class EmailDeduplication(Pipe):
         for index, part in enumerate(parts):
             part['successor'] = parts[index - 1]['doc_id'] if not index == 0 else None
             part['predecessor'] = parts[index + 1]['doc_id'] if not index == len(parts) - 1 else None
-            splitted_emails.append(json.dumps(part))
+            splitted_emails.append(json.dumps(part, ensure_ascii=False))
 
         return splitted_emails
 
