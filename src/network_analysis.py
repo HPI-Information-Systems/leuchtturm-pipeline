@@ -6,6 +6,7 @@ from .community_detection import CommunityDetector
 from .role_detection import RoleDetector
 from .social_hierarchy_detection import SocialHierarchyDetector
 from .common import Pipe
+from datetime import datetime
 
 
 class NetworkAnalyser(Pipe):
@@ -64,7 +65,7 @@ class NetworkAnalyser(Pipe):
         role_detector = RoleDetector()
         role_labels = role_detector.rolx(graph)
 
-        if self.conf.get('neo4j', 'upload'):
+        if self.conf.get('neo4j', 'import'):
             self.update_network(community_labels, "community")
             self.update_network(role_labels, "role")
             self.update_network(social_hierarchy_labels, "hierarchy")

@@ -1,6 +1,7 @@
 """This Module makes the community detection methods available."""
 
 from .snap import Snap
+from datetime import datetime
 
 
 class CommunityDetector:

@@ -1,8 +1,8 @@
 """Module for the social hierarchy score."""
 import networkx as nx
 import time
-import datetime
 import pandas as pd
+from datetime import datetime
 from pandas.tseries.offsets import BDay
 
 
@@ -111,7 +111,7 @@ class SocialHierarchyDetector:
         return metric
 
     def _response_score_and_average_time(self, graph):
-        print(datetime.now(), 'lt_logs', Start computing response scores and average time', flush=True)
+        print(datetime.now(), 'lt_logs', 'Start computing response scores and average time', flush=True)
         start = time.time()
         metric_response_score = dict()
         metric_average_time = dict()
@@ -143,7 +143,7 @@ class SocialHierarchyDetector:
 
             total = 0
             for response in responses:
-                dif = datetime.datetime.fromtimestamp(response[1]) - datetime.datetime.fromtimestamp(response[0])
+                dif = datetime.fromtimestamp(response[1]) - datetime.fromtimestamp(response[0])
                 total += datetime.timedelta.total_seconds(dif)
             if total == 0:
                 avg_time = 432000  # five days max
@@ -260,7 +260,10 @@ class SocialHierarchyDetector:
         h_a_values = nx.hits(graph)
         n = len(h_a_values)
         end = time.time()
-        print(datetime.now(), 'lt_logs', 'Calculated ' + str(n) + ' hubs and authorities values, took: ' + str(end - start) + 's', flush=True)
+        print(datetime.now(),
+              'lt_logs',
+              'Calculated ' + str(n) + ' hubs and authorities values, took: ' + str(end - start) + 's',
+              flush=True)
         return h_a_values[0], h_a_values[1]
 
     def _mean_shortest_paths(self, graph):
