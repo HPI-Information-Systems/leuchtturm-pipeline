@@ -82,7 +82,7 @@ def run_email_pipeline(conf):
         Neo4JFileWriter(conf, conf.get('data', 'results_correspondent_dir'), mode='nodes').run()
         Neo4JFileWriter(conf, conf.get('data', 'results_injected_dir'), mode='edges').run()
 
-    if conf.get('neo4j', 'upload'):
+    if conf.get('neo4j', 'import'):
         NetworkAnalyser(conf).run()
 
     SparkProvider.stop_spark_context()
