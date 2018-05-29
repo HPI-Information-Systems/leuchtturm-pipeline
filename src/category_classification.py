@@ -1,6 +1,7 @@
 """Classification of emails in the pipeline."""
 
 import ujson as json
+import dill
 
 from .common import Pipe
 from .libs import email_classification
@@ -20,8 +21,14 @@ class EmailCategoryClassification(Pipe):
 
     def load_clf_tool(self):
         """Load classifier and required vectorizers."""
-        return email_classification.EmailClassificationTool.load_from_file(
-            self.conf.get('classification', 'file_clf_tool')
+        with open(self.conf.get('classification', 'file_clf_tool'), 'rb') as f:
+            components = dill.load(f)
+
+        return email_classification.EmailClassificationTool(
+            components['classifier'],
+            components['vectorizer_body'],
+            components['vectorizer_subject'],
+            components['label_encoder']
         )
 
     def run_on_document(self, email_doc, email_clf_tool):
