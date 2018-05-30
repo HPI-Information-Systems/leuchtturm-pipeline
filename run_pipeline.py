@@ -54,8 +54,8 @@ def run_email_pipeline(conf):
 
     reader = TextFileReader(conf, path=conf.get('data', 'results_dir'))
     pipes = [
-        TopicModelPreprocessing(conf, read_from='text_clean', write_to='bow'),
-        TopicModelPrediction(conf)
+        TopicModelPreprocessing(conf, read_from='body', write_to='bow'),
+        TopicModelPrediction(conf, read_from='body')
     ]
     writer = TextFileWriter(conf, path=conf.get('topic_modelling', 'working_dir'))
     Pipeline(reader, pipes, writer).run()
