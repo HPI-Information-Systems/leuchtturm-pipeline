@@ -2,7 +2,7 @@
 import networkx as nx
 import time
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timedelta
 from pandas.tseries.offsets import BDay
 
 
@@ -144,7 +144,7 @@ class SocialHierarchyDetector:
             total = 0
             for response in responses:
                 dif = datetime.fromtimestamp(response[1]) - datetime.fromtimestamp(response[0])
-                total += datetime.timedelta.total_seconds(dif)
+                total += timedelta.total_seconds(dif)
             if total == 0:
                 avg_time = 432000  # five days max
             else:
