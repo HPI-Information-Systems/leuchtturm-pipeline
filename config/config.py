@@ -24,6 +24,8 @@ class Config:
             'source_dir': './data/input',
             'working_dir': './data/processed',
             'results_dir': '${data:working_dir}/pipeline_results',
+            'results_correspondent_dir': '${results_dir}_correspondent',
+            'results_injected_dir': '${results_dir}_injected',
             'time_min': 0,
             'time_max': 2147483647
         },
@@ -45,12 +47,13 @@ class Config:
             'http_port': 7474,
             'bolt_port': 7687,
             'data_location': './data/neo4j',
-            'log_location': './data/logs/neo4j'
+            'log_location': './data/logs/neo4j',
+            'create_node_index': True
         },
         'spark': {
             'driver_memory': '6g',
             'executor_memory': '4g',
-            'run_local': True,
+            'run_local': False,
             'num_executors': 23,
             'executor_cores': 4,
             'parallelism': 276
@@ -71,7 +74,7 @@ class Config:
             'file_dictionary': '${models:directory}/topicmodel.dict'
         },
         'classification': {
-            'train_model': False,
+            'train_model': True,
             'file_model': '${models:directory}/classification_model.pickle'
         }
     }
