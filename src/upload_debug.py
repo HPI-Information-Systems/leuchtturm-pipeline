@@ -1,7 +1,6 @@
+"""A module to upload buffered results quickly for debug purposes."""
 import json
 import py2neo
-import networkx as nx
-from pprint import pprint
 
 
 files = ['hierarchy', 'community', 'role']
