@@ -3,6 +3,7 @@
 import py2neo
 import networkx as nx
 import numpy as np
+import json
 import matplotlib.pyplot as plt
 from community_detection import CommunityDetector
 from role_detection import RoleDetector
@@ -18,8 +19,8 @@ class NetworkAnalyser:
     def __init__(self,
                  solr_url='http://sopedu.hpi.uni-potsdam.de:8983/solr/emails',
                  neo4j_host='http://172.16.64.28',  # 'http://sopedu.hpi.uni-potsdam.de',
-                 http_port=60100,
-                 bolt_port=60000):
+                 http_port=61100,
+                 bolt_port=61000):
         """Set solr config and path where rdd is read from."""
         self.solr_url = solr_url
         self.neo4j_host = neo4j_host
@@ -55,12 +56,15 @@ class NetworkAnalyser:
 
         social_hierarchy_detector = SocialHierarchyDetector()
         social_hierarchy_labels = social_hierarchy_detector.detect_social_hierarchy(digraph, graph)
+        self._save_results_locally(social_hierarchy_labels, 'hierarchy.json')
 
         community_detector = CommunityDetector(graph)
         community_labels = community_detector.clauset_newman_moore()
+        self._save_results_locally(community_labels, 'community.json')
 
         role_detector = RoleDetector()
         role_labels = role_detector.rolx(graph)
+        self._save_results_locally(role_labels, 'role.json')
 
         if upload:
             self.update_network(community_labels, "community")
@@ -71,6 +75,10 @@ class NetworkAnalyser:
         """Run statistics on hierarchy values in neo4j."""
         graph, __ = self._build_graph()
         self._run_statistics(graph)
+
+    def _save_results_locally(self, dictionary, filename):
+        with open(filename, 'w') as fp:
+            json.dump(dictionary, fp)
 
     def _run_statistics(self, graph):
         hierarchy_scores = nx.get_node_attributes(graph, 'hierarchy')
@@ -98,7 +106,7 @@ class NetworkAnalyser:
         plt.rcParams['axes.axisbelow'] = True
         axes = plt.gca()
         axes.get_yaxis().grid(color='gray', linestyle='dashed')
-        plt.savefig('three_bins_dnc.png', bbox_inches='tight')
+        plt.savefig('three_bins_enron_dev.png', bbox_inches='tight')
 
         # plot histogram
         plt.figure()
@@ -110,21 +118,21 @@ class NetworkAnalyser:
         plt.rcParams['axes.axisbelow'] = True
         axes = plt.gca()
         axes.get_yaxis().grid(color='gray', linestyle='dashed')
-        plt.savefig('five_bins_dnc.png', bbox_inches='tight')
+        plt.savefig('five_bins_enron_dev.png', bbox_inches='tight')
 
         # plot boxplot diagram
         fig1, ax1 = plt.subplots()
         ax1.set_title('Distribution of Hierarchy Scores')
         ax1.boxplot(y)
         ax1.axes.xaxis.set_ticklabels([])
-        fig1.savefig('boxplot_dnc.png', bbox_inches='tight')
+        fig1.savefig('boxplot_enron_dev.png', bbox_inches='tight')
 
         # plot scatter plot
         fig, ax = plt.subplots()
         ax.scatter(x, y, c=y, alpha=1, cmap='rainbow')
         ax.set_title('Distribution of Hierarchy Scores')
         ax.axes.xaxis.set_ticklabels([])
-        fig.savefig('scatter_plot_dnc.png', bbox_inches='tight')
+        fig.savefig('scatter_plot_enron_dev.png', bbox_inches='tight')
 
     def update_network(self, labelled_nodes, attribute):
         """Update neo4j's data with the detected labels."""
@@ -140,5 +148,5 @@ class NetworkAnalyser:
 
 
 na = NetworkAnalyser()
-na.analyse_network(upload=True)
+na.analyse_network(upload=False)
 # na.run_statistics()

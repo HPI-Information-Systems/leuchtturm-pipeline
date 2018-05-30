@@ -2,6 +2,7 @@
 
 import py2neo
 import networkx as nx
+import json
 from .community_detection import CommunityDetector
 from .role_detection import RoleDetector
 from .social_hierarchy_detection import SocialHierarchyDetector
@@ -35,6 +36,10 @@ class NetworkAnalyser(Pipe):
         """Run network analysis. Obligatory for Pipe inheritence."""
         self.analyse_network()
 
+    def _save_results_locally(self, dictionary, filename):
+        with open(filename, 'w') as fp:
+            json.dump(dictionary, fp)
+
     def analyse_network(self):
         """Analyse the network. Parameter upload decides if data in neo4j will be updated."""
         neo_connection = py2neo.Graph(self.neo4j_host, http_port=self.http_port, bolt_port=self.bolt_port)
@@ -58,12 +63,15 @@ class NetworkAnalyser(Pipe):
 
         social_hierarchy_detector = SocialHierarchyDetector()
         social_hierarchy_labels = social_hierarchy_detector.detect_social_hierarchy(digraph, graph)
+        self._save_results_locally(social_hierarchy_labels, 'hierarchy.json')
 
         community_detector = CommunityDetector(graph)
         community_labels = community_detector.clauset_newman_moore()
+        self._save_results_locally(community_labels, 'community.json')
 
         role_detector = RoleDetector()
         role_labels = role_detector.rolx(graph)
+        self._save_results_locally(role_labels, 'role.json')
 
         if self.conf.get('neo4j', 'import'):
             self.update_network(community_labels, "community")
