@@ -518,7 +518,7 @@ class TextCleaning(Pipe):
                    r'-----+\s?(original)|(inline).+-----+',
                    r'^(\*|=|-){20,}\s(.|\n)+(\*|=|-){20,}\s',
                    r'^[>\s]*on.+wrote:',
-                   r'^[>\s]+',
+                   r'^[>\t ]+',
                    r'(sent from my .+)|(sent via the samsung .+)',
                    r'^MIME-Version: .\..',
                    r'^Content-Type: .+;',
