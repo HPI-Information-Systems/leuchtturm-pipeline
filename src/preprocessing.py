@@ -297,7 +297,7 @@ class HeaderParsing(Pipe):
 
     def clean_email(self, email_string):
         """Clean email address."""
-        email = email_string.replace('[mailto:', '').replace('[smtp:').replace(']', '').replace('"', '').replace("'", '')
+        email = email_string.replace('[mailto:', '').replace('[smtp:', '').replace(']', '').replace('"', '').replace("'", '')
         if email.count('@') > 1 and re.search(r'<[^>]+>', email):
             email = re.sub(r'<[^>]+>', '', email)  # case: some_email@a.com<mailto:some_email@a.com>
         email = email.replace('<', '').replace('>', '').replace('|', '')
@@ -310,7 +310,7 @@ class HeaderParsing(Pipe):
 
     def clean_name(self, name_string):
         """Normalize and clean a name. Lastname, Firstname becomes to Fn Ln."""
-        name = re.sub(r'(on )?\d{2}\/\d{2}\/\d{2,4}\s\d{2}:\d{2}(:\d{2})?\s?(am|pm)?.*', '', name_string, flags=re.I)
+        name = re.sub(r'(\bon )?\d{2}\/\d{2}\/\d{2,4}\s\d{2}:\d{2}(:\d{2})?\s?(am|pm)?.*', '', name_string, flags=re.I)
         name = re.sub(r'(<.+>)|(\[.+\])|(\(.+\))', '', name)  # remove [FI] flags and similar
         name = re.sub(r'\S+@\S+\.\S{2,}', '', name)  # remove email
         name = re.sub(r'(?<=\w)(/|@).*', '', name)  # normalize weird enron names (beau ratliff/hou/ees@ees)
