@@ -9,6 +9,7 @@ import os
 from gensim import corpora, models
 from nltk.corpus import stopwords as nltksw
 from nltk.stem.wordnet import WordNetLemmatizer
+from datetime import datetime
 
 from .common import Pipe
 
@@ -269,24 +270,23 @@ class TopicModelTrainingNew(Pipe):
         # docs = [doc for doc in docs if doc]
 
         processed_corpus = rdd.map(lambda x: json.loads(x)['bow']).collect()
-        print(type(processed_corpus[0]))
-        print(processed_corpus[0])
-        print(type(processed_corpus[1]))
-        print(processed_corpus[1])
 
-        print('Starting dictionary creation...')
-
+        print('lt_logs', datetime.now(), 'Starting dictionary creation...')
         dictionary = corpora.Dictionary(processed_corpus)
+        print('lt_logs', datetime.now(), 'Finished dictionary creation. Starting to write to disk...')
         with open(self.conf.get('topic_modelling', 'file_dictionary'), 'wb') as pfile:
             pickle.dump(dictionary, pfile)
+        print('lt_logs', datetime.now(), 'Finished writing dictionary to disk.')
 
+        # TODO: we could distribute this step as well...
         bow_corpus = [dictionary.doc2bow(text) for text in processed_corpus]
 
-        print('Starting actual training...')
-
+        print('lt_logs', datetime.now(), 'Starting TM training...')
         lda = models.ldamodel.LdaModel(bow_corpus, num_topics=num_topics, iterations=iterations, eta=eta, alpha=alpha)
+        print('lt_logs', datetime.now(), 'Finished TM training. Starting to write to disk...')
         with open(self.conf.get('topic_modelling', 'file_model'), 'wb') as pfile:
             pickle.dump(lda, pfile)
+        print('lt_logs', datetime.now(), 'Finished writing TM to disk.')
 
 class TopicModelBucketing(Pipe):
     """Bucket email documents by time slices."""
