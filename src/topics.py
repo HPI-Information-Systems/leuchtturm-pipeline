@@ -10,9 +10,11 @@ from gensim import corpora, models
 from nltk.corpus import stopwords as nltksw
 from nltk.stem.wordnet import WordNetLemmatizer
 
+from pprint import pprint
 import numpy as np
 from scipy.linalg import norm
 from scipy.spatial.distance import euclidean
+
 from .common import Pipe
 
 
@@ -177,6 +179,8 @@ class TopicModelPrediction(Pipe):
         """Run task in spark context."""
         return rdd.mapPartitions(lambda x: self.run_on_partition(x)) \
                   .flatMap(lambda x: x)
+
+
 class TopicSimilarity(Pipe):
     """Train topic model and export it.
 
@@ -208,10 +212,8 @@ class TopicSimilarity(Pipe):
         dict = self.load_dictionary()
         model_topics = model.get_topics()
 
-        _SQRT2 = np.sqrt(2)     # sqrt(2) with default precision np.float64
-
         def hellinger(p, q):
-            return norm(np.sqrt(p) - np.sqrt(q)) / _SQRT2
+            return norm(np.sqrt(p) - np.sqrt(q)) / np.sqrt(2)
         
         # get similarites with first topic and top terms
         dists = []
@@ -231,14 +233,6 @@ class TopicSimilarity(Pipe):
                 smallest_distace = (topic_id, dist_to_reference) if dist_to_reference <= smallest_distace[1] else smallest_distace
 
             return smallest_distace
-    
-
-        # starting with most significant topic:
-            # for every topic in remaining
-                # calculate distance to all remaining
-                    # neighbor = topic with smallest distance
-                    # remove topic from remaining
-        # continue with neighbor
 
         ordered_topics = []
         remaining_topics = list(range(len(model_topics)))
@@ -247,7 +241,6 @@ class TopicSimilarity(Pipe):
         current_topic = most_significant_topic_id
 
         while remaining_topics:
-            print(current_topic)
             remaining_topics.remove(current_topic)
 
             smallest_distance_to_current = calculate_all_distances_to_reference(current_topic, remaining_topics)
@@ -265,17 +258,6 @@ class TopicSimilarity(Pipe):
         for topic in ordered_topics:
             pprint(topic)
             pprint('********')
-
-        print(sum([topic['distance_to_next'] for topic in ordered_topics]) / len(ordered_topics))
-        
-        distances = []
-
-        for i in list(range(100))[:-1]:
-            print('WHAT')
-            distances.append(hellinger(model_topics[i], model_topics[i + 1]))
-
-        print(sum(distances)/len(distances))
-
 
 
         
