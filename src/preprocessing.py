@@ -283,7 +283,7 @@ class HeaderParsing(Pipe):
         for index, header_field in enumerate(header_fields):
             if header_field[-1:] == ':':
                 header_field += ' '  # if key without value is included in header, add empty value
-            header_fields[index] = re.split(r':[\? ]+', header_field, maxsplit=1)  # make key value pair of a header
+            header_fields[index] = re.split(r':[\?; ]+', header_field, maxsplit=1)  # make key value pair of a header
 
         return header_fields
 
@@ -359,7 +359,7 @@ class HeaderParsing(Pipe):
         """Normalize date from a string. If self.use_unix_time set return timestamp."""
         date = re.sub(r'\(\w+\)', '', date_string).strip(whitespace)  # remove additional tz in brackets
         try:
-            date = dateparser.parse(date)
+            date = dateparser.parse(date, settings={'TO_TIMEZONE': 'UTC'})
         except Exception:
             return '', False
 
