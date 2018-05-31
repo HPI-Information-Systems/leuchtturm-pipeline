@@ -297,10 +297,10 @@ class HeaderParsing(Pipe):
 
     def clean_email(self, email_string):
         """Clean email address."""
-        email = email_string.replace('[mailto:', '').replace('[smtp:', '').replace(']', '').replace('"', '').replace("'", '')
+        email = email_string.replace('[mailto:', '').replace('[smtp:', '').replace(']', '')
         if email.count('@') > 1 and re.search(r'<[^>]+>', email):
             email = re.sub(r'<[^>]+>', '', email)  # case: some_email@a.com<mailto:some_email@a.com>
-        email = email.replace('<', '').replace('>', '').replace('|', '')
+        email = email.replace('<', '').replace('>', '').replace('|', '').replace('"', '').replace("'", '')
         if re.search(r'\S+@\S+\.\S{2,}', email):
             email = re.search(r'\S+@\S+\.\S{2,}', email).group(0)
         else:
