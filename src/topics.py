@@ -165,7 +165,11 @@ class TopicModelPreprocessing(Pipe):
 
     def run(self, rdd):
         """Run pipe in spark context."""
-        return rdd.map(self.run_on_document)
+        print('lt_logs', datetime.now(), 'Starting TM preprocessing...')
+        rdd = rdd.map(self.run_on_document)
+        rdd.count()
+        print('lt_logs', datetime.now(), 'Finished TM preprocessing.')
+        return rdd
 
 
 class TopicModelTraining(Pipe):
