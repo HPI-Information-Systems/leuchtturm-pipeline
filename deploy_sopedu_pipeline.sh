@@ -33,7 +33,7 @@ source deactivate
 echo '[stage 2 of 2] Running leuchtturm pipeline. This might take a while ...'
 hdfs dfs -rm -r $DATA_RESULTS_DIR || true
 hdfs dfs -rm -r $TOPIC_MODELLING_WORKING_DIR || true
-hdfs dfs -rm -r $TM_PREPROCESSING_BUCKETS_DIR || true
+# hdfs dfs -rm -r $TM_PREPROCESSING_BUCKETS_DIR || true
 hdfs dfs -rm -r $DATA_RESULTS_CORRESPONDENT_DIR || true
 hdfs dfs -rm -r $DATA_RESULTS_INJECTED_DIR || true
 curl $SOLR/update\?commit\=true -d  '<delete><query>*:*</query></delete>' || true

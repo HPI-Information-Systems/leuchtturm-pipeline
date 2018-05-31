@@ -64,8 +64,8 @@ class Config:
         'tm_preprocessing': {
             'buckets_dir': '${data:working_dir}/tm_buckets',
             'bucket_timeframe': 'month',
-            'min_freq': 0,
-            'max_percentage': 1.00
+            'min_freq_total': 3,
+            'max_percentage': 0.1
         },
         'topic_modelling': {
             'train_model': True,

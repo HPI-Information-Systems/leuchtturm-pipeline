@@ -6,7 +6,8 @@ import pickle
 from string import punctuation
 import os
 
-from gensim import corpora, models
+from gensim.models.ldamodel import LdaModel
+from gensim.corpora import Dictionary
 from nltk.corpus import stopwords as nltksw
 from nltk.stem.wordnet import WordNetLemmatizer
 from datetime import datetime
@@ -14,7 +15,7 @@ from datetime import datetime
 from .common import Pipe
 
 
-class TopicModelTraining(Pipe):
+class TopicModelTrainingOld(Pipe):
     """Train topic model and export it.
 
     Train a lda topic model using gensim.
@@ -90,13 +91,13 @@ class TopicModelTraining(Pipe):
 
         processed_corpus = docs
 
-        dictionary = corpora.Dictionary(processed_corpus)
+        dictionary = Dictionary(processed_corpus)
         with open(self.conf.get('topic_modelling', 'file_dictionary'), 'wb') as pfile:
             pickle.dump(dictionary, pfile)
 
         bow_corpus = [dictionary.doc2bow(text) for text in processed_corpus]
 
-        lda = models.ldamodel.LdaModel(bow_corpus, num_topics=num_topics, iterations=iterations, eta=eta, alpha=alpha)
+        lda = LdaModel(bow_corpus, num_topics=num_topics, iterations=iterations, eta=eta, alpha=alpha)
         with open(self.conf.get('topic_modelling', 'file_model'), 'wb') as pfile:
             pickle.dump(lda, pfile)
 
@@ -112,10 +113,6 @@ class TopicModelPreprocessing(Pipe):
         self.write_to = write_to
         self.stopwords = nltksw.words('english')
         self.lemma = WordNetLemmatizer()
-        self.word_frequencies = defaultdict(lambda: 0)
-        self.high_freq_words = set()
-        self.low_freq_words = set()
-        self.max_freq = -1
 
     def tokenize(self, body):
         """Split the body into words."""
@@ -155,49 +152,23 @@ class TopicModelPreprocessing(Pipe):
         """Lemmatize each word in a bow."""
         return [self.lemma.lemmatize(word) for word in bow]
 
-    def count_word_frequencies(self, bow):
-        """Add the number of occurences of words in a bow to the global tracked word frequencies."""
-        for word in bow:
-            self.word_frequencies[word] += 1
-
     def run_on_document(self, item):
         """Run TM preprocessing on document."""
         document = json.loads(item)
-        bow = self.tokenize(document[self.read_from])
 
+        bow = self.tokenize(document[self.read_from])
         bow = self.remove_various_words(bow, document['header']['sender'], document['header']['recipients'])
         bow = self.lemmatize(bow)
-        self.count_word_frequencies(bow)
 
         document[self.write_to] = bow
         return json.dumps(document)
 
-    def filter_by_frequencies(self, item):
-        """Remove all words from a bow that are too frequent or too infrequent in the whole corpus."""
-        document = json.loads(item)
-        bow = document[self.write_to]
-
-        filtered_bow = []
-        for word in bow:
-            if self.word_frequencies[word] > self.conf.get('tm_preprocessing', 'min_freq') \
-               and self.word_frequencies[word] < self.max_freq:
-                filtered_bow.append(word)
-
-        document[self.write_to] = filtered_bow
-        return json.dumps(document)
-
-    def don_commit(self, item):
-        document = json.loads(item)
-        return json.dumps({'body': document['body'], 'bow': document['bow']})
-
     def run(self, rdd):
         """Run pipe in spark context."""
-        self.max_freq = self.conf.get('tm_preprocessing', 'max_percentage') * rdd.count()
-        rdd = rdd.map(self.run_on_document)
-        return rdd.map(self.filter_by_frequencies) \
-                    .map(self.don_commit)
+        return rdd.map(self.run_on_document)
 
-class TopicModelTrainingNew(Pipe):
+
+class TopicModelTraining(Pipe):
     """Train topic model and export it.
 
     Train a lda topic model using gensim.
@@ -210,83 +181,60 @@ class TopicModelTrainingNew(Pipe):
         self.conf = conf
         self.read_from = read_from
 
+    def create_dictionary(self, corpus):
+        print('lt_logs', datetime.now(), 'Starting dictionary creation...')
+
+        dictionary = Dictionary(corpus)
+
+        dict_words = [word for word in dictionary.values()]
+        dictionary.filter_extremes(
+            no_above=self.conf.get('tm_preprocessing', 'max_percentage'),
+            no_below=0,
+            keep_n=len(dict_words)
+        )
+        dict_words_wo_frequent = [word for word in dictionary.values()]
+        dictionary.filter_extremes(
+            no_above=1.0,
+            no_below=self.conf.get('tm_preprocessing', 'min_freq_total'),
+            keep_n=len(dict_words)
+        )
+        dict_words_wo_infrequent = [word for word in dictionary.values()]
+
+        removed_frequent_words = set(dict_words) - set(dict_words_wo_frequent)
+        removed_infrequent_words = set(dict_words_wo_frequent) - set(dict_words_wo_infrequent)
+        with open(self.conf.get('models', 'directory') + '/removed_frequent_words.txt', 'wb') as file:
+            file.write(str(removed_frequent_words).encode())
+        with open(self.conf.get('models', 'directory') + '/removed_infrequent_words.txt', 'wb') as file:
+            file.write(str(removed_infrequent_words).encode())
+
+        with open(self.conf.get('topic_modelling', 'file_dictionary'), 'wb') as pfile:
+            pickle.dump(dictionary, pfile)
+
+        print('lt_logs', datetime.now(), 'Finished dictionary creation.')
+
+        return dictionary
+
     def run(self, rdd):
         """Run topic model training."""
         iterations = 1000
         num_topics = 100
         alpha = 50 / num_topics
         eta = 0.1
-        # raw_corpus = rdd.collect()
-        #
-        # stopwords = nltksw.words('english')
-        #
-        # lemma = WordNetLemmatizer()
-        # short_tokens = set()
-        # numbers = set()
-        #
-        # def clean(doc):
-        #     tokens = [token for token in doc.lower().split()]
-        #     punc_free = [token.strip(punctuation) for token in tokens]
-        #     empty_string_free = [token for token in punc_free if token]
-        #     stopword_free = [word for word in empty_string_free if word not in stopwords]
-        #     short_token_free = [word if len(word) > 2 else short_tokens.add(word) for word in stopword_free]
-        #     empty_string_free2 = [token for token in short_token_free if token]
-        #     numerics_free = []
-        #     for token in empty_string_free2:
-        #         if [char for char in token if not (char.isdigit() or char in punctuation)]:
-        #             numerics_free.append(token)
-        #         else:
-        #             numerics_free.append('lt_number')
-        #             numbers.add(token)
-        #     lemmatized = [lemma.lemmatize(word) for word in numerics_free]
-        #     return lemmatized
-        # word_doc_appearances = defaultdict(set)
-        # for i, doc in enumerate(docs):
-        #     for token in doc:
-        #         word_doc_appearances[token].add(i)
-        #
-        # high_freq_tokens = set()
-        # low_freq_tokens = set()
-        #
-        # MIN_FREQ = 3
-        # MAX_PERCENTAGE = 0.05
-        # max_freq = MAX_PERCENTAGE * len(docs)
-        #
-        # def filter_by_freq(doc):
-        #     filtered_doc = []
-        #     for token in doc:
-        #         if token == 'lt_number':
-        #             filtered_doc.append(token)
-        #         elif len(word_doc_appearances[token]) < MIN_FREQ:
-        #             low_freq_tokens.add(token)
-        #         elif len(word_doc_appearances[token]) > max_freq:
-        #             high_freq_tokens.add(token)
-        #         else:
-        #             filtered_doc.append(token)
-        #     return filtered_doc
-        #
-        # docs = [filter_by_freq(doc) for doc in docs]
-        #
-        # docs = [doc for doc in docs if doc]
 
-        processed_corpus = rdd.map(lambda x: json.loads(x)['bow']).collect()
-
-        print('lt_logs', datetime.now(), 'Starting dictionary creation...')
-        dictionary = corpora.Dictionary(processed_corpus)
-        print('lt_logs', datetime.now(), 'Finished dictionary creation. Starting to write to disk...')
-        with open(self.conf.get('topic_modelling', 'file_dictionary'), 'wb') as pfile:
-            pickle.dump(dictionary, pfile)
-        print('lt_logs', datetime.now(), 'Finished writing dictionary to disk.')
+        corpus = rdd.map(lambda x: json.loads(x)['bow']).collect()
+        dictionary = self.create_dictionary(corpus)
 
         # TODO: we could distribute this step as well...
-        bow_corpus = [dictionary.doc2bow(text) for text in processed_corpus]
+        corpus_dictionarized = [dictionary.doc2bow(document) for document in corpus]
 
         print('lt_logs', datetime.now(), 'Starting TM training...')
-        lda = models.ldamodel.LdaModel(bow_corpus, num_topics=num_topics, iterations=iterations, eta=eta, alpha=alpha)
-        print('lt_logs', datetime.now(), 'Finished TM training. Starting to write to disk...')
+
+        lda = LdaModel(corpus_dictionarized, num_topics=num_topics, iterations=iterations, eta=eta, alpha=alpha)
         with open(self.conf.get('topic_modelling', 'file_model'), 'wb') as pfile:
             pickle.dump(lda, pfile)
-        print('lt_logs', datetime.now(), 'Finished writing TM to disk.')
+
+        print('lt_logs', datetime.now(), 'Finished TM training.')
+
 
 class TopicModelBucketing(Pipe):
     """Bucket email documents by time slices."""

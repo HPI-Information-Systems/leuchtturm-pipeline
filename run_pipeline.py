@@ -1,20 +1,23 @@
 # flake8: noqa
 """This module runs the main pipeline."""
 
+import ujson as json
+from datetime import datetime
+
+from config.config import Config
 from src.common import Pipeline, SparkProvider
+from src.reader import EmlReader, TextFileReader
 from src.preprocessing import EmailDecoding, EmailSplitting, HeaderParsing, TextCleaning, LanguageDetection
 from src.deduplication import EmailDeduplication
 from src.ner import SpacyNer
-from config.config import Config
-from src.topics import TopicModelPrediction, TopicModelTraining, TopicModelPreprocessing, TopicModelBucketing, TopicModelTrainingNew
-from src.reader import EmlReader, TextFileReader
+from src.topics import TopicModelPreprocessing, TopicModelTraining, TopicModelTrainingOld, TopicModelPrediction
 from src.writer import TextFileWriter, SolrFileWriter, Neo4JFileWriter
 from src.signature_extraction import SignatureExtraction
 from src.correspondent_extraction_aggregation \
     import CorrespondentDataExtraction, CorrespondentDataAggregation, CorrespondentIdInjection
 from src.category_classification import EmailCategoryClassification
 from src.folder_classification import EmailFolderClassification
-import json
+
 
 def run_email_pipeline(conf):
     """Run main email pipeline."""
@@ -41,6 +44,7 @@ def run_email_pipeline(conf):
     writer = TextFileWriter(conf, path=conf.get('data', 'results_dir'))
     Pipeline(reader, pipes, writer).run()
 
+    # TODO: incorporate this into main pipe when work on TM preprocessing is completed
     reader = TextFileReader(conf, path=conf.get('data', 'results_dir'))
     pipes = [
         TopicModelPreprocessing(conf, read_from='body', write_to='bow'),
@@ -48,22 +52,13 @@ def run_email_pipeline(conf):
     writer = TextFileWriter(conf, path=conf.get('topic_modelling', 'working_dir'))
     Pipeline(reader, pipes, writer).run()
 
-    rdd = TextFileReader(conf, path=conf.get('topic_modelling', 'working_dir')).run()
-    TopicModelTrainingNew(conf, read_from='bow').run(rdd)
+    if conf.get('topic_modelling', 'train_model'):
+        rdd = TextFileReader(conf, path=conf.get('topic_modelling', 'working_dir')).run()
+        TopicModelTraining(conf, read_from='bow_filtered').run(rdd)
 
-    # if conf.get('topic_modelling', 'train_model'):
-    #     reader = TextFileReader(conf, path=conf.get('data', 'results_dir'))
-    #     pipes = [
-    #         TopicModelBucketing(conf)
-    #     ]
-    #     writer = TextFileWriter(conf, path=conf.get('tm_preprocessing', 'buckets_dir'))
-    #     Pipeline(reader, pipes, writer).run()
-    #
-    #     run_topic_model_training(conf)
-    #
+    # # TODO: join this with Correspondent Data Extraction / Aggregation when work on TM preprocessing is completed
     # reader = TextFileReader(conf, path=conf.get('data', 'results_dir'))
     # pipes = [
-    #     TopicModelPreprocessing(conf, read_from='body', write_to='bow'),
     #     TopicModelPrediction(conf, read_from='body')
     # ]
     # writer = TextFileWriter(conf, path=conf.get('topic_modelling', 'working_dir'))
@@ -85,7 +80,7 @@ def run_email_pipeline(conf):
     # ]
     # writer = TextFileWriter(conf, path=conf.get('data', 'results_injected_dir'))
     # Pipeline(reader, pipes, writer).run()
-
+    #
     # if conf.get('solr', 'import'):
     #     SolrFileWriter(conf,
     #                    conf.get('data', 'results_injected_dir'),
@@ -108,7 +103,7 @@ def run_topic_model_training(conf):
     df = EmailDecoding(conf, split_header_body=False).run(df)
     df = EmailSplitting(conf, keep_thread_connected=False).run(df)
     df = TextCleaning(conf, read_from='body', write_to='text_clean', readable=False).run(df).map(lambda x: json.loads(x)['text_clean'])
-    TopicModelTraining(conf).run(df)
+    TopicModelTrainingOld(conf).run(df)
 
 
 if __name__ == '__main__':
