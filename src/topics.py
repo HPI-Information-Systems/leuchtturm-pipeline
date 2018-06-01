@@ -183,10 +183,10 @@ class TopicModelPrediction(Pipe):
 
 
 class TopicSimilarity(Pipe):
-    """Calculate topic similarity.
-    """
+    """Calculate topic similarity."""
 
     def __init__(self, conf):
+        """Set params here."""
         super().__init__(conf)
         self.conf = conf
 
@@ -205,6 +205,7 @@ class TopicSimilarity(Pipe):
         return dictionary
 
     def run(self):
+        """Run topic similarity calc."""
         model = self.load_model()
         dict = self.load_dictionary()
         model_topics = model.get_topics()
