@@ -80,8 +80,8 @@ class Config:
             'file_dictionary': '${models:directory}/topicdict_${data:dataset}.pickle'
         },
         'classification': {
-            'train_model': True,
-            'file_model': '${models:directory}/classification_model.pickle'
+            'train_model': False,
+            'file_clf_tool': '${models:directory}/email_clf_tool.pickle'
         }
     }
 

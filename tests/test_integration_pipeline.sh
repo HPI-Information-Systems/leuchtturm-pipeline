@@ -8,6 +8,7 @@ source <(python config/ini2bash.py -c config/testconfig.ini)
 
 echo '[stage 1 of 3] Building environment ...'
 pip install --quiet -r requirements.txt
+python -m nltk.downloader all
 
 echo '[stage 2 of 3] Fetching data ...'
 # get requirements that are not stored in git

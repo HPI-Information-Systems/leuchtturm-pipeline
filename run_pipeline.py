@@ -10,7 +10,7 @@ from src.reader import EmlReader, TextFileReader
 from src.preprocessing import EmailDecoding, EmailSplitting, HeaderParsing, TextCleaning, LanguageDetection
 from src.deduplication import EmailDeduplication
 from src.ner import SpacyNer
-from src.topics import TopicModelPreprocessing, TopicModelTraining, TopicModelTrainingOld, TopicModelPrediction
+from src.topics import TopicModelPreprocessing, TopicModelTraining, TopicModelTrainingOld, TopicModelPrediction, TopicSimilarity
 from src.writer import TextFileWriter, SolrFileWriter, Neo4JFileWriter
 from src.signature_extraction import SignatureExtraction
 from src.correspondent_extraction_aggregation \
@@ -49,9 +49,11 @@ def run_email_pipeline(conf):
     topic_model_broadcast = SparkProvider.spark_context(conf).broadcast(topic_model)
     topic_dictionary_broadcast = SparkProvider.spark_context(conf).broadcast(topic_dictionary)
 
+    topic_ranks = TopicSimilarity(conf, model=topic_model_broadcast).run()
+
     reader = TextFileReader(conf, path=conf.get('data', 'results_dir'))
     pipes = [
-        TopicModelPrediction(conf, model=topic_model_broadcast, dictionary=topic_dictionary_broadcast, read_from='bow')
+        TopicModelPrediction(conf, topic_ranks=topic_ranks, read_from='bow', model=topic_model_broadcast, dictionary=topic_dictionary_broadcast)
     ]
     writer = TextFileWriter(conf, path=conf.get('data', 'results_topics_dir'))
     Pipeline(reader, pipes, writer).run()

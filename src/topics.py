@@ -5,7 +5,8 @@ import ujson as json
 import pickle
 from string import punctuation
 import os
-
+import numpy as np
+from scipy.linalg import norm
 from gensim.models.ldamodel import LdaModel
 from gensim.corpora import Dictionary
 from nltk.corpus import stopwords as nltksw
@@ -325,11 +326,12 @@ class TopicModelPrediction(Pipe):
     Will add topic field.
     """
 
-    def __init__(self, conf, model, dictionary, read_from='bow'):
+    def __init__(self, conf, topic_ranks, read_from, model, dictionary):
         """Set params here."""
         super().__init__(conf)
-        self.read_from = read_from
         self.conf = conf
+        self.topic_ranks = topic_ranks
+        self.read_from = read_from
         self.model = model
         self.dictionary = dictionary
 
@@ -349,6 +351,7 @@ class TopicModelPrediction(Pipe):
             word_id_conf_tuples = self.model.value.get_topic_terms(topic_id, topn=10)
 
             topic_obj['topic_id'] = topic_id
+            topic_obj['topic_rank'] = self.topic_ranks[topic_id][1]
             topic_obj['topic_conf'] = round(float(topic[1]), 8)
             topic_obj['terms'] = str(list(map(self.get_word_from_word_id_and_round, word_id_conf_tuples)))
             topic_obj['doc_id'] = doc_id
@@ -373,3 +376,61 @@ class TopicModelPrediction(Pipe):
         """Run task in spark context."""
         return rdd.mapPartitions(lambda x: self.run_on_partition(x)) \
                   .flatMap(lambda x: x)
+
+
+class TopicSimilarity(Pipe):
+    """Calculate topic similarity."""
+
+    def __init__(self, conf, model):
+        """Set params here."""
+        super().__init__(conf)
+        self.conf = conf
+        self.model = model.value
+
+    def run(self):
+        """Run topic similarity calc."""
+        model_topics = self.model.get_topics()
+
+        def hellinger(p, q):
+            return norm(np.sqrt(p) - np.sqrt(q)) / np.sqrt(2)
+
+        # 1 topic, 10 words, first item in list, id
+        most_significant_topic_id = self.model.print_topics(1, 10)[0][0]
+
+        def get_smallest_distance_to_reference(current_topic, remaining_topics):
+
+            # init with invalid neg topic id and max possible ditstance
+            smallest_dist = (-1, 1)
+
+            for topic_id in remaining_topics:
+                dist_to_ref = hellinger(model_topics[current_topic], model_topics[topic_id])
+                smallest_dist = (topic_id, dist_to_ref) if dist_to_ref <= smallest_dist[1] else smallest_dist
+
+            return smallest_dist
+
+        topics_by_rank = []
+        remaining_topics = list(range(len(model_topics)))
+        count = 0
+        current_topic = most_significant_topic_id
+
+        while remaining_topics:
+            remaining_topics.remove(current_topic)
+
+            smallest_distance_to_current = get_smallest_distance_to_reference(current_topic, remaining_topics)
+
+            topics_by_rank.append({
+                'rank': count,
+                'id': current_topic,
+                'distance_to_next': smallest_distance_to_current[1]
+            })
+
+            current_topic = smallest_distance_to_current[0]
+            count += 1
+
+        topics_by_id = sorted(topics_by_rank, key=lambda x: x['id'], reverse=False)
+
+        rank_array = list(map(
+            lambda x: (x['id'], x["rank"]), topics_by_id
+        ))
+
+        return rank_array
