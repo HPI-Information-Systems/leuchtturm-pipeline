@@ -20,3 +20,6 @@ py2neo
 nltk
 talon
 regex
+pandas
+dill
+nltk  # IMPORTANT download nltk data via "conda install -c conda-forge nltk_data" or "python -m nltk.downloader all"

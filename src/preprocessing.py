@@ -187,6 +187,7 @@ class EmailSplitting(Pipe):
         # when no headers are found is the entire unsplit mail to be added
         if not headers:
             parts.append(remaining_email)
+
         for index, found_header in enumerate(headers):
             current_header = found_header
             next_header = ''
@@ -282,7 +283,7 @@ class HeaderParsing(Pipe):
         for index, header_field in enumerate(header_fields):
             if header_field[-1:] == ':':
                 header_field += ' '  # if key without value is included in header, add empty value
-            header_fields[index] = re.split(r':[\? ]+', header_field, maxsplit=1)  # make key value pair of a header
+            header_fields[index] = re.split(r':[\?; ]+', header_field, maxsplit=1)  # make key value pair of a header
 
         return header_fields
 
@@ -296,10 +297,10 @@ class HeaderParsing(Pipe):
 
     def clean_email(self, email_string):
         """Clean email address."""
-        email = email_string.replace('[mailto:', '').replace(']', '').replace('"', '').replace("'", '')
+        email = email_string.replace('[mailto:', '').replace('[smtp:', '').replace(']', '')
         if email.count('@') > 1 and re.search(r'<[^>]+>', email):
             email = re.sub(r'<[^>]+>', '', email)  # case: some_email@a.com<mailto:some_email@a.com>
-        email = email.replace('<', '').replace('>', '').replace('|', '')
+        email = email.replace('<', '').replace('>', '').replace('|', '').replace('"', '').replace("'", '')
         if re.search(r'\S+@\S+\.\S{2,}', email):
             email = re.search(r'\S+@\S+\.\S{2,}', email).group(0)
         else:
@@ -309,7 +310,7 @@ class HeaderParsing(Pipe):
 
     def clean_name(self, name_string):
         """Normalize and clean a name. Lastname, Firstname becomes to Fn Ln."""
-        name = re.sub(r'(on )?\d{2}\/\d{2}\/\d{2,4}\s\d{2}:\d{2}(:\d{2})?\s?(am|pm)?.*', '', name_string, flags=re.I)
+        name = re.sub(r'(\bon )?\d{2}\/\d{2}\/\d{2,4}\s\d{2}:\d{2}(:\d{2})?\s?(am|pm)?.*', '', name_string, flags=re.I)
         name = re.sub(r'(<.+>)|(\[.+\])|(\(.+\))', '', name)  # remove [FI] flags and similar
         name = re.sub(r'\S+@\S+\.\S{2,}', '', name)  # remove email
         name = re.sub(r'(?<=\w)(/|@).*', '', name)  # normalize weird enron names (beau ratliff/hou/ees@ees)
@@ -358,7 +359,7 @@ class HeaderParsing(Pipe):
         """Normalize date from a string. If self.use_unix_time set return timestamp."""
         date = re.sub(r'\(\w+\)', '', date_string).strip(whitespace)  # remove additional tz in brackets
         try:
-            date = dateparser.parse(date)
+            date = dateparser.parse(date, settings={'TO_TIMEZONE': 'UTC'})
         except Exception:
             return '', False
 
@@ -404,8 +405,10 @@ class HeaderParsing(Pipe):
             sender = re.sub(r'(on )?\d{2}/\d{2}/\d{2,4}\s\d{2}:\d{2}(:\d{2})?\s?(am|pm)?', '',
                             headers[0][0], flags=re.IGNORECASE)  # rm date
             header['sender'] = self.parse_correspondent(sender)
+        elif self.get_header_value(headers, 'sender'):
+            header['sender'] = self.parse_correspondent(self.get_header_value(headers, 'sender'))
 
-        delimiter = ',' if 'Original Message' not in header_string else ';'  # catch case 'to: lastname, firstname'
+        delimiter = ',' if 'original message' not in header_string.lower() else ';'  # catch 'to: lastname, firstname'
         if self.get_header_value(headers, 'to'):
             header['recipients'] += self.parse_recipients(self.get_header_value(headers, 'to'),
                                                           kind='to', delimiter=delimiter)
@@ -515,7 +518,7 @@ class TextCleaning(Pipe):
                    r'-----+\s?(original)|(inline).+-----+',
                    r'^(\*|=|-){20,}\s(.|\n)+(\*|=|-){20,}\s',
                    r'^[>\s]*on.+wrote:',
-                   r'^[>\s]+',
+                   r'^[>\t ]+',
                    r'(sent from my .+)|(sent via the samsung .+)',
                    r'^MIME-Version: .\..',
                    r'^Content-Type: .+;',
