@@ -10,6 +10,9 @@ from gensim import corpora, models
 from nltk.corpus import stopwords as nltksw
 from nltk.stem.wordnet import WordNetLemmatizer
 
+import numpy as np
+from scipy.linalg import norm
+
 from .common import Pipe
 
 
@@ -107,11 +110,12 @@ class TopicModelPrediction(Pipe):
     Will add topic field.
     """
 
-    def __init__(self, conf, read_from='text_clean'):
+    def __init__(self, conf, topic_ranks, read_from='text_clean'):
         """Set params here."""
         super().__init__(conf)
         self.read_from = read_from
         self.conf = conf
+        self.topic_ranks = topic_ranks
         # TODO add variable train_topic_model=Bool to trigger tm training within the main pipeline
 
     def load_model(self):
@@ -144,6 +148,7 @@ class TopicModelPrediction(Pipe):
             term_id_conf_tuples = model.get_topic_terms(topic_id, topn=10)
 
             topic_obj['topic_id'] = topic_id
+            topic_obj['topic_rank'] = self.topic_ranks[topic_id][1]
             topic_obj['topic_conf'] = round(float(topic[1]), 8)
             topic_obj['terms'] = str(list(map(get_word_from_term_id_and_round, term_id_conf_tuples)))
             topic_obj['doc_id'] = doc_id
@@ -174,3 +179,77 @@ class TopicModelPrediction(Pipe):
         """Run task in spark context."""
         return rdd.mapPartitions(lambda x: self.run_on_partition(x)) \
                   .flatMap(lambda x: x)
+
+
+class TopicSimilarity(Pipe):
+    """Calculate topic similarity."""
+
+    def __init__(self, conf):
+        """Set params here."""
+        super().__init__(conf)
+        self.conf = conf
+
+    def load_model(self):
+        """Load lda model from defined path."""
+        with open(os.path.abspath(self.conf.get('topic_modelling', 'file_model')), mode='rb') as pfile:
+            model = pickle.load(pfile)
+
+        return model
+
+    def load_dictionary(self):
+        """Load dict for lda tm from defined path."""
+        with open(os.path.abspath(self.conf.get('topic_modelling', 'file_dictionary')), mode='rb') as pfile:
+            dictionary = pickle.load(pfile)
+
+        return dictionary
+
+    def run(self):
+        """Run topic similarity calc."""
+        model = self.load_model()
+        dict = self.load_dictionary()
+        model_topics = model.get_topics()
+
+        def hellinger(p, q):
+            return norm(np.sqrt(p) - np.sqrt(q)) / np.sqrt(2)
+
+        # 1 topic, 10 words, first item in list, id
+        most_significant_topic_id = model.print_topics(1, 10)[0][0]
+
+        def get_smallest_distance_to_reference(current_topic, remaining_topics):
+
+            # init with invalid neg topic id and max possible ditstance
+            smallest_dist = (-1, 1)
+
+            for topic_id in remaining_topics:
+                dist_to_ref = hellinger(model_topics[current_topic], model_topics[topic_id])
+                smallest_dist = (topic_id, dist_to_ref) if dist_to_ref <= smallest_dist[1] else smallest_dist
+
+            return smallest_dist
+
+        topics_by_rank = []
+        remaining_topics = list(range(len(model_topics)))
+        count = 0
+        current_topic = most_significant_topic_id
+
+        while remaining_topics:
+            remaining_topics.remove(current_topic)
+
+            smallest_distance_to_current = get_smallest_distance_to_reference(current_topic, remaining_topics)
+
+            topics_by_rank.append({
+                'rank': count,
+                'id': current_topic,
+                'words': [dict[word[0]] for word in model.get_topic_terms(current_topic, 10)],
+                'distance_to_next': smallest_distance_to_current[1]
+            })
+
+            current_topic = smallest_distance_to_current[0]
+            count += 1
+
+        topics_by_id = sorted(topics_by_rank, key=lambda x: x['id'], reverse=False)
+
+        rank_array = list(map(
+            lambda x: (x['id'], x["rank"]), topics_by_id
+        ))
+
+        return rank_array
