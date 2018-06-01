@@ -26,6 +26,7 @@ class Config:
             'results_dir': '${data:working_dir}/pipeline_results',
             'results_correspondent_dir': '${results_dir}_correspondent',
             'results_injected_dir': '${results_dir}_injected',
+            'results_topics_dir': '${results_dir}_topics',
             'time_min': 0,
             'time_max': 2147483647
         },
@@ -69,7 +70,6 @@ class Config:
         },
         'topic_modelling': {
             'train_model': True,
-            'working_dir': '${data:working_dir}/topics',
             'file_model': '${models:directory}/topicmodel.pickle',
             'file_dictionary': '${models:directory}/topicmodel.dict'
         },

@@ -39,31 +39,23 @@ def run_email_pipeline(conf):
         # LanguageDetection(conf, read_from='body'),
         # SpacyNer(conf, read_from='body'),
         # EmailCategoryClassification(conf),
-        # EmailFolderClassification(conf)
+        # EmailFolderClassification(conf),
+        TopicModelPreprocessing(conf, read_from='body', write_to='bow'),
     ]
     writer = TextFileWriter(conf, path=conf.get('data', 'results_dir'))
     Pipeline(reader, pipes, writer).run()
 
-    # TODO: incorporate this into main pipe when work on TM preprocessing is completed
+    if conf.get('topic_modelling', 'train_model'):
+        rdd = TextFileReader(conf, path=conf.get('data', 'results_dir')).run()
+        TopicModelTraining(conf, read_from='bow').run(rdd)
+
     reader = TextFileReader(conf, path=conf.get('data', 'results_dir'))
     pipes = [
-        TopicModelPreprocessing(conf, read_from='body', write_to='bow'),
+        TopicModelPrediction(conf, read_from='bow')
     ]
-    writer = TextFileWriter(conf, path=conf.get('topic_modelling', 'working_dir'))
+    writer = TextFileWriter(conf, path=conf.get('data', 'results_topics_dir'))
     Pipeline(reader, pipes, writer).run()
 
-    if conf.get('topic_modelling', 'train_model'):
-        rdd = TextFileReader(conf, path=conf.get('topic_modelling', 'working_dir')).run()
-        TopicModelTraining(conf, read_from='bow_filtered').run(rdd)
-
-    # # TODO: join this with Correspondent Data Extraction / Aggregation when work on TM preprocessing is completed
-    # reader = TextFileReader(conf, path=conf.get('data', 'results_dir'))
-    # pipes = [
-    #     TopicModelPrediction(conf, read_from='body')
-    # ]
-    # writer = TextFileWriter(conf, path=conf.get('topic_modelling', 'working_dir'))
-    # Pipeline(reader, pipes, writer).run()
-    #
     # reader = TextFileReader(conf, path=conf.get('data', 'results_dir'))
     # pipes = [
     #     CorrespondentDataExtraction(conf),
@@ -86,7 +78,7 @@ def run_email_pipeline(conf):
     #                    conf.get('data', 'results_injected_dir'),
     #                    conf.solr_url + conf.get('solr', 'collection')).run()
     #     SolrFileWriter(conf,
-    #                    conf.get('topic_modelling', 'working_dir'),
+    #                    conf.get('data', 'results_topics_dir'),
     #                    conf.solr_url + conf.get('solr', 'topic_collection')).run()
     #
     # if conf.get('neo4j', 'import'):

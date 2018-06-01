@@ -12,7 +12,7 @@ from nltk.corpus import stopwords as nltksw
 from nltk.stem.wordnet import WordNetLemmatizer
 from datetime import datetime
 
-from .common import Pipe
+from .common import Pipe, SparkProvider
 
 
 class TopicModelTrainingOld(Pipe):
@@ -225,10 +225,8 @@ class TopicModelTraining(Pipe):
         alpha = 50 / num_topics
         eta = 0.1
 
-        corpus = rdd.map(lambda x: json.loads(x)['bow']).collect()
+        corpus = rdd.map(lambda x: json.loads(x)[self.read_from]).collect()
         dictionary = self.create_dictionary(corpus)
-
-        # TODO: we could distribute this step as well...
         corpus_dictionarized = [dictionary.doc2bow(document) for document in corpus]
 
         print('lt_logs', datetime.now(), 'Starting TM training...')
@@ -317,68 +315,63 @@ class TopicModelPrediction(Pipe):
     Will add topic field.
     """
 
-    def __init__(self, conf, read_from='text_clean'):
+    def __init__(self, conf, read_from='bow'):
         """Set params here."""
         super().__init__(conf)
         self.read_from = read_from
         self.conf = conf
-        # TODO add variable train_topic_model=Bool to trigger tm training within the main pipeline
+        self.model = self.load_model()
+        self.dictionary = self.load_dictionary()
 
     def load_model(self):
         """Load lda model from defined path."""
         with open(os.path.abspath(self.conf.get('topic_modelling', 'file_model')), mode='rb') as pfile:
             model = pickle.load(pfile)
 
-        return model
+        return SparkProvider.spark_context(self.conf).broadcast(model)
 
     def load_dictionary(self):
         """Load dict for lda tm from defined path."""
         with open(os.path.abspath(self.conf.get('topic_modelling', 'file_dictionary')), mode='rb') as pfile:
             dictionary = pickle.load(pfile)
 
-        return dictionary
+        return SparkProvider.spark_context(self.conf).broadcast(dictionary)
 
-    def get_topics_for_doc(self, doc_id, text, model, dictionary):
+    def get_word_from_word_id_and_round(self, word_tuple):
+        word = self.dictionary.value[word_tuple[0]]
+        word_conf = round(float(word_tuple[1]), 8)
+        return (word, word_conf)
+
+    def get_topics_for_doc(self, doc_id, bow):
         """Predict topics for a text."""
-        def get_word_from_term_id_and_round(word_tuple):
-            term = dictionary[word_tuple[0]]
-            term_conf = round(float(word_tuple[1]), 8)
-            return (term, term_conf)
+        bow_dictionarized = self.dictionary.value.doc2bow(bow)
 
-        bow = dictionary.doc2bow(text.split())
         doc_topics = []
-
-        for topic in model.get_document_topics(bow):
+        for topic in self.model.value.get_document_topics(bow_dictionarized):
             topic_obj = {}
             topic_id = topic[0]
-            term_id_conf_tuples = model.get_topic_terms(topic_id, topn=10)
+            word_id_conf_tuples = self.model.value.get_topic_terms(topic_id, topn=10)
 
             topic_obj['topic_id'] = topic_id
             topic_obj['topic_conf'] = round(float(topic[1]), 8)
-            topic_obj['terms'] = str(list(map(get_word_from_term_id_and_round, term_id_conf_tuples)))
+            topic_obj['terms'] = str(list(map(self.get_word_from_word_id_and_round, word_id_conf_tuples)))
             topic_obj['doc_id'] = doc_id
 
             doc_topics.append(topic_obj)
 
         return doc_topics
 
-    def run_on_document(self, raw_message, model=None, dictionary=None):
+    def run_on_document(self, raw_message):
         """Predict topics for a leuchtturm document."""
-        model = model if model is not None else self.load_model()
-        dictionary = dictionary if dictionary is not None else self.load_dictionary()
-
         document = json.loads(raw_message)
-        doc_topics = self.get_topics_for_doc(document['doc_id'], document[self.read_from], model, dictionary)
+        doc_topics = self.get_topics_for_doc(document['doc_id'], document[self.read_from])
 
         return [json.dumps(topic, ensure_ascii=False) for topic in doc_topics]
 
     def run_on_partition(self, partition):
         """Run task in spark context. Partitionwise for performance reasosn."""
-        model = self.load_model()
-        dictionary = self.load_dictionary()
-
         for doc in partition:
-            yield self.run_on_document(doc, model=model, dictionary=dictionary)
+            yield self.run_on_document(doc)
 
     def run(self, rdd):
         """Run task in spark context."""
