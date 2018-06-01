@@ -183,14 +183,10 @@ class TopicModelPrediction(Pipe):
 
 
 class TopicSimilarity(Pipe):
-    """Train topic model and export it.
-
-    Train a lda topic model using gensim.
-    Export pickeled model to a textfile.
+    """Calculate topic similarity.
     """
 
     def __init__(self, conf):
-        """TODO: set params here (iterations, num_topics, ...)!! Especially output paths."""
         super().__init__(conf)
         self.conf = conf
 
