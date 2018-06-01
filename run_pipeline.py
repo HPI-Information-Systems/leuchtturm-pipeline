@@ -43,15 +43,15 @@ def run_email_pipeline(conf):
         TopicModelPreprocessing(conf, read_from='body', write_to='bow'),
     ]
     writer = TextFileWriter(conf, path=conf.get('data', 'results_dir'))
-    Pipeline(reader, pipes, writer).run()
+    results_rdd = Pipeline(reader, pipes, writer).run()
 
-    if conf.get('topic_modelling', 'train_model'):
-        rdd = TextFileReader(conf, path=conf.get('data', 'results_dir')).run()
-        TopicModelTraining(conf, read_from='bow').run(rdd)
+    topic_model, topic_dictionary = TopicModelTraining(conf, read_from='bow').run(results_rdd)
+    topic_model_broadcast = SparkProvider.spark_context(conf).broadcast(topic_model)
+    topic_dictionary_broadcast = SparkProvider.spark_context(conf).broadcast(topic_dictionary)
 
     reader = TextFileReader(conf, path=conf.get('data', 'results_dir'))
     pipes = [
-        TopicModelPrediction(conf, read_from='bow')
+        TopicModelPrediction(conf, model=topic_model_broadcast, dictionary=topic_dictionary_broadcast, read_from='bow')
     ]
     writer = TextFileWriter(conf, path=conf.get('data', 'results_topics_dir'))
     Pipeline(reader, pipes, writer).run()

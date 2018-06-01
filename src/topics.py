@@ -206,13 +206,18 @@ class TopicModelTraining(Pipe):
 
         removed_frequent_words = set(dict_words) - set(dict_words_wo_frequent)
         removed_infrequent_words = set(dict_words_wo_frequent) - set(dict_words_wo_infrequent)
-        with open(self.conf.get('tm_preprocessing', 'file_removed_frequent_words'), 'wb') as file:
-            file.write(str(removed_frequent_words).encode())
-        with open(self.conf.get('tm_preprocessing', 'file_removed_infrequent_words'), 'wb') as file:
-            file.write(str(removed_infrequent_words).encode())
+        try:
+            with open(self.conf.get('tm_preprocessing', 'file_removed_frequent_words'), 'wb') as file:
+                file.write(str(removed_frequent_words).encode())
+            with open(self.conf.get('tm_preprocessing', 'file_removed_infrequent_words'), 'wb') as file:
+                file.write(str(removed_infrequent_words).encode())
 
-        with open(self.conf.get('topic_modelling', 'file_dictionary'), 'wb') as pfile:
-            pickle.dump(dictionary, pfile)
+            with open(self.conf.get('topic_modelling', 'file_dictionary'), 'wb') as pfile:
+                pickle.dump(dictionary, pfile)
+        except Exception:
+            print('Saving the TM to disk didnt work')
+            print('file_removed_frequent_words', removed_frequent_words)
+            print('file_removed_infrequent_words', removed_infrequent_words)
 
         print('lt_logs', datetime.now(), 'Finished dictionary creation.')
 
@@ -233,10 +238,14 @@ class TopicModelTraining(Pipe):
             eta=self.conf.get('topic_modelling', 'eta'),
             alpha=self.conf.get('topic_modelling', 'alpha_numerator') / self.conf.get('topic_modelling', 'num_topics')
         )
-        with open(self.conf.get('topic_modelling', 'file_model'), 'wb') as pfile:
-            pickle.dump(lda, pfile)
+        try:
+            with open(self.conf.get('topic_modelling', 'file_model'), 'wb') as pfile:
+                pickle.dump(lda, pfile)
+        except Exception:
+            print('Saving the TM to disk didnt work')
 
         print('lt_logs', datetime.now(), 'Finished TM training.')
+        return lda, dictionary
 
 
 class TopicModelBucketing(Pipe):
@@ -316,27 +325,13 @@ class TopicModelPrediction(Pipe):
     Will add topic field.
     """
 
-    def __init__(self, conf, read_from='bow'):
+    def __init__(self, conf, model, dictionary, read_from='bow'):
         """Set params here."""
         super().__init__(conf)
         self.read_from = read_from
         self.conf = conf
-        self.model = self.load_model()
-        self.dictionary = self.load_dictionary()
-
-    def load_model(self):
-        """Load lda model from defined path."""
-        with open(os.path.abspath(self.conf.get('topic_modelling', 'file_model')), mode='rb') as pfile:
-            model = pickle.load(pfile)
-
-        return SparkProvider.spark_context(self.conf).broadcast(model)
-
-    def load_dictionary(self):
-        """Load dict for lda tm from defined path."""
-        with open(os.path.abspath(self.conf.get('topic_modelling', 'file_dictionary')), mode='rb') as pfile:
-            dictionary = pickle.load(pfile)
-
-        return SparkProvider.spark_context(self.conf).broadcast(dictionary)
+        self.model = model
+        self.dictionary = dictionary
 
     def get_word_from_word_id_and_round(self, word_tuple):
         word = self.dictionary.value[word_tuple[0]]
