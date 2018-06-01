@@ -29,15 +29,15 @@ def run_email_pipeline(conf):
         EmailSplitting(conf, keep_thread_connected=True),
         HeaderParsing(conf, use_unix_time=False),
         EmailDeduplication(conf, is_connected_thread=True),
-        TextCleaning(conf, read_from='body', write_to='text_clean', write_to_original_ws='text_clean_original_ws'),
+        TextCleaning(conf, read_from='body', write_to='body', write_to_original_ws='body_original_ws'),
         SignatureExtraction(  # also relies on document['header']['sender']['email']
             conf,
-            read_from='text_clean_original_ws',
+            read_from='body_original_ws',
             write_body_without_signature_to='body_without_signature',
             write_signature_to='signature'
         ),
-        LanguageDetection(conf, read_from='text_clean'),
-        SpacyNer(conf, read_from='text_clean'),
+        LanguageDetection(conf, read_from='body'),
+        SpacyNer(conf, read_from='body'),
         EmailCategoryClassification(conf),
         EmailFolderClassification(conf)
     ]
@@ -50,7 +50,7 @@ def run_email_pipeline(conf):
 
     reader = TextFileReader(conf, path=conf.get('data', 'results_dir'))
     writer = TextFileWriter(conf, path=conf.get('topic_modelling', 'working_dir'))
-    Pipeline(reader, [TopicModelPrediction(conf)], writer).run()
+    Pipeline(reader, [TopicModelPrediction(conf, read_from='body')], writer).run()
 
     reader = TextFileReader(conf, path=conf.get('data', 'results_dir'))
     pipes = [
@@ -90,7 +90,7 @@ def run_topic_model_training(conf):
     df = EmlReader(conf, conf.get('data', 'source_dir')).run()
     df = EmailDecoding(conf, split_header_body=False).run(df)
     df = EmailSplitting(conf, keep_thread_connected=False).run(df)
-    df = TextCleaning(conf, read_from='body', write_to='text_clean').run(df).map(lambda x: json.loads(x)['text_clean'])
+    df = TextCleaning(conf, read_from='body', write_to='text_clean', readable=False).run(df).map(lambda x: json.loads(x)['text_clean'])
     TopicModelTraining(conf).run(df)
 
 

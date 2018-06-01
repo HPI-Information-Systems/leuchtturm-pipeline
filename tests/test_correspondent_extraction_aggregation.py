@@ -112,8 +112,8 @@ def test_preparation_for_aggregation():
         keys = prepared_email.keys()
         assert set(keys) == correspondent_object_keys
         for key in keys:
-            if key == 'identifying_name':
-                assert type(prepared_email[key]) == str
+            if key == 'identifying_names':
+                assert type(prepared_email[key]) == dict
             elif key == 'source_count':
                 assert type(prepared_email[key]) == int
             else:
