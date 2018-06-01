@@ -4,7 +4,6 @@ from collections import defaultdict
 import ujson as json
 import pickle
 from string import punctuation
-import os
 import numpy as np
 from scipy.linalg import norm
 from gensim.models.ldamodel import LdaModel
@@ -13,7 +12,7 @@ from nltk.corpus import stopwords as nltksw
 from nltk.stem.wordnet import WordNetLemmatizer
 from datetime import datetime
 
-from .common import Pipe, SparkProvider
+from .common import Pipe
 
 
 class TopicModelTrainingOld(Pipe):
@@ -174,10 +173,11 @@ class TopicModelPreprocessing(Pipe):
 
 
 class TopicModelTraining(Pipe):
-    """Train topic model and export it.
+    """Train topic model and return it.
 
+    Create a dictionary from the corpus that can be used with the lda topic model.
     Train a lda topic model using gensim.
-    Export pickeled model to a textfile.
+    Return the topic model to be used by downstream tasks.
     """
 
     def __init__(self, conf, read_from='bow'):
@@ -187,6 +187,7 @@ class TopicModelTraining(Pipe):
         self.read_from = read_from
 
     def create_dictionary(self, corpus):
+        """Create a gensim Dictionary that can be used to convert documents so that they can be used by LDAModel."""
         print('lt_logs', datetime.now(), 'Starting dictionary creation...')
 
         dictionary = Dictionary(corpus)
@@ -336,6 +337,7 @@ class TopicModelPrediction(Pipe):
         self.dictionary = dictionary
 
     def get_word_from_word_id_and_round(self, word_tuple):
+        """Map a tuple of word_id and conf to a tuple of actual word and rounded conf."""
         word = self.dictionary.value[word_tuple[0]]
         word_conf = round(float(word_tuple[1]), 8)
         return (word, word_conf)

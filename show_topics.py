@@ -1,9 +1,11 @@
+"""Make show_topics() accessible."""
 import pickle
 import os
 from config.config import Config
 
 
 def show_topics(conf):
+    """Show all topics of saved saved LDA model."""
     with open(os.path.abspath(conf.get('topic_modelling', 'file_model')), mode='rb') as pfile:
         model = pickle.load(pfile)
     with open(os.path.abspath(conf.get('topic_modelling', 'file_dictionary')), mode='rb') as pfile:
