@@ -206,9 +206,9 @@ class TopicModelTraining(Pipe):
 
         removed_frequent_words = set(dict_words) - set(dict_words_wo_frequent)
         removed_infrequent_words = set(dict_words_wo_frequent) - set(dict_words_wo_infrequent)
-        with open(self.conf.get('models', 'directory') + '/removed_frequent_words.txt', 'wb') as file:
+        with open(self.conf.get('tm_preprocessing', 'file_removed_frequent_words'), 'wb') as file:
             file.write(str(removed_frequent_words).encode())
-        with open(self.conf.get('models', 'directory') + '/removed_infrequent_words.txt', 'wb') as file:
+        with open(self.conf.get('tm_preprocessing', 'file_removed_infrequent_words'), 'wb') as file:
             file.write(str(removed_infrequent_words).encode())
 
         with open(self.conf.get('topic_modelling', 'file_dictionary'), 'wb') as pfile:
@@ -220,18 +220,19 @@ class TopicModelTraining(Pipe):
 
     def run(self, rdd):
         """Run topic model training."""
-        iterations = 1000
-        num_topics = 100
-        alpha = 50 / num_topics
-        eta = 0.1
-
         corpus = rdd.map(lambda x: json.loads(x)[self.read_from]).collect()
         dictionary = self.create_dictionary(corpus)
         corpus_dictionarized = [dictionary.doc2bow(document) for document in corpus]
 
         print('lt_logs', datetime.now(), 'Starting TM training...')
 
-        lda = LdaModel(corpus_dictionarized, num_topics=num_topics, iterations=iterations, eta=eta, alpha=alpha)
+        lda = LdaModel(
+            corpus_dictionarized,
+            num_topics=self.conf.get('topic_modelling', 'num_topics'),
+            iterations=self.conf.get('topic_modelling', 'iterations'),
+            eta=self.conf.get('topic_modelling', 'eta'),
+            alpha=self.conf.get('topic_modelling', 'alpha_numerator') / self.conf.get('topic_modelling', 'num_topics')
+        )
         with open(self.conf.get('topic_modelling', 'file_model'), 'wb') as pfile:
             pickle.dump(lda, pfile)
 

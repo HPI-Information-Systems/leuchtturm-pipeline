@@ -66,10 +66,16 @@ class Config:
             'buckets_dir': '${data:working_dir}/tm_buckets',
             'bucket_timeframe': 'month',
             'min_freq_total': 3,
-            'max_percentage': 0.1
+            'max_percentage': 0.1,
+            'file_removed_frequent_words': '${data:working_dir}/removed_frequent_words.txt',
+            'file_removed_infrequent_words': '${data:working_dir}/removed_infrequent_words.txt'
         },
         'topic_modelling': {
             'train_model': True,
+            'iterations': 1000,
+            'num_topics': 100,
+            'alpha_numerator': 50,
+            'eta': 0.1,
             'file_model': '${models:directory}/topicmodel.pickle',
             'file_dictionary': '${models:directory}/topicmodel.dict'
         },
