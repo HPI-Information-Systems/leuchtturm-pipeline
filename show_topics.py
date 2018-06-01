@@ -16,7 +16,7 @@ def show_topics(conf):
 
     for i in range(0, 100):
         term_id_conf_tuples = model.get_topic_terms(i, topn=20)
-        print(list(map(get_word_from_term_id_and_round, term_id_conf_tuples)))
+        print('topic #', i, list(map(get_word_from_term_id_and_round, term_id_conf_tuples)))
 
 
 show_topics(Config())
