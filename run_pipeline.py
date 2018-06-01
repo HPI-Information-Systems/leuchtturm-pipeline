@@ -10,7 +10,7 @@ from src.reader import EmlReader, TextFileReader
 from src.preprocessing import EmailDecoding, EmailSplitting, HeaderParsing, TextCleaning, LanguageDetection
 from src.deduplication import EmailDeduplication
 from src.ner import SpacyNer
-from src.topics import TopicModelTraining, TopicModelPrediction
+from src.topics import TopicModelTraining, TopicModelPrediction, TopicSimilarity
 from src.writer import TextFileWriter, SolrFileWriter, Neo4JFileWriter
 from src.signature_extraction import SignatureExtraction
 from src.correspondent_extraction_aggregation \
@@ -48,9 +48,10 @@ def run_email_pipeline(conf):
     if conf.get('topic_modelling', 'train_model'):
         run_topic_model_training(conf)
 
+    topic_ranks = TopicSimilarity(conf).run()
     reader = TextFileReader(conf, path=conf.get('data', 'results_dir'))
     writer = TextFileWriter(conf, path=conf.get('topic_modelling', 'working_dir'))
-    Pipeline(reader, [TopicModelPrediction(conf, read_from='body')], writer).run()
+    Pipeline(reader, [TopicModelPrediction(conf, topic_ranks, read_from='body')], writer).run()
 
     reader = TextFileReader(conf, path=conf.get('data', 'results_dir'))
     pipes = [
