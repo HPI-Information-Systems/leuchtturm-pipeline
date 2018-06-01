@@ -60,7 +60,7 @@ class Config:
             'parallelism': 276
         },
         'models': {
-            'directory': '${data:working_dir}/models'
+            'directory': './models'
         },
         'tm_preprocessing': {
             'buckets_dir': '${data:working_dir}/tm_buckets',

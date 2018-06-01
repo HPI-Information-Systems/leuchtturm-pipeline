@@ -2,7 +2,6 @@
 """This module runs the main pipeline."""
 
 import ujson as json
-from datetime import datetime
 
 from config.config import Config
 from src.common import Pipeline, SparkProvider
@@ -30,16 +29,16 @@ def run_email_pipeline(conf):
         HeaderParsing(conf, use_unix_time=False),
         EmailDeduplication(conf, is_connected_thread=True),
         TextCleaning(conf, read_from='body', write_to='body', write_to_original_ws='body_original_ws'),
-        # SignatureExtraction(  # also relies on document['header']['sender']['email']
-        #     conf,
-        #     read_from='body_original_ws',
-        #     write_body_without_signature_to='body_without_signature',
-        #     write_signature_to='signature'
-        # ),
-        # LanguageDetection(conf, read_from='body'),
-        # SpacyNer(conf, read_from='body'),
-        # EmailCategoryClassification(conf),
-        # EmailFolderClassification(conf),
+        SignatureExtraction(  # also relies on document['header']['sender']['email']
+            conf,
+            read_from='body_original_ws',
+            write_body_without_signature_to='body_without_signature',
+            write_signature_to='signature'
+        ),
+        LanguageDetection(conf, read_from='body'),
+        SpacyNer(conf, read_from='body'),
+        EmailCategoryClassification(conf),
+        EmailFolderClassification(conf),
         TopicModelPreprocessing(conf, read_from='body', write_to='bow'),
     ]
     writer = TextFileWriter(conf, path=conf.get('data', 'results_dir'))
@@ -58,34 +57,34 @@ def run_email_pipeline(conf):
     writer = TextFileWriter(conf, path=conf.get('data', 'results_topics_dir'))
     Pipeline(reader, pipes, writer).run()
 
-    # reader = TextFileReader(conf, path=conf.get('data', 'results_dir'))
-    # pipes = [
-    #     CorrespondentDataExtraction(conf),
-    #     CorrespondentDataAggregation(conf),
-    # ]
-    # writer = TextFileWriter(conf, path=conf.get('data', 'results_correspondent_dir'))
-    # Pipeline(reader, pipes, writer).run()
-    #
-    # correspondent_rdd = SparkProvider.spark_context(conf).broadcast(
-    #     TextFileReader(conf, path=conf.get('data', 'results_correspondent_dir')).run().collect()
-    # )
-    # pipes = [
-    #     CorrespondentIdInjection(conf, correspondent_rdd),
-    # ]
-    # writer = TextFileWriter(conf, path=conf.get('data', 'results_injected_dir'))
-    # Pipeline(reader, pipes, writer).run()
-    #
-    # if conf.get('solr', 'import'):
-    #     SolrFileWriter(conf,
-    #                    conf.get('data', 'results_injected_dir'),
-    #                    conf.solr_url + conf.get('solr', 'collection')).run()
-    #     SolrFileWriter(conf,
-    #                    conf.get('data', 'results_topics_dir'),
-    #                    conf.solr_url + conf.get('solr', 'topic_collection')).run()
-    #
-    # if conf.get('neo4j', 'import'):
-    #     Neo4JFileWriter(conf, conf.get('data', 'results_correspondent_dir'), mode='nodes').run()
-    #     Neo4JFileWriter(conf, conf.get('data', 'results_injected_dir'), mode='edges').run()
+    reader = TextFileReader(conf, path=conf.get('data', 'results_dir'))
+    pipes = [
+        CorrespondentDataExtraction(conf),
+        CorrespondentDataAggregation(conf),
+    ]
+    writer = TextFileWriter(conf, path=conf.get('data', 'results_correspondent_dir'))
+    Pipeline(reader, pipes, writer).run()
+
+    correspondent_rdd = SparkProvider.spark_context(conf).broadcast(
+        TextFileReader(conf, path=conf.get('data', 'results_correspondent_dir')).run().collect()
+    )
+    pipes = [
+        CorrespondentIdInjection(conf, correspondent_rdd),
+    ]
+    writer = TextFileWriter(conf, path=conf.get('data', 'results_injected_dir'))
+    Pipeline(reader, pipes, writer).run()
+
+    if conf.get('solr', 'import'):
+        SolrFileWriter(conf,
+                       conf.get('data', 'results_injected_dir'),
+                       conf.solr_url + conf.get('solr', 'collection')).run()
+        SolrFileWriter(conf,
+                       conf.get('data', 'results_topics_dir'),
+                       conf.solr_url + conf.get('solr', 'topic_collection')).run()
+
+    if conf.get('neo4j', 'import'):
+        Neo4JFileWriter(conf, conf.get('data', 'results_correspondent_dir'), mode='nodes').run()
+        Neo4JFileWriter(conf, conf.get('data', 'results_injected_dir'), mode='edges').run()
 
     SparkProvider.stop_spark_context()
 
