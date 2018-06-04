@@ -338,7 +338,7 @@ class TopicModelPrediction(Pipe):
 
     def get_word_from_word_id_and_round(self, word_tuple):
         """Map a tuple of word_id and conf to a tuple of actual word and rounded conf."""
-        word = self.dictionary.value[word_tuple[0]]
+        word = self.dictionary.value[word_tuple[0]].replace("'", '')  # TODO: integrate stemmer that takes care of this
         word_conf = round(float(word_tuple[1]), 8)
         return (word, word_conf)
 
