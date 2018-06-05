@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 from community_detection import CommunityDetector
 from role_detection import RoleDetector
 from social_hierarchy_detection import SocialHierarchyDetector
+# from social_hierarchy_detection_multiprocessed import SocialHierarchyDetector
 
 
 class NetworkAnalyser:

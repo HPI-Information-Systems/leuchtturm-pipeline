@@ -5,7 +5,8 @@ import networkx as nx
 import json
 from .community_detection import CommunityDetector
 from .role_detection import RoleDetector
-from .social_hierarchy_detection import SocialHierarchyDetector
+# from .social_hierarchy_detection import SocialHierarchyDetector
+from .social_hierarchy_detection_multiprocessed import SocialHierarchyDetector
 from .common import Pipe
 from datetime import datetime
 

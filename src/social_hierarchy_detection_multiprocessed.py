@@ -67,7 +67,7 @@ class SocialHierarchyDetector:
             try:
                 name, metric = queue.get_nowait()
                 own_queue.put((name, metric))
-            except:
+            except Exception:
                 pass
             if name == 'number_of_emails':
                 number_of_emails = metric
@@ -101,7 +101,7 @@ class SocialHierarchyDetector:
                 break
 
         metrics = []
-        while not own_queue.empty():
+        for i in range(own_queue.qsize()):
             name, metric = own_queue.get()
             print(name)
             if type(metric) is not dict:
@@ -113,12 +113,17 @@ class SocialHierarchyDetector:
             else:
                 metrics.append(self._normalize(metric))
 
+        # print(own_queue.qsize())
+        # for i in range(own_queue.qsize()):
+        #     name, metric = own_queue.get()
+        #     print(name + '   ' + str(type(metric)))
+
         # metrics = []
         # for metric in [response_avg_times, mean_shortest_paths]:
         #     metrics.append(self._normalize(metric, high=False))
         #
         # for metric in [number_of_cliques, raw_clique_score, degree_values,
-        #                hub_values, authority_values, number_of_emails, clustering_coefficients, weighted_clique_score]:
+        #               hub_values, authority_values, number_of_emails, clustering_coefficients, weighted_clique_score]:
         #     metrics.append(self._normalize(metric))
 
         hierarchy_scores = self._aggregate(graph, metrics)
