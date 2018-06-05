@@ -65,8 +65,8 @@ class Config:
         'tm_preprocessing': {
             'buckets_dir': '${data:working_dir}/tm_buckets',
             'bucket_timeframe': 'month',
-            'min_freq_total': 3,
-            'max_percentage': 0.1,
+            'minimum_total_word_document_frequency': 3,
+            'maximum_fraction_word_document_frequency': 0.1,
             'file_removed_frequent_words': '${data:working_dir}/removed_frequent_words_${data:dataset}.txt',
             'file_removed_infrequent_words': '${data:working_dir}/removed_infrequent_words_${data:dataset}.txt'
         },

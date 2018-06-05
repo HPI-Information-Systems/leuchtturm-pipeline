@@ -111,7 +111,7 @@ class TopicModelPreprocessing(Pipe):
         self.conf = conf
         self.read_from = read_from
         self.write_to = write_to
-        self.stopwords = nltksw.words('english')
+        self.stopwords = set(nltksw.words('english'))
         self.lemma = WordNetLemmatizer()
 
     def tokenize(self, body):
@@ -167,7 +167,6 @@ class TopicModelPreprocessing(Pipe):
         """Run pipe in spark context."""
         print('lt_logs', datetime.now(), 'Starting TM preprocessing...')
         rdd = rdd.map(self.run_on_document)
-        rdd.count()
         print('lt_logs', datetime.now(), 'Finished TM preprocessing.')
         return rdd
 
@@ -181,7 +180,7 @@ class TopicModelTraining(Pipe):
     """
 
     def __init__(self, conf, read_from='bow'):
-        """TODO: set params here (iterations, num_topics, ...)!! Especially output paths."""
+        """Set params."""
         super().__init__(conf)
         self.conf = conf
         self.read_from = read_from
@@ -194,14 +193,14 @@ class TopicModelTraining(Pipe):
 
         dict_words = [word for word in dictionary.values()]
         dictionary.filter_extremes(
-            no_above=self.conf.get('tm_preprocessing', 'max_percentage'),
+            no_above=self.conf.get('tm_preprocessing', 'maximum_fraction_word_document_frequency'),
             no_below=0,
             keep_n=len(dict_words)
         )
         dict_words_wo_frequent = [word for word in dictionary.values()]
         dictionary.filter_extremes(
             no_above=1.0,
-            no_below=self.conf.get('tm_preprocessing', 'min_freq_total'),
+            no_below=self.conf.get('tm_preprocessing', 'minimum_total_word_document_frequency'),
             keep_n=len(dict_words)
         )
         dict_words_wo_infrequent = [word for word in dictionary.values()]
@@ -289,8 +288,8 @@ class TopicModelBucketing(Pipe):
         document2 = [json.loads(subitem) for subitem in item2]
         new_count = document1[0]['count_in_bucket'] + document2[0]['count_in_bucket']
         merged_documents = document1 + document2
-        for i in range(len(merged_documents)):
-            merged_documents[i]['count_in_bucket'] = new_count
+        for doc in merged_documents:
+            doc['count_in_bucket'] = new_count
 
         return [json.dumps(doc) for doc in merged_documents]
 
