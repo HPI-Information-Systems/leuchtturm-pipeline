@@ -38,11 +38,6 @@ hdfs dfs -rm -r $DATA_RESULTS_TOPICS_DIR || true
 hdfs dfs -rm -r $DATA_RESULTS_CORRESPONDENT_DIR || true
 hdfs dfs -rm -r $DATA_RESULTS_INJECTED_DIR || true
 
-rm $TOPIC_MODELLING_FILE_MODEL || true
-rm $TOPIC_MODELLING_FILE_DICTIONARY || true
-rm $TM_PREPROCESSING_FILE_REMOVED_FREQUENT_WORDS || true
-rm $TM_PREPROCESSING_FILE_REMOVED_INFREQUENT_WORDS || true
-
 curl $SOLR/update\?commit\=true -d  '<delete><query>*:*</query></delete>' || true
 curl $SOLR_TOPICS/update\?commit\=true -d  '<delete><query>*:*</query></delete>' || true
 

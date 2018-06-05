@@ -213,16 +213,12 @@ class TopicModelTraining(Pipe):
                 file.write(str(removed_frequent_words).encode())
             with open(self.conf.get('tm_preprocessing', 'file_removed_infrequent_words'), 'wb') as file:
                 file.write(str(removed_infrequent_words).encode())
-
             with open(self.conf.get('topic_modelling', 'file_dictionary'), 'wb') as pfile:
                 pickle.dump(dictionary, pfile)
         except Exception:
-            print('Saving the TM to disk didnt work')
-            print('file_removed_frequent_words', removed_frequent_words)
-            print('file_removed_infrequent_words', removed_infrequent_words)
+            print('lt_logs', datetime.now(), 'Saving the TM dictionary and frequency-removed words to disk didnt work')
 
         print('lt_logs', datetime.now(), 'Finished dictionary creation.')
-
         return dictionary
 
     def run(self, rdd):
@@ -244,7 +240,7 @@ class TopicModelTraining(Pipe):
             with open(self.conf.get('topic_modelling', 'file_model'), 'wb') as pfile:
                 pickle.dump(lda, pfile)
         except Exception:
-            print('Saving the TM to disk didnt work')
+            print('lt_logs', datetime.now(), 'Saving the TM to disk didnt work')
 
         print('lt_logs', datetime.now(), 'Finished TM training.')
         return lda, dictionary
