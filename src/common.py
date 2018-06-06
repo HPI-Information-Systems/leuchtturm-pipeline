@@ -67,6 +67,7 @@ class Pipeline(object):
         for pipe in self.pipes:
             corpus = pipe.run(corpus)
         self.writer.run(corpus)
+        return corpus
 
 
 class Pipe(object):
