@@ -2,7 +2,6 @@
 """This module runs the main pipeline."""
 
 import ujson as json
-from datetime import datetime
 
 from config.config import Config
 from src.common import Pipeline, SparkProvider
@@ -10,7 +9,7 @@ from src.reader import EmlReader, TextFileReader
 from src.preprocessing import EmailDecoding, EmailSplitting, HeaderParsing, TextCleaning, LanguageDetection
 from src.deduplication import EmailDeduplication
 from src.ner import SpacyNer
-from src.topics import TopicModelTraining, TopicModelPrediction, TopicSimilarity
+from src.topics import TopicModelPreprocessing, TopicModelTraining, TopicModelTrainingOld, TopicModelPrediction, TopicSimilarity
 from src.writer import TextFileWriter, SolrFileWriter, Neo4JFileWriter
 from src.signature_extraction import SignatureExtraction
 from src.correspondent_extraction_aggregation \
@@ -39,19 +38,24 @@ def run_email_pipeline(conf):
         LanguageDetection(conf, read_from='body'),
         SpacyNer(conf, read_from='body'),
         EmailCategoryClassification(conf),
-        EmailFolderClassification(conf)
+        EmailFolderClassification(conf),
+        TopicModelPreprocessing(conf, read_from='body', write_to='bow'),
     ]
-
     writer = TextFileWriter(conf, path=conf.get('data', 'results_dir'))
-    Pipeline(reader, pipes, writer).run()
+    results_rdd = Pipeline(reader, pipes, writer).run()
 
-    if conf.get('topic_modelling', 'train_model'):
-        run_topic_model_training(conf)
+    topic_model, topic_dictionary = TopicModelTraining(conf, read_from='bow').run(results_rdd)
+    topic_model_broadcast = SparkProvider.spark_context(conf).broadcast(topic_model)
+    topic_dictionary_broadcast = SparkProvider.spark_context(conf).broadcast(topic_dictionary)
 
-    topic_ranks = TopicSimilarity(conf).run()
+    topic_ranks = TopicSimilarity(conf, model=topic_model_broadcast).run()
+
     reader = TextFileReader(conf, path=conf.get('data', 'results_dir'))
-    writer = TextFileWriter(conf, path=conf.get('topic_modelling', 'working_dir'))
-    Pipeline(reader, [TopicModelPrediction(conf, topic_ranks, read_from='body')], writer).run()
+    pipes = [
+        TopicModelPrediction(conf, topic_ranks=topic_ranks, read_from='bow', model=topic_model_broadcast, dictionary=topic_dictionary_broadcast)
+    ]
+    writer = TextFileWriter(conf, path=conf.get('data', 'results_topics_dir'))
+    Pipeline(reader, pipes, writer).run()
 
     reader = TextFileReader(conf, path=conf.get('data', 'results_dir'))
     pipes = [
@@ -75,7 +79,7 @@ def run_email_pipeline(conf):
                        conf.get('data', 'results_injected_dir'),
                        conf.solr_url + conf.get('solr', 'collection')).run()
         SolrFileWriter(conf,
-                       conf.get('topic_modelling', 'working_dir'),
+                       conf.get('data', 'results_topics_dir'),
                        conf.solr_url + conf.get('solr', 'topic_collection')).run()
 
     if conf.get('neo4j', 'import'):
@@ -92,7 +96,7 @@ def run_topic_model_training(conf):
     df = EmailDecoding(conf, split_header_body=False).run(df)
     df = EmailSplitting(conf, keep_thread_connected=False).run(df)
     df = TextCleaning(conf, read_from='body', write_to='text_clean', readable=False).run(df).map(lambda x: json.loads(x)['text_clean'])
-    TopicModelTraining(conf).run(df)
+    TopicModelTrainingOld(conf).run(df)
 
 
 if __name__ == '__main__':
