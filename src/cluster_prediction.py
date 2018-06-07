@@ -25,7 +25,7 @@ class EmailClusterPrediction(Pipe):
             components = pickle.load(f)
 
         return email_clustering.EmailClusteringTool(
-            components['classifier'],
+            components['knn_clf'],
             components['vectorizer_body'],
             components['vectorizer_subject'],
         )
