@@ -70,6 +70,9 @@ class Config:
         'classification': {
             'train_model': False,
             'file_clf_tool': '${models:directory}/email_clf_tool.pickle'
+        },
+        'clustering': {
+            'file_clustering_tool': '${models:directory}/clustering_tool.pickle'
         }
     }
 
