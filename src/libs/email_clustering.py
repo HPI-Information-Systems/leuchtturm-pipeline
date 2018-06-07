@@ -15,6 +15,7 @@ from datetime import datetime
 
 class Preprocessing:
     # Preprocessing is used to extract all information and fields that are / might be needed to extract the features
+    @staticmethod
     def preprocess_emails(df):
         d = {
             'body_clean': [],
@@ -105,6 +106,7 @@ class Preprocessing:
 
         return pd.DataFrame(data=d)
 
+    @staticmethod
     def remove_html_tags(text, check_for_tags=True):
         """Convert html to corresponding md."""
         if (not check_for_tags) or (check_for_tags and re.search(r'<[^>]+>', text) and re.search(r'</[^>]+>', text)):
@@ -116,6 +118,7 @@ class Preprocessing:
         else:
             return text
 
+    @staticmethod
     def parse_body(message):
         def decode_part(text, encoding=None):
             if encoding is None:
@@ -143,6 +146,7 @@ class Preprocessing:
         else:
             return decode_part(message.get_payload(decode=True))
 
+    @staticmethod
     def remove_inline_headers(text):
         forwarded_by_heuristic = r'(.*-{3}.*Forwarded by((\n|.)*?)Subject:.*)'
         begin_forwarded_message_heuristic = r'(.*Begin forwarded message:((\n|.)*?)To:.*)'
@@ -161,22 +165,26 @@ class Preprocessing:
         ))
         return header_regex.sub('', text)
 
+    @staticmethod
     def clean_text(text):
         return preprocess_text(text, fix_unicode=True, lowercase=True, transliterate=True,
                         no_urls=True, no_emails=True, no_phone_numbers=True,
                         no_numbers=True, no_currency_symbols=True, no_punct=True,
                         no_contractions=True, no_accents=True)
 
+    @staticmethod
     def parse_from_email(message):
         return utils.parseaddr(message.get('from'))[1]
 
+    @staticmethod
     def parse_to_emails(message):
         return ','.join([elem[1] for elem in utils.getaddresses(message.get_all('to', []))])
 
+    @staticmethod
     def parse_cc_emails(message):
         return ','.join([elem[1] for elem in utils.getaddresses(message.get_all('cc', []))])
 
-
+    @staticmethod
     def parse_date(message):
         date = message.get('date', '')
         date = re.sub(r'\(\w+\)', '', date).strip(whitespace)
@@ -185,12 +193,14 @@ class Preprocessing:
         except Exception:
             return 0
 
+    @staticmethod
     def get_email_domain(email):
         if email and '@' in email:
             return email.split('@', 1)[1]
         else:
             return 'UNKNOWN'
 
+    @staticmethod
     def get_recipient_domain(emails):
         if emails:
             recipients = []
@@ -200,38 +210,42 @@ class Preprocessing:
         else:
             return []
 
+    @staticmethod
     def count_emails(emails):
         if emails:
             return len(emails.split(','))
         else:
             return 0
 
+    @staticmethod
     def get_year(date):
         try:
             return int(date.strftime('%y'))
         except Exception:
             return -1
 
-
+    @staticmethod
     def get_month(date):
         try:
             return int(date.strftime('%m'))
         except Exception:
             return -1
 
+    @staticmethod
     def get_day(date):
         try:
             return int(date.strftime('%d'))
         except Exception:
             return -1
 
+    @staticmethod
     def get_hour(date):
         try:
             return int(date.strftime('%-H'))
         except Exception:
             return -1
 
-
+    @staticmethod
     def get_weekday(date):
         try:
             # 0 is sunday and 6 is saturday
@@ -239,6 +253,7 @@ class Preprocessing:
         except Exception:
             return -1
 
+    @staticmethod
     def get_sent_at_weekend(date):
         try:
             # 0 is sunday and 6 is saturday
@@ -247,6 +262,7 @@ class Preprocessing:
         except Exception:
             return False
 
+    @staticmethod
     def get_sent_during_business_hours(date):
         try:
             # assuming enron staff had 7 to 7 jobs and no work on sundays ;-)
@@ -257,6 +273,7 @@ class Preprocessing:
         except:
             return False
 
+    @staticmethod
     def remove_nan_drop(data, column):
     	# TODO: replace with better strategy for handling nan values (maybe different strategies for different columns)
     	data = data.loc[pd.notnull(data[column]), :]
@@ -264,6 +281,7 @@ class Preprocessing:
     	return data
 
 class FolderSplitting:
+    @staticmethod
     def run(df, size):
         folder_names = np.unique(df.folder_name)
         df['folder_chunk'] = 0
@@ -280,6 +298,7 @@ class FolderSplitting:
                     df.loc[df.index == index, 'folder_chunk'] = i + 1
 
 class FolderAggregation:
+    @staticmethod
     def aggregate_by_folder_name(df):
         folder_names = np.unique(df.folder_name)
         columns = [col for col in df.columns if 'feat_' in col]
@@ -298,6 +317,7 @@ class FolderAggregation:
             df_avg = df_avg.append(pd.DataFrame([row], columns=df_avg.columns), ignore_index=True)
         return df_avg
 
+    @staticmethod
     def aggregate_by_folder_name_and_chunk(df):
         folder_names = np.unique(df.folder_name)
         columns = [col for col in df.columns if 'feat_' in col]
@@ -319,6 +339,7 @@ class FolderAggregation:
         return df_avg
 
 class Features:
+    @staticmethod
     def get_vectorizer(max_features, use_porter=False, norm='l2'):
         def get_porter_tfidf_vectorizer():
             stemmer = PorterStemmer()
@@ -340,9 +361,11 @@ class Features:
                 norm=norm
             )
 
+    @staticmethod
     def vectorize(vectorizer, df, column, prefix):
         return pd.DataFrame(vectorizer.fit_transform(df[column]).todense()).add_prefix(prefix)
 
+    @staticmethod
     def add_features(df):
         d = {}
         boolean_features = [
@@ -366,6 +389,7 @@ class Features:
         # Feature Ideas:
         # subject longer than body
 
+    @staticmethod
     def add_quarter_feature(d, df):
         d['feat_sent_quarter_1'] = ((1 <= df.date_month) & (df.date_month <= 3)).apply(lambda x: int(x))
         d['feat_sent_quarter_2'] = ((4 <= df.date_month) & (df.date_month <= 6)).apply(lambda x: int(x))
@@ -373,6 +397,7 @@ class Features:
         d['feat_sent_quarter_4'] = ((10 <= df.date_month) & (df.date_month <= 12)).apply(lambda x: int(x))
         return d
 
+    @staticmethod
     def add_weekday_feature(d, df):
         d['feat_weekday_0'] = (df.date_weekday == 0).apply(lambda x: int(x))
         d['feat_weekday_1'] = (df.date_weekday == 1).apply(lambda x: int(x))
@@ -383,12 +408,14 @@ class Features:
         d['feat_weekday_6'] = (df.date_weekday == 6).apply(lambda x: int(x))
         return d
 
+    @staticmethod
     def add_sent_month_feature(d, df):
         d['feat_sent_month_1'] = ((1 <= df.date_day) & (df.date_day <= 3)).apply(lambda x: int(x)) # month beginning
         d['feat_sent_month_2'] = ((4 <= df.date_day) & (df.date_day <= 27)).apply(lambda x: int(x)) # month during
         d['feat_sent_month_3'] = (28 <= df.date_day).apply(lambda x: int(x)) # month end
         return d
 
+    @staticmethod
     def add_sent_between_feature(d, df):
         def sent_between(hour, min, max):
             try:
@@ -405,6 +432,7 @@ class Features:
         d['feat_sent_between_8'] = df.date_hour.apply(lambda x: sent_between(x, 21, 24))
         return d
 
+    @staticmethod
     def add_body_length_feature(d, df):
         d['feat_body_length_1'] = ((0 <= df.body_length) & (df.body_length <= 10)).apply(lambda x: int(x))
         d['feat_body_length_2'] = ((10 < df.body_length) & (df.body_length <= 200)).apply(lambda x: int(x))
@@ -412,19 +440,23 @@ class Features:
         d['feat_body_length_4'] = (1000 < df.body_length).apply(lambda x: int(x))
         return d
 
+    @staticmethod
     def add_recipients_amount_feature(d, df):
         d['feat_recipients_amount_1'] = ((0 <= df.recipients_amount) & (df.recipients_amount <= 1)).apply(lambda x: int(x))
         d['feat_recipients_amount_2'] = ((1 < df.recipients_amount) & (df.recipients_amount <= 10)).apply(lambda x: int(x))
         d['feat_recipients_amount_3'] = (10 < df.recipients_amount).apply(lambda x: int(x))
         return d
 
+    @staticmethod
     def get_df_columns(df, feat_prefix):
         return [col for col in df if col.startswith(feat_prefix)]
 
+    @staticmethod
     def drop(df, feat_prefix):
         columns = Features.get_df_columns(df, feat_prefix)
         return df.drop(columns, inplace=False, axis=1)
 
+    @staticmethod
     def reduce_features(df, feat_prefix, n_components):
         columns = Features.get_df_columns(df, feat_prefix)
         reduced = PCA(n_components=n_components).fit_transform(df[columns])
@@ -442,7 +474,7 @@ class EmailClusteringTool:
         self.vectorizer_subject = vectorizer_subject
 
     def create_df(self, text):
-        return pd.DataFrame(data=[[text]], columns=['email'])
+        return pd.DataFrame(data=[[text]], columns=['raw'])
 
     def preprocess(self, df):
         return Preprocessing.preprocess_emails(df)
