@@ -110,7 +110,6 @@ class Neo4JEdgeWriter(Pipe):
 
     def prepare_for_upload(self, data):
         """Reduce complexity of an email object so that it can be easier consumed by Neo4j."""
-        print('lt_logs', datetime.now(), 'Start preparation for Neo4j Edge Upload for document...', flush=True)
         document = json.loads(data)
 
         mail_id = document.get('doc_id', '')
@@ -133,7 +132,6 @@ class Neo4JEdgeWriter(Pipe):
             'mail_timestamp': mail_timestamp
         }
 
-        print('lt_logs', datetime.now(), 'End preparation for Neo4j Edge Upload for document.', flush=True)
         return json.dumps(result_document)
 
     def run_on_partition(self, partition):
