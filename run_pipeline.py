@@ -40,6 +40,7 @@ def run_email_pipeline(conf):
         SpacyNer(conf, read_from='body'),
         EmailCategoryClassification(conf),
         EmailFolderClassification(conf)
+        EmailClusterPrediction(conf)
     ]
 
     writer = TextFileWriter(conf, path=conf.get('data', 'results_dir'))

@@ -34,7 +34,8 @@ class EmailClusterPrediction(Pipe):
         """Predict classes for a document."""
         document = json.loads(email_doc)
 
-        document['cluster'] = clustering_tool.predict_cluster(document['raw'])
+        prediction = clustering_tool.predict_cluster(document['raw'])
+        document['cluster'] = str(prediction)
 
         return json.dumps(document, ensure_ascii=False)
 

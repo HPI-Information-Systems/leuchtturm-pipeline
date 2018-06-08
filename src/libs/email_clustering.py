@@ -362,8 +362,12 @@ class Features:
             )
 
     @staticmethod
-    def vectorize(vectorizer, df, column, prefix):
+    def vectorizer_fit_tranform(vectorizer, df, column, prefix):
         return pd.DataFrame(vectorizer.fit_transform(df[column]).todense()).add_prefix(prefix)
+
+    @staticmethod
+    def vectorizer_transform(vectorizer, df, column, prefix):
+        return pd.DataFrame(vectorizer.transform(df[column]).todense()).add_prefix(prefix)
 
     @staticmethod
     def add_features(df):
@@ -457,6 +461,17 @@ class Features:
         return df.drop(columns, inplace=False, axis=1)
 
     @staticmethod
+    def drop_features(df):
+        for column in [
+            'feat_recipients_amount',
+            'feat_body_length',
+            'feat_weekday',
+            'feat_sent_quarter',
+        ]:
+            df = Features.drop(df, column)
+        return df
+
+    @staticmethod
     def reduce_features(df, feat_prefix, n_components):
         columns = Features.get_df_columns(df, feat_prefix)
         reduced = PCA(n_components=n_components).fit_transform(df[columns])
@@ -483,13 +498,14 @@ class EmailClusteringTool:
         df = self.create_df(text)
         df = self.preprocess(df)
         df = pd.concat([
-            Features.vectorize(self.vectorizer_subject, df, 'subject_clean', 'feat_subject_'),
-            Features.vectorize(self.vectorizer_body, df, 'body_clean', 'feat_body_'),
+            Features.vectorizer_transform(self.vectorizer_subject, df, 'subject_clean', 'feat_subject_'),
+            Features.vectorizer_transform(self.vectorizer_body, df, 'body_clean', 'feat_body_'),
             Features.add_features(df)
         ], axis=1)
         return df
 
     def predict_cluster(self, text):
         df = self.prepare_email(text)
+        df = Features.drop_features(df)
         return self.classifier.predict(df)[0]
 
