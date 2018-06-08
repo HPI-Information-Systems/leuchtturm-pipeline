@@ -32,18 +32,22 @@ SOLR_TOPICS=$SOLR_URL$SOLR_TOPIC_COLLECTION
 source deactivate
 
 echo '[stage 2 of 2] Running leuchtturm pipeline. This might take a while ...'
+
 hdfs dfs -rm -r $DATA_RESULTS_DIR || true
-hdfs dfs -rm -r $TOPIC_MODELLING_WORKING_DIR || true
+hdfs dfs -rm -r $DATA_RESULTS_TOPICS_DIR || true
 hdfs dfs -rm -r $DATA_RESULTS_CORRESPONDENT_DIR || true
 hdfs dfs -rm -r $DATA_RESULTS_INJECTED_DIR || true
+
 curl $SOLR/update\?commit\=true -d  '<delete><query>*:*</query></delete>' || true
 curl $SOLR_TOPICS/update\?commit\=true -d  '<delete><query>*:*</query></delete>' || true
+
 curl -H "Content-Type: application/json" -X POST \
      -d '{"statements": [{"statement": "MATCH (n) DETACH DELETE n"}]}' \
      "http://"$NEO4J_HOST":"$NEO4J_HTTP_PORT"/db/data/transaction/commit" || true
 curl -H "Content-Type: application/json" -X POST \
      -d '{"statements": [{"statement": "DROP INDEX ON :Person(identifying_name)"}]}' \
      "http://"$NEO4J_HOST":"$NEO4J_HTTP_PORT"/db/data/transaction/commit" || true
+
 PYSPARK_PYTHON=./leuchtturm_env/bin/python \
     spark-submit --master yarn --deploy-mode cluster \
     --driver-memory $SPARK_DRIVER_MEMORY --executor-memory $SPARK_EXECUTOR_MEMORY \
