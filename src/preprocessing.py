@@ -327,6 +327,7 @@ class HeaderParsing(Pipe):
 
         name = re.sub(r'\s+', ' ', name)
         name = re.sub(r'[^a-zA-Z0-9-_\.\+ ]', '', name)  # replace non alphanumeric chars leaving some chars out
+        name = re.sub(r'(^\s*|\s*$)', '', name)
 
         return name.title()
 
