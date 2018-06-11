@@ -305,8 +305,9 @@ class HeaderParsing(Pipe):
             email = re.search(r'\S+@\S+\.\S{2,}', email).group(0)
         else:
             email = ''
-
-        return unquote(email.lower())
+        email = unquote(email.lower())
+        email = re.sub(r'(^\(|\)$|^\[|\]$)', '', email)
+        return email
 
     def clean_name(self, name_string):
         """Normalize and clean a name. Lastname, Firstname becomes to Fn Ln."""
@@ -326,6 +327,7 @@ class HeaderParsing(Pipe):
 
         name = re.sub(r'\s+', ' ', name)
         name = re.sub(r'[^a-zA-Z0-9-_\.\+ ]', '', name)  # replace non alphanumeric chars leaving some chars out
+        name = re.sub(r'(^\s*|\s*$)', '', name)
 
         return name.title()
 
