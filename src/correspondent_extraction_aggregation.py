@@ -133,6 +133,15 @@ class CorrespondentDataExtraction(Pipe):
             correspondents.append(build_correspondent(recipient['name'], recipient['email']))
         return correspondents
 
+    def remove_empty_values(self, documents):
+        """Remove empty values '' from certain fields because otherwise these appear in the frontend."""
+        for doc in documents:
+            for key in ['signatures', 'email_addresses', 'aliases']:
+                doc[key] = [val for val in doc[key] if val]
+            doc['identifying_names'] = \
+                {recipient_name: count for recipient_name, count in doc['identifying_names'].items() if recipient_name}
+        return documents
+
     def run_on_document(self, data_item):
         """Apply correspondent data extraction to a leuchtturm document. Return list of leuchtturm documents."""
         document = json.loads(data_item)
@@ -148,6 +157,7 @@ class CorrespondentDataExtraction(Pipe):
         document['writes_to'] = self.extract_writes_to_relationship(document['recipients'])
         document = self.convert_and_rename_fields(document)
         documents = [document] + self.extract_receiving_correspondents(document)
+        documents = self.remove_empty_values(documents)
 
         return [json.dumps(document, ensure_ascii=False) for document in documents]
 
