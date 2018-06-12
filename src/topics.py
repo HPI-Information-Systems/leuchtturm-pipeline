@@ -144,7 +144,6 @@ class TopicModelPreprocessing(Pipe):
 
     def tokenize_and_remove_various_words(self, body, name_parts):
         """Clean the bow from distracting words."""
-
         body = textacy_preprocess(
             body,
             no_urls=True,
@@ -178,8 +177,30 @@ class TopicModelPreprocessing(Pipe):
         return processed_bow
 
     def lemmatize(self, bow):
-        """Lemmatize each word in a bow."""
-        return [self.lemma.lemmatize(word) for word in bow]
+        """Lemmatize each word in a bow as well as possible."""
+        processed_bow = []
+
+        for word in bow:
+            lemmatized_word_noun = self.lemma.lemmatize(word, 'n')
+            lemmatized_word_verb = self.lemma.lemmatize(word, 'v')
+            if word != lemmatized_word_noun and word != lemmatized_word_verb:
+                processed_bow.append(min([lemmatized_word_noun, lemmatized_word_verb], key=len))
+                continue
+            elif word != lemmatized_word_noun:
+                processed_bow.append(lemmatized_word_noun)
+                continue
+            elif word != lemmatized_word_verb:
+                processed_bow.append(lemmatized_word_verb)
+                continue
+
+            lemmatized_word_adjective = self.lemma.lemmatize(word, 'a')
+            if word != lemmatized_word_adjective:
+                processed_bow.append(lemmatized_word_adjective)
+                continue
+
+            processed_bow.append(word)
+
+        return processed_bow
 
     def run_on_document(self, item):
         """Run TM preprocessing on document."""
