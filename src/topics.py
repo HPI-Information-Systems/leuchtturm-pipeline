@@ -11,6 +11,7 @@ from gensim.corpora import Dictionary
 from nltk.corpus import stopwords as nltksw
 from nltk.stem.wordnet import WordNetLemmatizer
 from datetime import datetime
+from string import whitespace
 
 from .common import Pipe
 
@@ -114,21 +115,39 @@ class TopicModelPreprocessing(Pipe):
         self.stopwords = set(nltksw.words('english'))
         self.lemma = WordNetLemmatizer()
 
-    def tokenize(self, body):
-        """Split the body into words."""
-        return body.lower().split()
-
-    def remove_various_words(self, bow, sender, recipients):
-        """Clean the bow from distracting words."""
-        names = [part.lower() for part in sender['name'].split()]
+    def _normalize_split_correspondent_names(self, sender, recipients):
+        sender_parts = {part.lower() for part in sender['name'].split()}
+        recipient_parts = set()
         for recipient in recipients:
             for part in recipient['name'].split():
-                names.append(part.lower())
+                recipient_parts.add(part.lower())
+        return sender_parts, recipient_parts
+
+    def tokenize_and_remove_salutation(self, body):
+        """Split the body into words and remove salutation operators if applicable."""
+        salutation_operators = \
+            {'hi', 'hello', 'hey', 'all', 'dear', 'sir', 'madam', 'good', 'morning', 'afternoon', 'greetings'}
+
+        def remove_salutation_operators(bow):
+            return [word for word in bow if word not in salutation_operators]
+
+        body = body.strip(whitespace).lower()
+
+        split_body = body.split('\n', 1)
+        if len(split_body) != 2:
+            return body.split()
+        salutation_candidate = split_body[0].split()
+        body_candidate = split_body[1].split()
+
+        return remove_salutation_operators(salutation_candidate) + body_candidate
+
+    def remove_various_words(self, bow, name_parts):
+        """Clean the bow from distracting words."""
 
         processed_bow = []
         for word in bow:
             # remove names of the sender and the recipients of the email
-            word = word if word not in names else ''
+            word = word if word not in name_parts else ''
             # remove punctuation characters
             word = word.strip(punctuation)
             # remove stopwords
@@ -156,8 +175,11 @@ class TopicModelPreprocessing(Pipe):
         """Run TM preprocessing on document."""
         document = json.loads(item)
 
-        bow = self.tokenize(document[self.read_from])
-        bow = self.remove_various_words(bow, document['header']['sender'], document['header']['recipients'])
+        sender_name_parts, recipient_name_parts = self._normalize_split_correspondent_names(
+            document['header']['sender'], document['header']['recipients']
+        )
+        bow = self.tokenize_and_remove_salutation(document[self.read_from])
+        bow = self.remove_various_words(bow, sender_name_parts.union(recipient_name_parts))
         bow = self.lemmatize(bow)
 
         document[self.write_to] = bow
@@ -167,7 +189,6 @@ class TopicModelPreprocessing(Pipe):
         """Run pipe in spark context."""
         print('lt_logs', datetime.now(), 'Starting TM preprocessing...')
         rdd = rdd.map(self.run_on_document)
-        print('lt_logs', datetime.now(), 'Finished TM preprocessing.')
         return rdd
 
 
