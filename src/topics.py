@@ -11,6 +11,7 @@ from gensim.corpora import Dictionary
 from nltk import word_tokenize
 from nltk.corpus import stopwords as nltksw
 from nltk.stem.wordnet import WordNetLemmatizer
+from textacy.preprocess import preprocess_text as textacy_preprocess
 from datetime import datetime
 from string import whitespace
 import re
@@ -125,29 +126,44 @@ class TopicModelPreprocessing(Pipe):
                 recipient_parts.add(part.lower())
         return sender_parts, recipient_parts
 
-    def tokenize_and_remove_salutation(self, body):
-        """Split the body into words and remove salutation operators if applicable."""
+    def remove_salutation(self, body):
+        """Remove salutation operators from the body if applicable."""
         salutation_operators = \
             {'hi', 'hello', 'hey', 'all', 'dear', 'sir', 'madam', 'good', 'morning', 'afternoon', 'greetings'}
 
         def remove_salutation_operators(bow):
             return [word for word in bow if word not in salutation_operators]
 
-        body = body.strip(whitespace).lower()
-
         split_body = body.split('\n', 1)
         if len(split_body) != 2:
-            return word_tokenize(body)
+            return body
         salutation_candidate = word_tokenize(split_body[0])
-        body_candidate = word_tokenize(split_body[1])
+        body_candidate = split_body[1]
 
-        return remove_salutation_operators(salutation_candidate) + body_candidate
+        return ' '.join(remove_salutation_operators(salutation_candidate)) + '\n' + body_candidate
 
-    def remove_various_words(self, bow, name_parts):
+    def tokenize_and_remove_various_words(self, body, name_parts):
         """Clean the bow from distracting words."""
 
+        body = textacy_preprocess(
+            body,
+            no_urls=True,
+            no_emails=True,
+            no_phone_numbers=True,
+            no_numbers=True,
+            no_currency_symbols=True,
+            no_contractions=True,
+            no_accents=True
+        )
+        textacy_placeholders = ['*URL*', '*EMAIL*', '*PHONE*', '*NUMBER*']
+
+        bow = word_tokenize(body)
         processed_bow = []
+
         for word in bow:
+            # remove placeholder words from textacy
+            for placeholder_text in textacy_placeholders:
+                word = word.replace(placeholder_text, '')
             # remove names of the sender and the recipients of the email
             word = word if word not in name_parts else ''
             # remove punctuation characters
@@ -156,18 +172,10 @@ class TopicModelPreprocessing(Pipe):
             word = word if word not in self.stopwords else ''
             # remove very short words as they often don't carry any meaning
             word = word if len(word) > 2 else ''
-            # remove numbers
-            word = word if not self._is_numeric(word) else ''
             if word:
                 processed_bow.append(word)
 
         return processed_bow
-
-    def _is_numeric(self, word):
-        for char in word:
-            if not (char.isdigit() or char in punctuation):
-                return False
-        return True
 
     def lemmatize(self, bow):
         """Lemmatize each word in a bow."""
@@ -180,8 +188,9 @@ class TopicModelPreprocessing(Pipe):
         sender_name_parts, recipient_name_parts = self._normalize_split_correspondent_names(
             document['header']['sender'], document['header']['recipients']
         )
-        bow = self.tokenize_and_remove_salutation(document[self.read_from])
-        bow = self.remove_various_words(bow, sender_name_parts.union(recipient_name_parts))
+        body = document[self.read_from].strip(whitespace).lower()
+        body = self.remove_salutation(body)
+        bow = self.tokenize_and_remove_various_words(body, sender_name_parts.union(recipient_name_parts))
         bow = self.lemmatize(bow)
 
         document[self.write_to] = bow
