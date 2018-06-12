@@ -8,10 +8,12 @@ import numpy as np
 from scipy.linalg import norm
 from gensim.models.ldamodel import LdaModel
 from gensim.corpora import Dictionary
+from nltk import word_tokenize
 from nltk.corpus import stopwords as nltksw
 from nltk.stem.wordnet import WordNetLemmatizer
 from datetime import datetime
 from string import whitespace
+import re
 
 from .common import Pipe
 
@@ -135,9 +137,9 @@ class TopicModelPreprocessing(Pipe):
 
         split_body = body.split('\n', 1)
         if len(split_body) != 2:
-            return body.split()
-        salutation_candidate = split_body[0].split()
-        body_candidate = split_body[1].split()
+            return word_tokenize(body)
+        salutation_candidate = word_tokenize(split_body[0])
+        body_candidate = word_tokenize(split_body[1])
 
         return remove_salutation_operators(salutation_candidate) + body_candidate
 
@@ -149,7 +151,7 @@ class TopicModelPreprocessing(Pipe):
             # remove names of the sender and the recipients of the email
             word = word if word not in name_parts else ''
             # remove punctuation characters
-            word = word.strip(punctuation)
+            word = re.sub(r'[' + re.escape(punctuation) + r']', '', word)
             # remove stopwords
             word = word if word not in self.stopwords else ''
             # remove very short words as they often don't carry any meaning
