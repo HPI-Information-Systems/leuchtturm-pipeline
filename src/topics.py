@@ -395,7 +395,10 @@ class TopicModelPrediction(Pipe):
         bow_dictionarized = self.dictionary.value.doc2bow(bow)
 
         doc_topics = []
-        for topic in self.model.value.get_document_topics(bow_dictionarized):
+        for topic in self.model.value.get_document_topics(
+                bow_dictionarized,
+                minimum_probability=self.conf.get('topic_modelling', 'minimum_prediction_probability')
+        ):
             topic_obj = {}
             topic_id = topic[0]
             word_id_conf_tuples = self.model.value.get_topic_terms(topic_id, topn=10)
