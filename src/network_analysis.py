@@ -73,22 +73,3 @@ class NetworkAnalyser(Pipe):
         role_detector = RoleDetector()
         role_labels = role_detector.rolx(graph)
         self._save_results_locally(role_labels, 'role.json')
-
-        if self.conf.get('neo4j', 'import'):
-            self.update_network(community_labels, "community")
-            self.update_network(role_labels, "role")
-            self.update_network(social_hierarchy_labels, "hierarchy")
-
-    def update_network(self, labelled_nodes, attribute):
-        """Update neo4j's data with the detected labels."""
-        if labelled_nodes:
-            print(datetime.now(),
-                  'lt_logs', '---------------- finished ' + attribute + ' analysis ----------------',
-                  flush=True)
-
-        neo_connection = py2neo.Graph(self.neo4j_host, http_port=self.http_port, bolt_port=self.bolt_port)
-        neo_connection.run('UNWIND $labelled_nodes AS ln '
-                           'MATCH (node) WHERE ID(node) = ln.node_id '
-                           'SET node.' + attribute + ' = ln.' + attribute,
-                           labelled_nodes=labelled_nodes, attribute=attribute)
-        print(datetime.now(), 'lt_logs', '- finished upload of ' + attribute + ' labels.', flush=True)

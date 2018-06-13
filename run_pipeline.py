@@ -18,6 +18,7 @@ from src.correspondent_extraction_aggregation \
 from src.category_classification import EmailCategoryClassification
 from src.folder_classification import EmailFolderClassification
 from src.network_analysis import NetworkAnalyser
+from src.network_uploader import NetworkUploader
 
 
 def run_email_pipeline(conf):
@@ -81,9 +82,8 @@ def run_email_pipeline(conf):
     if conf.get('neo4j', 'import'):
         Neo4JFileWriter(conf, conf.get('data', 'results_correspondent_dir'), mode='nodes').run()
         Neo4JFileWriter(conf, conf.get('data', 'results_injected_dir'), mode='edges').run()
-
-    if conf.get('neo4j', 'import'):
         NetworkAnalyser(conf).run()
+        NetworkUploader(conf).run()
 
     SparkProvider.stop_spark_context()
 

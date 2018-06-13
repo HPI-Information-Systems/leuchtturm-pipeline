@@ -7,8 +7,11 @@ import json
 import matplotlib.pyplot as plt
 from community_detection import CommunityDetector
 from role_detection import RoleDetector
-from social_hierarchy_detection import SocialHierarchyDetector
-# from social_hierarchy_detection_multiprocessed import SocialHierarchyDetector
+# from social_hierarchy_detection import SocialHierarchyDetector
+from social_hierarchy_detection_multiprocessed import SocialHierarchyDetector
+
+from py2neo.packages.httpstream import http
+http.socket_timeout = 604800  # one week
 
 
 class NetworkAnalyser:
@@ -20,8 +23,8 @@ class NetworkAnalyser:
     def __init__(self,
                  solr_url='http://sopedu.hpi.uni-potsdam.de:8983/solr/emails',
                  neo4j_host='http://172.16.64.28',  # 'http://sopedu.hpi.uni-potsdam.de',
-                 http_port=61100,
-                 bolt_port=61000):
+                 http_port=60100,
+                 bolt_port=60000):
         """Set solr config and path where rdd is read from."""
         self.solr_url = solr_url
         self.neo4j_host = neo4j_host
@@ -51,7 +54,7 @@ class NetworkAnalyser:
 
         return graph, digraph
 
-    def analyse_network(self, upload=False):
+    def analyse_network(self):
         """Analyse the network. Parameter upload decides if data in neo4j will be updated."""
         graph, digraph = self._build_graph()
 
@@ -66,11 +69,6 @@ class NetworkAnalyser:
         role_detector = RoleDetector()
         role_labels = role_detector.rolx(graph)
         self._save_results_locally(role_labels, 'role.json')
-
-        if upload:
-            self.update_network(community_labels, "community")
-            self.update_network(role_labels, "role")
-            self.update_network(social_hierarchy_labels, "hierarchy")
 
     def run_statistics(self):
         """Run statistics on hierarchy values in neo4j."""
@@ -135,19 +133,7 @@ class NetworkAnalyser:
         ax.axes.xaxis.set_ticklabels([])
         fig.savefig('scatter_plot_enron_dev.png', bbox_inches='tight')
 
-    def update_network(self, labelled_nodes, attribute):
-        """Update neo4j's data with the detected labels."""
-        if labelled_nodes:
-            print('---------------- finished ' + attribute + ' analysis ----------------')
-
-        neo_connection = py2neo.Graph(self.neo4j_host, http_port=self.http_port, bolt_port=self.bolt_port)
-        neo_connection.run('UNWIND $labelled_nodes AS ln '
-                           'MATCH (node) WHERE ID(node) = ln.node_id '
-                           'SET node.' + attribute + ' = ln.' + attribute,
-                           labelled_nodes=labelled_nodes, attribute=attribute)
-        print('- finished upload of ' + attribute + ' labels.')
-
 
 na = NetworkAnalyser()
-na.analyse_network(upload=False)
+na.analyse_network()
 # na.run_statistics()
