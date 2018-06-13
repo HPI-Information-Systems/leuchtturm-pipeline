@@ -187,6 +187,7 @@ class EmailSplitting(Pipe):
         # when no headers are found is the entire unsplit mail to be added
         if not headers:
             parts.append(remaining_email)
+
         for index, found_header in enumerate(headers):
             current_header = found_header
             next_header = ''
@@ -264,11 +265,10 @@ class HeaderParsing(Pipe):
 
     def prepare_header_string(self, text):
         """Remove whitespace, newlines and other noise."""
-        text = re.sub(r'.*----- ?original message ?-----', '', text, flags=re.IGNORECASE)
-        text = re.sub(r'.*-{5,} forwarded by.+-{5,}', '', text, 0, re.IGNORECASE | re.DOTALL)  # remove 2ndary header
+        text = re.sub(r'.*-----', '', text, 0, re.IGNORECASE | re.DOTALL)
         text = re.sub(r'^(\s|>)+', '', text, flags=re.MULTILINE)  # remove leading > and whitespace
         text = re.sub(r'\s+', ' ', text)  # normalize whitespace
-        text = text.replace('*', '')
+        text = text.replace('*', '').replace('follows ---------', '')
         text = text.strip(whitespace)
 
         return text
@@ -277,13 +277,13 @@ class HeaderParsing(Pipe):
         """Split a string that is likely a header into its fields."""
         header_string = self.prepare_header_string(header_string)
 
-        separator_re = re.compile(r'\s((?=(x-)?from:\s)|(?=((x|reply)-)?to:\s)|(?=(x-)?b?cc:\s)|(?=date:\s)|(?=sent(-by)?:\s)|(?=subject:\s))', re.IGNORECASE)  # NOQA
+        separator_re = re.compile(r'\s((?=(x-)?from:)|(?=((x|reply)-)?to:)|(?=(x-)?b?cc:)|(?=date:)|(?=sent(-by)?:)|(?=subject:))', re.IGNORECASE)  # NOQA
         header_fields = separator_re.split(header_string)  # split into separate headers
         header_fields = [header_field for header_field in header_fields if header_field]  # filter none and empty
         for index, header_field in enumerate(header_fields):
             if header_field[-1:] == ':':
                 header_field += ' '  # if key without value is included in header, add empty value
-            header_fields[index] = header_field.split(': ', 1)  # make key value pair of a header
+            header_fields[index] = re.split(r':[\?; ]+', header_field, maxsplit=1)  # make key value pair of a header
 
         return header_fields
 
@@ -297,32 +297,37 @@ class HeaderParsing(Pipe):
 
     def clean_email(self, email_string):
         """Clean email address."""
-        email = email_string.replace('[mailto:', '').replace(']', '').replace('"', '').replace("'", '')
+        email = email_string.replace('[mailto:', '').replace('[smtp:', '').replace(']', '')
         if email.count('@') > 1 and re.search(r'<[^>]+>', email):
             email = re.sub(r'<[^>]+>', '', email)  # case: some_email@a.com<mailto:some_email@a.com>
-        email = email.replace('<', '').replace('>', '')
+        email = email.replace('<', '').replace('>', '').replace('|', '').replace('"', '').replace("'", '')
         if re.search(r'\S+@\S+\.\S{2,}', email):
             email = re.search(r'\S+@\S+\.\S{2,}', email).group(0)
         else:
             email = ''
-
-        return unquote(email.lower())
+        email = unquote(email.lower())
+        email = re.sub(r'(^\(|\)$|^\[|\]$)', '', email)
+        return email
 
     def clean_name(self, name_string):
         """Normalize and clean a name. Lastname, Firstname becomes to Fn Ln."""
-        name = re.sub(r'(<.+>)|(\[.+\])', '', name_string)  # remove [FI] flags and similar
+        name = re.sub(r'(\bon )?\d{2}\/\d{2}\/\d{2,4}\s\d{2}:\d{2}(:\d{2})?\s?(am|pm)?.*', '', name_string, flags=re.I)
+        name = re.sub(r'(<.+>)|(\[.+\])|(\(.+\))', '', name)  # remove [FI] flags and similar
         name = re.sub(r'\S+@\S+\.\S{2,}', '', name)  # remove email
         name = re.sub(r'(?<=\w)(/|@).*', '', name)  # normalize weird enron names (beau ratliff/hou/ees@ees)
-        name = name.replace('"', '').replace("'", '').split(',')
+        name = name.split(',')
         name.reverse()
         name = ' '.join(name).strip(whitespace)
-        name = re.sub(r'\s+', ' ', name)
 
         if not name:  # parse name from email address if else unavailable
             email_without_domain = re.sub(r'@.+', '', self.clean_email(name_string))
             if '.' in email_without_domain:
                 name_parts = [part for part in email_without_domain.split('.') if part]
                 name = ' '.join(name_parts)
+
+        name = re.sub(r'\s+', ' ', name)
+        name = re.sub(r'[^a-zA-Z0-9-_\.\+ ]', '', name)  # replace non alphanumeric chars leaving some chars out
+        name = re.sub(r'(^\s*|\s*$)', '', name)
 
         return name.title()
 
@@ -344,9 +349,11 @@ class HeaderParsing(Pipe):
 
         recipients = []
         for recipient in field_splitted:
-            recipient_obj = self.parse_correspondent(recipient)
-            recipient_obj['type'] = kind
-            recipients.append(recipient_obj.copy())
+            parsed = self.parse_correspondent(recipient)
+            if parsed['name'] or parsed['email']:
+                recipient_obj = parsed
+                recipient_obj['type'] = kind
+                recipients.append(recipient_obj.copy())
 
         return recipients
 
@@ -354,7 +361,7 @@ class HeaderParsing(Pipe):
         """Normalize date from a string. If self.use_unix_time set return timestamp."""
         date = re.sub(r'\(\w+\)', '', date_string).strip(whitespace)  # remove additional tz in brackets
         try:
-            date = dateparser.parse(date)
+            date = dateparser.parse(date, settings={'TO_TIMEZONE': 'UTC'})
         except Exception:
             return '', False
 
@@ -369,13 +376,11 @@ class HeaderParsing(Pipe):
         """Normalize date to given period of time."""
         date = original_date.replace(tzinfo=None)
 
-        if self.start_date:
-            if date < self.start_date:
-                return self.start_date, True
+        if self.start_date and date < self.start_date:
+            return self.start_date, True
 
-        if self.end_date:
-            if date > self.end_date:
-                return self.end_date, True
+        if self.end_date and date > self.end_date:
+            return self.end_date, True
 
         return original_date, False
 
@@ -402,8 +407,10 @@ class HeaderParsing(Pipe):
             sender = re.sub(r'(on )?\d{2}/\d{2}/\d{2,4}\s\d{2}:\d{2}(:\d{2})?\s?(am|pm)?', '',
                             headers[0][0], flags=re.IGNORECASE)  # rm date
             header['sender'] = self.parse_correspondent(sender)
+        elif self.get_header_value(headers, 'sender'):
+            header['sender'] = self.parse_correspondent(self.get_header_value(headers, 'sender'))
 
-        delimiter = ',' if 'Original Message' not in header_string else ';'  # catch case 'to: lastname, firstname'
+        delimiter = ',' if 'original message' not in header_string.lower() else ';'  # catch 'to: lastname, firstname'
         if self.get_header_value(headers, 'to'):
             header['recipients'] += self.parse_recipients(self.get_header_value(headers, 'to'),
                                                           kind='to', delimiter=delimiter)
@@ -508,15 +515,22 @@ class TextCleaning(Pipe):
 
     def remove_header(self, text):
         """Remove email and enron specific noise from texts."""
-        headers = [r'^(((subject:)|(from:)|(sent:)|(date:)|(to:)|(cc:))(\s.*\n)){3,}\s+',
-                   r'----- forwarded.*((from:.*)|subject:(.)*|to:(.)*|sent:(.)*|cc:(.)*|\n)*\n',
-                   r'-----\s?original message\s?-----',
-                   r'(\*|=|-){40,}\s(.|\n)+(\*|=|-){40,}\s']
+        # these rules primarily exist to cleanup things we didn't extract properly previously, use carefully!
+        headers = [r'---+ forwarded.*',
+                   r'-----+\s?(original)|(inline).+-----+',
+                   r'^(\*|=|-){20,}\s(.|\n)+(\*|=|-){20,}\s',
+                   r'^[>\s]*on.+wrote:',
+                   r'^[>\t ]+',
+                   r'(sent from my .+)|(sent via the samsung .+)',
+                   r'^MIME-Version: .\..',
+                   r'^Content-Type: .+;',
+                   r'^boundary="----_=.+']
 
         text_clean = text
         for header in headers:
-            text_clean = re.sub(header, '', text_clean, 0, re.MULTILINE | re.IGNORECASE | re.UNICODE)
+            text_clean = re.sub(header, '', text_clean, 0, re.M | re.I)
 
+        # the enron edrm dataset has this footer in every email
         edrm_footer = ('***********\r\nEDRM Enron Email Data Set has been produced in EML, PST and NSF format by ZL '
                        'Technologies, Inc. This Data Set is licensed under a Creative Commons Attribution 3.0 United '
                        'States License <http://creativecommons.org/licenses/by/3.0/us/> . To provide attribution, '
@@ -536,11 +550,10 @@ class TextCleaning(Pipe):
         document = json.loads(raw_message)
         clean = document[self.read_from]
 
-        for func in [self.remove_header, self.convert_to_ascii]:
+        for func in [self.convert_to_ascii, self.remove_header]:
             clean = func(clean)
 
         clean_original_ws = clean
-        clean = textacy.preprocess.normalize_whitespace(clean)  # Replace 2+ spaces/newlines with 1 char
 
         if not self.readable:
             clean_original_ws = self.remove_strict(clean_original_ws)
@@ -548,6 +561,7 @@ class TextCleaning(Pipe):
 
         document[self.write_to_original_ws] = clean_original_ws
         document[self.write_to] = clean
+
         return json.dumps(document, ensure_ascii=False)
 
     def run(self, rdd):

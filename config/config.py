@@ -26,6 +26,7 @@ class Config:
             'results_dir': '${data:working_dir}/pipeline_results',
             'results_correspondent_dir': '${results_dir}_correspondent',
             'results_injected_dir': '${results_dir}_injected',
+            'results_topics_dir': '${results_dir}_topics',
             'time_min': 0,
             'time_max': 2147483647
         },
@@ -59,17 +60,31 @@ class Config:
             'parallelism': 276
         },
         'models': {
-            'directory': '${data:working_dir}/models'
+            'directory': './models'
+        },
+        'tm_preprocessing': {
+            'buckets_dir': '${data:working_dir}/tm_buckets',
+            'bucket_timeframe': 'month',
+            'minimum_total_word_document_frequency': 3,
+            'maximum_fraction_word_document_frequency': 0.1,
+            'file_removed_frequent_words': '${data:working_dir}/removed_frequent_words_${data:dataset}.txt',
+            'file_removed_infrequent_words': '${data:working_dir}/removed_infrequent_words_${data:dataset}.txt'
         },
         'topic_modelling': {
             'train_model': True,
-            'working_dir': '${data:working_dir}/topics',
-            'file_model': '${models:directory}/topicmodel.pickle',
-            'file_dictionary': '${models:directory}/topicmodel.dict'
+            'iterations': 1000,
+            'num_topics': 100,
+            'alpha_numerator': 50,
+            'eta': 0.1,
+            'file_model': '${models:directory}/topicmodel_${data:dataset}.pickle',
+            'file_dictionary': '${models:directory}/topicdict_${data:dataset}.pickle'
         },
         'classification': {
-            'train_model': True,
-            'file_model': '${models:directory}/classification_model.pickle'
+            'train_model': False,
+            'file_clf_tool': '${models:directory}/email_clf_tool.pickle'
+        },
+        'clustering': {
+            'file_clustering_tool': '${models:directory}/clustering_tool.pickle'
         }
     }
 

@@ -2,7 +2,6 @@
 """This module runs the main pipeline."""
 
 import ujson as json
-from datetime import datetime
 
 from config.config import Config
 from src.common import Pipeline, SparkProvider
@@ -10,13 +9,13 @@ from src.reader import EmlReader, TextFileReader
 from src.preprocessing import EmailDecoding, EmailSplitting, HeaderParsing, TextCleaning, LanguageDetection
 from src.deduplication import EmailDeduplication
 from src.ner import SpacyNer
-from src.topics import TopicModelTraining, TopicModelPrediction
+from src.topics import TopicModelPreprocessing, TopicModelTraining, TopicModelTrainingOld, TopicModelPrediction, TopicSimilarity
 from src.writer import TextFileWriter, SolrFileWriter, Neo4JFileWriter
 from src.signature_extraction import SignatureExtraction
 from src.correspondent_extraction_aggregation \
     import CorrespondentDataExtraction, CorrespondentDataAggregation, CorrespondentIdInjection
 from src.category_classification import EmailCategoryClassification
-from src.folder_classification import EmailFolderClassification
+from src.cluster_prediction import EmailClusterPrediction
 from src.network_analysis import NetworkAnalyser
 from src.network_uploader import NetworkUploader
 
@@ -31,28 +30,34 @@ def run_email_pipeline(conf):
         EmailSplitting(conf, keep_thread_connected=True),
         HeaderParsing(conf, use_unix_time=False),
         EmailDeduplication(conf, is_connected_thread=True),
-        TextCleaning(conf, read_from='body', write_to='text_clean', write_to_original_ws='text_clean_original_ws'),
+        TextCleaning(conf, read_from='body', write_to='body', write_to_original_ws='body_original_ws'),
         SignatureExtraction(  # also relies on document['header']['sender']['email']
             conf,
-            read_from='text_clean_original_ws',
+            read_from='body_original_ws',
             write_body_without_signature_to='body_without_signature',
             write_signature_to='signature'
         ),
-        LanguageDetection(conf, read_from='text_clean'),
-        SpacyNer(conf, read_from='text_clean'),
+        LanguageDetection(conf, read_from='body'),
+        SpacyNer(conf, read_from='body'),
         EmailCategoryClassification(conf),
-        EmailFolderClassification(conf)
+        EmailClusterPrediction(conf),
+        TopicModelPreprocessing(conf, read_from='body', write_to='bow'),
     ]
-
     writer = TextFileWriter(conf, path=conf.get('data', 'results_dir'))
-    Pipeline(reader, pipes, writer).run()
+    results_rdd = Pipeline(reader, pipes, writer).run()
 
-    if conf.get('topic_modelling', 'train_model'):
-        run_topic_model_training(conf)
+    topic_model, topic_dictionary = TopicModelTraining(conf, read_from='bow').run(results_rdd)
+    topic_model_broadcast = SparkProvider.spark_context(conf).broadcast(topic_model)
+    topic_dictionary_broadcast = SparkProvider.spark_context(conf).broadcast(topic_dictionary)
+
+    topic_ranks = TopicSimilarity(conf, model=topic_model_broadcast).run()
 
     reader = TextFileReader(conf, path=conf.get('data', 'results_dir'))
-    writer = TextFileWriter(conf, path=conf.get('topic_modelling', 'working_dir'))
-    Pipeline(reader, [TopicModelPrediction(conf)], writer).run()
+    pipes = [
+        TopicModelPrediction(conf, topic_ranks=topic_ranks, read_from='bow', model=topic_model_broadcast, dictionary=topic_dictionary_broadcast)
+    ]
+    writer = TextFileWriter(conf, path=conf.get('data', 'results_topics_dir'))
+    Pipeline(reader, pipes, writer).run()
 
     reader = TextFileReader(conf, path=conf.get('data', 'results_dir'))
     pipes = [
@@ -76,7 +81,7 @@ def run_email_pipeline(conf):
                        conf.get('data', 'results_injected_dir'),
                        conf.solr_url + conf.get('solr', 'collection')).run()
         SolrFileWriter(conf,
-                       conf.get('topic_modelling', 'working_dir'),
+                       conf.get('data', 'results_topics_dir'),
                        conf.solr_url + conf.get('solr', 'topic_collection')).run()
 
     if conf.get('neo4j', 'import'):
@@ -94,8 +99,8 @@ def run_topic_model_training(conf):
     df = EmlReader(conf, conf.get('data', 'source_dir')).run()
     df = EmailDecoding(conf, split_header_body=False).run(df)
     df = EmailSplitting(conf, keep_thread_connected=False).run(df)
-    df = TextCleaning(conf, read_from='body', write_to='text_clean').run(df).map(lambda x: json.loads(x)['text_clean'])
-    TopicModelTraining(conf).run(df)
+    df = TextCleaning(conf, read_from='body', write_to='text_clean', readable=False).run(df).map(lambda x: json.loads(x)['text_clean'])
+    TopicModelTrainingOld(conf).run(df)
 
 
 if __name__ == '__main__':
