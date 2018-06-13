@@ -9,6 +9,7 @@ from src.reader import EmlReader, TextFileReader
 from src.preprocessing import EmailDecoding, EmailSplitting, HeaderParsing, TextCleaning, LanguageDetection
 from src.deduplication import EmailDeduplication
 from src.ner import SpacyNer
+from src.phrase_detection import PhraseDetection
 from src.topics import TopicModelPreprocessing, TopicModelTraining, TopicModelTrainingOld, TopicModelPrediction, TopicSimilarity
 from src.writer import TextFileWriter, SolrFileWriter, Neo4JFileWriter
 from src.signature_extraction import SignatureExtraction
@@ -35,11 +36,12 @@ def run_email_pipeline(conf):
             write_body_without_signature_to='body_without_signature',
             write_signature_to='signature'
         ),
-        LanguageDetection(conf, read_from='body'),
-        SpacyNer(conf, read_from='body'),
-        EmailCategoryClassification(conf),
-        EmailClusterPrediction(conf),
-        TopicModelPreprocessing(conf, read_from='body', write_to='bow'),
+        PhraseDetection(conf, read_from='body_without_signature'),
+        # LanguageDetection(conf, read_from='body'),
+        # SpacyNer(conf, read_from='body'),
+        # EmailCategoryClassification(conf),
+        # EmailClusterPrediction(conf),
+        # TopicModelPreprocessing(conf, read_from='body', write_to='bow'),
     ]
     writer = TextFileWriter(conf, path=conf.get('data', 'results_dir'))
     results_rdd = Pipeline(reader, pipes, writer).run()
@@ -52,15 +54,15 @@ def run_email_pipeline(conf):
 
     reader = TextFileReader(conf, path=conf.get('data', 'results_dir'))
     pipes = [
-        TopicModelPrediction(conf, topic_ranks=topic_ranks, read_from='bow', model=topic_model_broadcast, dictionary=topic_dictionary_broadcast)
+        # TopicModelPrediction(conf, topic_ranks=topic_ranks, read_from='bow', model=topic_model_broadcast, dictionary=topic_dictionary_broadcast)
     ]
     writer = TextFileWriter(conf, path=conf.get('data', 'results_topics_dir'))
     Pipeline(reader, pipes, writer).run()
 
     reader = TextFileReader(conf, path=conf.get('data', 'results_dir'))
     pipes = [
-        CorrespondentDataExtraction(conf),
-        CorrespondentDataAggregation(conf),
+        # CorrespondentDataExtraction(conf),
+        # CorrespondentDataAggregation(conf),
     ]
     writer = TextFileWriter(conf, path=conf.get('data', 'results_correspondent_dir'))
     Pipeline(reader, pipes, writer).run()
@@ -69,7 +71,7 @@ def run_email_pipeline(conf):
         TextFileReader(conf, path=conf.get('data', 'results_correspondent_dir')).run().collect()
     )
     pipes = [
-        CorrespondentIdInjection(conf, correspondent_rdd),
+        # CorrespondentIdInjection(conf, correspondent_rdd),
     ]
     writer = TextFileWriter(conf, path=conf.get('data', 'results_injected_dir'))
     Pipeline(reader, pipes, writer).run()
