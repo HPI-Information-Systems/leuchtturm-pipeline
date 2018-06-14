@@ -39,7 +39,7 @@ def run_email_pipeline(conf):
         SpacyNer(conf, read_from='body'),
         EmailCategoryClassification(conf),
         EmailClusterPrediction(conf),
-        TopicModelPreprocessing(conf, read_from='body', write_to='bow'),
+        TopicModelPreprocessing(conf, read_from='body_without_signature', write_to='bow'),
     ]
     writer = TextFileWriter(conf, path=conf.get('data', 'results_dir'))
     results_rdd = Pipeline(reader, pipes, writer).run()
