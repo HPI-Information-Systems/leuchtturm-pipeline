@@ -24,11 +24,12 @@ class EmailClusterPrediction(Pipe):
         with open(self.conf.get('clustering', 'file_clustering_tool'), 'rb') as f:
             components = pickle.load(f)
 
-        return email_clustering.EmailClusteringTool(
-            components['knn_clf'],
-            components['vectorizer_body'],
-            components['vectorizer_subject'],
-        )
+            return email_clustering.EmailClusteringTool(
+                components['knn_clf'],
+                components['vectorizer_body'],
+                components['vectorizer_subject'],
+                components['insights']
+            )
 
     def run_on_document(self, email_doc, clustering_tool):
         """Predict classes for a document."""
