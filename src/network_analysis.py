@@ -5,7 +5,6 @@ import networkx as nx
 import json
 from .community_detection import CommunityDetector
 from .role_detection import RoleDetector
-# from .social_hierarchy_detection import SocialHierarchyDetector
 from .social_hierarchy_detection_multiprocessed import SocialHierarchyDetector
 from .common import Pipe
 from datetime import datetime
@@ -17,12 +16,7 @@ class NetworkAnalyser(Pipe):
     Initialize with needed parameters for solr_url, neo4j_host, http_port, bolt_port (for neo4j)
     """
 
-    def __init__(self,
-                 conf):
-                #  solr_url='http://sopedu.hpi.uni-potsdam.de:8983/solr/emails',
-                #  neo4j_host='http://172.16.64.28',  # 'http://sopedu.hpi.uni-potsdam.de',
-                #  http_port=61100,
-                #  bolt_port=61000):
+    def __init__(self, conf):
         """Set solr config and path where rdd is read from."""
         super().__init__(conf)
         self.conf = conf
@@ -62,8 +56,9 @@ class NetworkAnalyser(Pipe):
         print(datetime.now(), 'lt_logs', 'Number of Nodes: ' + str(graph.number_of_nodes()), flush=True)
         print(datetime.now(), 'lt_logs', 'Number of Edges: ' + str(graph.number_of_edges()), flush=True)
 
+        weights = dict(self.conf.get('hierarchy_scores', 'weights')).get('weights')
         social_hierarchy_detector = SocialHierarchyDetector()
-        social_hierarchy_labels = social_hierarchy_detector.detect_social_hierarchy(digraph, graph)
+        social_hierarchy_labels = social_hierarchy_detector.detect_social_hierarchy(digraph, graph, weights)
         self._save_results_locally(social_hierarchy_labels, 'hierarchy.json')
 
         community_detector = CommunityDetector(graph)

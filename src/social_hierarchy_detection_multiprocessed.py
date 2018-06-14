@@ -14,7 +14,7 @@ def _three_business_days(timestamp):
 class SocialHierarchyDetector:
     """Class for the social hierarchy score."""
 
-    def detect_social_hierarchy(self, graph, undirected_graph):
+    def detect_social_hierarchy(self, graph, undirected_graph, weights):
         """
         Trigger social hierarchy score detection.
 
@@ -103,42 +103,18 @@ class SocialHierarchyDetector:
         metrics = []
         for i in range(own_queue.qsize()):
             name, metric = own_queue.get()
-            print(name)
             if type(metric) is not dict:
                 print('No dict')
                 continue
 
+            weight = weights.get(name)
+
             if name == 'average_time' or name == 'mean_shortest_paths':
-                metrics.append(self._normalize(metric, high=False))
+                metrics.append((self._normalize(metric, high=False), weight))
             else:
-                metrics.append(self._normalize(metric))
-
-        # print(own_queue.qsize())
-        # for i in range(own_queue.qsize()):
-        #     name, metric = own_queue.get()
-        #     print(name + '   ' + str(type(metric)))
-
-        # metrics = []
-        # for metric in [response_avg_times, mean_shortest_paths]:
-        #     metrics.append(self._normalize(metric, high=False))
-        #
-        # for metric in [number_of_cliques, raw_clique_score, degree_values,
-        #               hub_values, authority_values, number_of_emails, clustering_coefficients, weighted_clique_score]:
-        #     metrics.append(self._normalize(metric))
+                metrics.append((self._normalize(metric), weight))
 
         hierarchy_scores = self._aggregate(graph, metrics)
-        # for testing purposes:
-        # hierarchy_scores = {
-        #     1789: 9.124392619010068, 580: 12.240280965335609, 1081: 26.37987980807487, 1816: 9.145741243918646,
-        #     1064: 15.152177841396314, 1114: 15.177581770488784, 963: 23.667776814550674, 800: 0.025463857506665463,
-        #     803: 12.188869698846476, 825: 6.257739454711132, 831: 9.781444715376796, 885: 9.514021758852707,
-        #     900: 18.431642952354263, 982: 9.230725026500606, 2183: 9.10207433356118, 1049: 0.04337863968422003,
-        #     2128: 9.079217298991635, 1110: 0.0020791866860019144, 1135: 9.161629985203534, 1323: 13.321351762179951,
-        #     2742: 9.067835504621918, 1492: 0.03736859295873761, 1543: 4.557505229810029, 1673: 9.093374266557147,
-        #     1760: 0.019437401197172747, 1878: 4.575436016971585, 1877: 4.575436016971585, 2201: 4.575436016888384,
-        #     1919: 13.63277835046198, 1976: 9.093374266557147, 2072: 0.17968440078391315, 2114: 0.019437401197172747,
-        #     2777: 0.0018654467347532571, 3126: 0.01015105652432728
-        # }
         hierarchy_scores_formatted = self._format_for_upload(hierarchy_scores)
 
         end = time.time()
@@ -165,8 +141,8 @@ class SocialHierarchyDetector:
         hierarchy_scores = dict()
         for node in graph.nodes:
             score = 0
-            for metric in metrics:
-                score += metric[node]
+            for metric, weight in metrics:
+                score += metric[node] * weight
             score = score / len(metrics)
             hierarchy_scores[node] = round(score)
 

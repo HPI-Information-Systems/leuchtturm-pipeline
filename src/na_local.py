@@ -7,7 +7,6 @@ import json
 import matplotlib.pyplot as plt
 from community_detection import CommunityDetector
 from role_detection import RoleDetector
-# from social_hierarchy_detection import SocialHierarchyDetector
 from social_hierarchy_detection_multiprocessed import SocialHierarchyDetector
 
 from py2neo.packages.httpstream import http
@@ -23,13 +22,30 @@ class NetworkAnalyser:
     def __init__(self,
                  solr_url='http://sopedu.hpi.uni-potsdam.de:8983/solr/emails',
                  neo4j_host='http://172.16.64.28',  # 'http://sopedu.hpi.uni-potsdam.de',
-                 http_port=60100,
-                 bolt_port=60000):
+                 http_port=61100,
+                 bolt_port=61000):
         """Set solr config and path where rdd is read from."""
         self.solr_url = solr_url
         self.neo4j_host = neo4j_host
         self.http_port = http_port
         self.bolt_port = bolt_port
+        self.conf = {
+            'hierarchy_scores': {
+                'weights': {
+                    'degree': 0,
+                    'number_of_emails': 0.5,
+                    'clustering_values': 1,
+                    'hubs': 2,
+                    'authorities': 1,
+                    'response_score': 1,
+                    'average_time': 1,
+                    'mean_shortest_paths': 1,
+                    'number_of_cliques': 3,
+                    'raw_clique_score': 1,
+                    'weighted_clique_score': 1
+                }
+            }
+        }
 
     def _build_graph(self):
         """Fetch data from neo4j and build graph."""
@@ -58,8 +74,9 @@ class NetworkAnalyser:
         """Analyse the network. Parameter upload decides if data in neo4j will be updated."""
         graph, digraph = self._build_graph()
 
+        weights = dict(self.conf.get('hierarchy_scores', 'weights')).get('weights')
         social_hierarchy_detector = SocialHierarchyDetector()
-        social_hierarchy_labels = social_hierarchy_detector.detect_social_hierarchy(digraph, graph)
+        social_hierarchy_labels = social_hierarchy_detector.detect_social_hierarchy(digraph, graph, weights)
         self._save_results_locally(social_hierarchy_labels, 'hierarchy.json')
 
         community_detector = CommunityDetector(graph)
@@ -87,13 +104,8 @@ class NetworkAnalyser:
         for node in top_five:
             print((hierarchy_scores[node], email_addresses[node], node))
 
-        # plot line diagram
         y = sorted_hierarchy
         x = np.random.randint(0, high=100, size=len(y))
-        # plt.plot(x, y, '.-')
-        # plt.title('Hierarchy scores')
-        # plt.xlabel('Scores')
-        # plt.ylabel('Hierarchy values')
 
         # plot histogram
         plt.figure()
