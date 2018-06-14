@@ -37,7 +37,13 @@ class EmailClusterPrediction(Pipe):
 
         prediction = clustering_tool.predict_cluster(document['raw'])
         document['cluster'] = str(prediction)
-
+        insights = clustering_tool.get_cluster_insights(prediction)
+        document['cluster.top_subject_words'] = insights['top_subject_words']
+        document['cluster.top_body_words'] = insights['top_body_words']
+        document['cluster.email_is_thread'] = round(insights['email_is_thread'], 2)
+        document['cluster.email_is_internal'] = round(insights['email_is_internal'], 2)
+        document['cluster.recipients_is_single'] = round(insights['recipients_is_single'], 2)
+        document['cluster.sent_during_business_hours'] = round(insights['sent_during_business_hours'], 2)
         return json.dumps(document, ensure_ascii=False)
 
     def run_on_partition(self, partition):
