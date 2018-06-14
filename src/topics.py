@@ -11,7 +11,8 @@ from gensim.corpora import Dictionary
 from nltk import word_tokenize
 from nltk.corpus import stopwords as nltksw
 from nltk.stem.wordnet import WordNetLemmatizer
-from textacy.preprocess import preprocess_text as textacy_preprocess
+from textacy.preprocess import preprocess_text
+from textacy.preprocess import replace_urls, replace_emails, replace_phone_numbers, replace_numbers
 from datetime import datetime
 from string import whitespace
 import re
@@ -119,12 +120,11 @@ class TopicModelPreprocessing(Pipe):
         self.lemma = WordNetLemmatizer()
 
     def _normalize_split_correspondent_names(self, sender, recipients):
-        sender_parts = {part.lower() for part in sender['name'].split()}
-        recipient_parts = set()
+        name_parts = {part.lower() for part in sender['name'].split()}
         for recipient in recipients:
             for part in recipient['name'].split():
-                recipient_parts.add(part.lower())
-        return sender_parts, recipient_parts
+                name_parts.add(part.lower())
+        return name_parts
 
     def remove_salutation(self, body):
         """Remove salutation operators from the body if applicable."""
@@ -144,25 +144,19 @@ class TopicModelPreprocessing(Pipe):
 
     def tokenize_and_remove_various_words(self, body, name_parts):
         """Clean the bow from distracting words."""
-        body = textacy_preprocess(
+        body = preprocess_text(
             body,
-            no_urls=True,
-            no_emails=True,
-            no_phone_numbers=True,
-            no_numbers=True,
             no_currency_symbols=True,
             no_contractions=True,
             no_accents=True
         )
-        textacy_placeholders = ['*URL*', '*EMAIL*', '*PHONE*', '*NUMBER*']
+        for func in [replace_urls, replace_emails, replace_phone_numbers, replace_numbers]:
+            body = func(body, replace_with='')
 
         bow = word_tokenize(body)
         processed_bow = []
 
         for word in bow:
-            # remove placeholder words from textacy
-            for placeholder_text in textacy_placeholders:
-                word = word.replace(placeholder_text, '')
             # remove names of the sender and the recipients of the email
             word = word if word not in name_parts else ''
             # remove punctuation characters
@@ -185,20 +179,16 @@ class TopicModelPreprocessing(Pipe):
             lemmatized_word_verb = self.lemma.lemmatize(word, 'v')
             if word != lemmatized_word_noun and word != lemmatized_word_verb:
                 processed_bow.append(min([lemmatized_word_noun, lemmatized_word_verb], key=len))
-                continue
             elif word != lemmatized_word_noun:
                 processed_bow.append(lemmatized_word_noun)
-                continue
             elif word != lemmatized_word_verb:
                 processed_bow.append(lemmatized_word_verb)
-                continue
-
-            lemmatized_word_adjective = self.lemma.lemmatize(word, 'a')
-            if word != lemmatized_word_adjective:
-                processed_bow.append(lemmatized_word_adjective)
-                continue
-
-            processed_bow.append(word)
+            else:
+                lemmatized_word_adjective = self.lemma.lemmatize(word, 'a')
+                if word != lemmatized_word_adjective:
+                    processed_bow.append(lemmatized_word_adjective)
+                else:
+                    processed_bow.append(word)
 
         return processed_bow
 
@@ -206,12 +196,12 @@ class TopicModelPreprocessing(Pipe):
         """Run TM preprocessing on document."""
         document = json.loads(item)
 
-        sender_name_parts, recipient_name_parts = self._normalize_split_correspondent_names(
+        name_parts = self._normalize_split_correspondent_names(
             document['header']['sender'], document['header']['recipients']
         )
         body = document[self.read_from].strip(whitespace).lower()
         body = self.remove_salutation(body)
-        bow = self.tokenize_and_remove_various_words(body, sender_name_parts.union(recipient_name_parts))
+        bow = self.tokenize_and_remove_various_words(body, name_parts)
         bow = self.lemmatize(bow)
 
         document[self.write_to] = bow
