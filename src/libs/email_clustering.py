@@ -481,20 +481,24 @@ class Features:
         return pd.concat([df_dropped, new_feat_df], axis=1)
 
 class Evaluation:
+    @staticmethod
     def get_vect_words(vect):
         return sorted(list(zip(vect.idf_, [x[1] for x in sorted([(v,k) for k,v in vect.vocabulary_.items()],key=lambda x: x[0])])), key=lambda x: x[0])
 
     # functions below insired by https://towardsdatascience.com/how-i-used-machine-learning-to-classify-emails-and-turn-them-into-insights-efed37c1e66
+    @staticmethod
     def top_tfidf_feats(row, features, top_n=20):
         topn_ids = np.argsort(row)[::-1][:top_n]
         top_feats = [(features[i], row[i]) for i in topn_ids]
         df = pd.DataFrame(top_feats, columns=['features', 'score'])
         return df
 
+    @staticmethod
     def top_feats_in_doc(X, features, row_id, top_n=25):
         row = np.squeeze(X[row_id].toarray())
         return Evaluation.top_tfidf_feats(row, features, top_n)
 
+    @staticmethod
     def top_mean_feats(X, features, grp_ids=None, min_tfidf=0.1, top_n=25):
         if grp_ids:
             D = X[grp_ids]
@@ -505,6 +509,7 @@ class Evaluation:
         tfidf_means = np.mean(D, axis=0)
         return Evaluation.top_tfidf_feats(tfidf_means, features, top_n)
 
+    @staticmethod
     def top_feats_per_cluster(X, y, features, min_tfidf=0.1, top_n=25):
         dfs = []
         labels = np.unique(y)
@@ -515,6 +520,7 @@ class Evaluation:
             dfs.append(feats_df)
         return dfs
 
+    @staticmethod
     def average_per_cluster(X, y):
         dfs = []
         labels = np.unique(y)
@@ -523,6 +529,7 @@ class Evaluation:
             dfs.append((sum(X[ids]) / len(X[ids])))
         return dfs
 
+    @staticmethod
     def extract_cluster_information(df, clusters, subject_vect, body_vect):
         top_subject_features_per_cluster = Evaluation.top_feats_per_cluster(
             df[[col for col in df.columns if col.startswith('feat_subject')]].values,
@@ -563,6 +570,7 @@ class Evaluation:
 
         return cluster_information_per_cluster
 
+    @staticmethod
     def plot_tfidf_classfeats_h(dfs):
         fig = plt.figure(figsize=(12, 9), facecolor="w")
         x = np.arange(len(dfs[0]))
