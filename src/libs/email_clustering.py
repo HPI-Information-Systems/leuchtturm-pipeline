@@ -482,11 +482,12 @@ class Features:
 
 class EmailClusteringTool:
 
-    def __init__(self, classifier, vectorizer_body, vectorizer_subject):
+    def __init__(self, classifier, vectorizer_body, vectorizer_subject, insights):
         super().__init__()
         self.classifier = classifier
         self.vectorizer_body = vectorizer_body
         self.vectorizer_subject = vectorizer_subject
+        self.insights = insights
 
     def create_df(self, text):
         return pd.DataFrame(data=[[text]], columns=['raw'])
@@ -509,3 +510,5 @@ class EmailClusteringTool:
         df = Features.drop_features(df)
         return self.classifier.predict(df)[0]
 
+    def get_cluster_insights(self, cluster):
+        return self.insights[cluster]
