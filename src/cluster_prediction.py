@@ -36,7 +36,7 @@ class EmailClusterPrediction(Pipe):
         document = json.loads(email_doc)
 
         prediction = clustering_tool.predict_cluster(document['raw'])
-        document['cluster'] = str(prediction)
+        document['cluster.number'] = str(prediction)
         insights = clustering_tool.get_cluster_insights(prediction)
         document['cluster.top_subject_words'] = insights['top_subject_words']
         document['cluster.top_body_words'] = insights['top_body_words']
