@@ -85,7 +85,7 @@ class Config:
         },
         'clustering': {
             'file_clustering_tool': '${models:directory}/clustering_tool.pickle'
-        }
+        },
         'hierarchy_scores': {
             'weights': {
                 'degree': 0,
