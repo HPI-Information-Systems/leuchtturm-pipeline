@@ -15,7 +15,7 @@ from src.signature_extraction import SignatureExtraction
 from src.correspondent_extraction_aggregation \
     import CorrespondentDataExtraction, CorrespondentDataAggregation, CorrespondentIdInjection
 from src.category_classification import EmailCategoryClassification
-from src.folder_classification import EmailFolderClassification
+from src.cluster_prediction import EmailClusterPrediction
 
 
 def run_email_pipeline(conf):
@@ -38,8 +38,8 @@ def run_email_pipeline(conf):
         LanguageDetection(conf, read_from='body'),
         SpacyNer(conf, read_from='body'),
         EmailCategoryClassification(conf),
-        EmailFolderClassification(conf),
-        TopicModelPreprocessing(conf, read_from='body', write_to='bow'),
+        EmailClusterPrediction(conf),
+        TopicModelPreprocessing(conf, read_from='body_without_signature', write_to='bow'),
     ]
     writer = TextFileWriter(conf, path=conf.get('data', 'results_dir'))
     results_rdd = Pipeline(reader, pipes, writer).run()
