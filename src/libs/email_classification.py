@@ -664,12 +664,15 @@ class EmailClassificationTool:
         label_3 = self.classifier_3.predict(df)[0]
         probabilities_3 = dict(zip(self.labels_3.classes_, self.classifier_3.predict_proba(df)[0]))
 
-        label_genre = self.classifier_genre.predict(df)[0]
-        probabilities_genre = zip(self.labels_genre.classes_, self.classifier_genre.predict_proba(df)[0])
-
-        return {
+        obj = {
             'top_category': self.translate_label(label_3, self.labels_3),
-            'top_subcategory': self.translate_label(label_genre, self.labels_genre),
-            'prob_category': probabilities_3,
-            'prob_subcategory': probabilities_genre
+            'prob_category': probabilities_3
         }
+
+        if obj['top_category'] == 'business':
+            label_genre = self.classifier_genre.predict(df)[0]
+            probabilities_genre = zip(self.labels_genre.classes_, self.classifier_genre.predict_proba(df)[0])
+            obj['top_subcategory'] = self.translate_label(label_genre, self.labels_genre)
+            obj['prob_subcategory'] = probabilities_genre
+
+        return obj
