@@ -675,7 +675,7 @@ class EmailClassificationTool:
             obj['top_subcategory'] = self.translate_label(label_genre, self.labels_genre)
             obj['prob_subcategory'] = probabilities_genre
         else:
-            obj['top_subcategory'] = label_3
+            obj['top_subcategory'] = self.translate_label(label_3, self.labels_3)
             obj['prob_subcategory'] = []
 
         return obj
