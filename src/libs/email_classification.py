@@ -674,5 +674,8 @@ class EmailClassificationTool:
             probabilities_genre = zip(self.labels_genre.classes_, self.classifier_genre.predict_proba(df)[0])
             obj['top_subcategory'] = self.translate_label(label_genre, self.labels_genre)
             obj['prob_subcategory'] = probabilities_genre
+        else:
+            obj['top_subcategory'] = label_3
+            obj['prob_subcategory'] = []
 
         return obj
