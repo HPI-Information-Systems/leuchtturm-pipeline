@@ -24,21 +24,18 @@ class EmailCategoryClassification(Pipe):
         with open(self.conf.get('classification', 'file_clf_tool'), 'rb') as f:
             components = pickle.load(f)
 
-        return email_classification.EmailClassificationTool(
-            components['classifier_3'],
-            components['classifier_genre'],
-            components['vectorizer_body'],
-            components['vectorizer_subject'],
-            components['labels_3'],
-            components['labels_genre']
-        )
+            return email_classification.EmailClassificationTool(
+                components['classifier_3'],
+                components['classifier_genre'],
+                components['vectorizer_body'],
+                components['vectorizer_subject'],
+                components['labels_3'],
+                components['labels_genre']
+            )
 
     def run_on_document(self, email_doc, email_clf_tool):
         """Predict classes for a document."""
         document = json.loads(email_doc)
-
-        # prediction = {'top_category': email_clf_tool.predict_top_category(document['raw']),
-        #               'prob_category': email_clf_tool.predict_proba(document['raw'])}
         document['category'] = email_clf_tool.predict(document['raw'])
 
         return json.dumps(document, ensure_ascii=False)
