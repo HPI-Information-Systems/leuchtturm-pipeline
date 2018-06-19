@@ -31,9 +31,15 @@ class NetworkAnalyser(Pipe):
         """Run network analysis. Obligatory for Pipe inheritence."""
         self.analyse_network()
 
-    def _save_results_locally(self, dictionary, filename):
+    def _save_results_locally(self, nodes, dictionary, filename):
+        result = dict()
+        for node in nodes:
+            identifying_name = node['p.identifying_name']
+            neo_id = node['id(p)']
+            if identifying_name and neo_id:
+                result[identifying_name] = dictionary[neo_id]
         with open(filename, 'w') as fp:
-            json.dump(dictionary, fp)
+            json.dump(result, fp)
 
     def analyse_network(self):
         """Analyse the network. Parameter upload decides if data in neo4j will be updated."""
@@ -56,15 +62,15 @@ class NetworkAnalyser(Pipe):
         print(datetime.now(), 'lt_logs', 'Number of Nodes: ' + str(graph.number_of_nodes()), flush=True)
         print(datetime.now(), 'lt_logs', 'Number of Edges: ' + str(graph.number_of_edges()), flush=True)
 
-        weights = self.conf.get('hierarchy_scores', 'weights')
+        weights = self.conf.get('hierarchy_scores_weights')
         social_hierarchy_detector = SocialHierarchyDetector()
         social_hierarchy_labels = social_hierarchy_detector.detect_social_hierarchy(digraph, graph, weights)
-        self._save_results_locally(social_hierarchy_labels, 'hierarchy.json')
+        self._save_results_locally(nodes, social_hierarchy_labels, 'hierarchy.json')
 
         community_detector = CommunityDetector(graph)
         community_labels = community_detector.clauset_newman_moore()
-        self._save_results_locally(community_labels, 'community.json')
+        self._save_results_locally(nodes, community_labels, 'community.json')
 
         role_detector = RoleDetector()
         role_labels = role_detector.rolx(graph)
-        self._save_results_locally(role_labels, 'role.json')
+        self._save_results_locally(nodes, role_labels, 'role.json')
