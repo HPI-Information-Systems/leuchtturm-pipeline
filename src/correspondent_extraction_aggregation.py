@@ -304,6 +304,26 @@ class CorrespondentDataAggregation(Pipe):
         document['identifying_name'] = max(document.pop('identifying_names'))
         return json.dumps(document, ensure_ascii=False)
 
+    def extract_organisation(self, data):
+        """Extract the correspondents organisation by parsing his emails"""
+        document = json.loads(data)
+        organisations = []
+        for address in document['email_addresses']:
+            try:
+                parts = re.split('@', address)
+                part_behind_at = parts[1]
+                domain_parts = part_behind_at.split('.')
+                organisation = domain_parts[len(domain_parts) - 2].title()
+                organisations.append(organisation)
+            except:
+                continue
+
+        if len(organisations):
+            most_common_organisation = max(set(organisations), key=organisations.count)
+            document['organisation'] = most_common_organisation
+
+        return json.dumps(document, ensure_ascii=False)
+
     def run(self, rdd):
         """Run pipe in spark context."""
         rdd = rdd.map(self.prepare_for_reduction)
@@ -322,6 +342,7 @@ class CorrespondentDataAggregation(Pipe):
                  .reduceByKey(self.merge_correspondents_by_name) \
                  .map(self.extract_data_from_tuple) \
                  .map(self.convert_identifying_names_field) \
+                 .map(self.extract_organisation) \
                  .coalesce(self.conf.get('spark', 'parallelism'))
 
         return rdd
