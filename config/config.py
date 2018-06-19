@@ -86,20 +86,18 @@ class Config:
         'clustering': {
             'file_clustering_tool': '${models:directory}/clustering_tool.pickle'
         },
-        'hierarchy_scores': {
-            'weights': {
-                'degree': 0,
-                'number_of_emails': 0.5,
-                'clustering_values': 1,
-                'hubs': 2,
-                'authorities': 1,
-                'response_score': 1,
-                'average_time': 1,
-                'mean_shortest_paths': 1,
-                'number_of_cliques': 3,
-                'raw_clique_score': 1,
-                'weighted_clique_score': 1
-            }
+        'hierarchy_score_weights': {
+            'degree': 0,
+            'number_of_emails': 0.5,
+            'clustering_values': 1,
+            'hubs': 2,
+            'authorities': 1,
+            'response_score': 1,
+            'average_time': 1,
+            'mean_shortest_paths': 1,
+            'number_of_cliques': 3,
+            'raw_clique_score': 1,
+            'weighted_clique_score': 1
         }
     }
 
