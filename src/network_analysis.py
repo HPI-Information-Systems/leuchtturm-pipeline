@@ -62,9 +62,8 @@ class NetworkAnalyser(Pipe):
         print(datetime.now(), 'lt_logs', 'Number of Nodes: ' + str(graph.number_of_nodes()), flush=True)
         print(datetime.now(), 'lt_logs', 'Number of Edges: ' + str(graph.number_of_edges()), flush=True)
 
-        weights = self.conf.get('hierarchy_scores_weights')
         social_hierarchy_detector = SocialHierarchyDetector()
-        social_hierarchy_labels = social_hierarchy_detector.detect_social_hierarchy(digraph, graph, weights)
+        social_hierarchy_labels = social_hierarchy_detector.detect_social_hierarchy(digraph, graph, self.conf)
         self._save_results_locally(nodes, social_hierarchy_labels, 'hierarchy.json')
 
         community_detector = CommunityDetector(graph)

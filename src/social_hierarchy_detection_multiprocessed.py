@@ -14,7 +14,7 @@ def _three_business_days(timestamp):
 class SocialHierarchyDetector:
     """Class for the social hierarchy score."""
 
-    def detect_social_hierarchy(self, graph, undirected_graph, weights):
+    def detect_social_hierarchy(self, graph, undirected_graph, conf):
         """
         Trigger social hierarchy score detection.
 
@@ -106,7 +106,7 @@ class SocialHierarchyDetector:
             if type(metric) is not dict:
                 continue
 
-            weight = weights.get(name)
+            weight = conf.get('hierarchy_scores_weights', name)
 
             if name == 'average_time' or name == 'mean_shortest_paths':
                 metrics.append((self._normalize(metric, high=False), weight))
