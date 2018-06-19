@@ -305,7 +305,7 @@ class CorrespondentDataAggregation(Pipe):
         return json.dumps(document, ensure_ascii=False)
 
     def extract_organisation(self, data):
-        """Extract the correspondents organisation by parsing his emails"""
+        """Extract the correspondents organisation by parsing his emails."""
         document = json.loads(data)
         organisations = []
         for address in document['email_addresses']:
@@ -315,7 +315,7 @@ class CorrespondentDataAggregation(Pipe):
                 domain_parts = part_behind_at.split('.')
                 organisation = domain_parts[len(domain_parts) - 2].title()
                 organisations.append(organisation)
-            except:
+            except Exception:
                 continue
 
         if len(organisations):
