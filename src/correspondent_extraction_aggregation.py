@@ -308,6 +308,8 @@ class CorrespondentDataAggregation(Pipe):
         """Extract the correspondents organisation by parsing his emails."""
         document = json.loads(data)
         organisations = []
+        false_organisations = self.conf.get('correspondent_aggregation', 'false_organisations')
+
         for address in document['email_addresses']:
             try:
                 parts = re.split('@', address)
@@ -317,6 +319,8 @@ class CorrespondentDataAggregation(Pipe):
                 organisations.append(organisation)
             except Exception:
                 continue
+
+        organisations = [org for org in organisations if org not in false_organisations]
 
         if len(organisations):
             most_common_organisation = max(set(organisations), key=organisations.count)

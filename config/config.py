@@ -86,6 +86,16 @@ class Config:
         },
         'clustering': {
             'file_clustering_tool': '${models:directory}/clustering_tool.pickle'
+        },
+        'correspondent_aggregation': {
+            'false_organisations': [
+                'yahoo',
+                'aol',
+                'gmail',
+                'hotmail',
+                'gmx',
+                'web'
+            ]
         }
     }
 
