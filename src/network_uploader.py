@@ -29,7 +29,7 @@ class NetworkUploader(Pipe):
             print(datetime.now(), 'lt_logs', '- start upload of ' + attribute + ' labels.', flush=True)
             neo_connection = py2neo.Graph(self.neo4j_host, http_port=self.http_port, bolt_port=self.bolt_port)
             neo_connection.run('UNWIND $labelled_nodes AS ln '
-                               'MATCH (node) WHERE ID(node) = ln.node_id '
+                               'MATCH (node) WHERE node.identifying_name = ln.identifying_name '
                                'SET node.' + attribute + ' = ln.' + attribute,
                                labelled_nodes=labelled_nodes, attribute=attribute)
             print(datetime.now(), 'lt_logs', '- finished upload of ' + attribute + ' labels.', flush=True)
