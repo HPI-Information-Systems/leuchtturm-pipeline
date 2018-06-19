@@ -7,7 +7,7 @@ import re
 from string import whitespace
 
 import dateparser
-import dill
+import pickle
 from html2text import HTML2Text
 from nltk import tokenize
 from nltk.corpus import stopwords
@@ -592,24 +592,26 @@ class Features:
 
 class EmailClassificationTool:
 
-    def __init__(self, classifier, vectorizer_body, vectorizer_subject, label_encoder):
+    def __init__(self, clf_3, clf_genre, vectorizer_body, vectorizer_subject, labels_3, labels_genre):
         super().__init__()
-        self.classifier = classifier
+        self.classifier_3 = clf_3
+        self.classifier_genre = clf_genre
         self.vectorizer_body = vectorizer_body
         self.vectorizer_subject = vectorizer_subject
-        self.label_encoder = label_encoder
+        self.labels_3 = labels_3
+        self.labels_genre = labels_genre
 
     @staticmethod
     def load_from_file(path):
         with open(path, 'rb') as f:
-            return dill.load(f)
+            return pickle.load(f)
 
     def dump_as_file(self, path):
-        if not self.classifier or not self.vectorizer_body or not self.vectorizer_subject or not self.label_encoder:
+        if not self.classifier_3 or not self.vectorizer_body or not self.vectorizer_subject or not self.labels_3:
             raise Exception('EmailClassificationTool has not been created properly.')
 
         with open(path, 'wb') as f:
-            dill.dump(self, f)
+            pickle.dump(self, f)
 
     def create_df(self, text):
         return pd.DataFrame(data=[[text]], columns=['email'])
@@ -640,18 +642,40 @@ class EmailClassificationTool:
 
         return df
 
-    def translate_label(self, number):
-        return self.label_encoder.inverse_transform(number)
+    def translate_label(self, number, encoder):
+        return encoder.inverse_transform(number)
 
     def predict_top_category(self, text):
         df = self.prepare_email(text)
-        label = self.classifier.predict(df)[0]
+        label = self.classifier_3.predict(df)[0]
 
-        return self.translate_label(label)
+        return self.translate_label(label, self.labels_3)
 
     def predict_proba(self, text):
         df = self.prepare_email(text)
-        probabilities = self.classifier.predict_proba(df)[0]
-        labels = self.label_encoder.classes_
+        probabilities = self.classifier_3.predict_proba(df)[0]
+        labels = self.labels_3.classes_
 
         return dict(zip(labels, probabilities))
+
+    def predict(self, text):
+        df = self.prepare_email(text)
+
+        label_3 = self.classifier_3.predict(df)[0]
+        probabilities_3 = dict(zip(self.labels_3.classes_, self.classifier_3.predict_proba(df)[0]))
+
+        obj = {
+            'top_category': self.translate_label(label_3, self.labels_3),
+            'prob_category': probabilities_3
+        }
+
+        if obj['top_category'] == 'business':
+            label_genre = self.classifier_genre.predict(df)[0]
+            probabilities_genre = zip(self.labels_genre.classes_, self.classifier_genre.predict_proba(df)[0])
+            obj['top_subcategory'] = self.translate_label(label_genre, self.labels_genre)
+            obj['prob_subcategory'] = probabilities_genre
+        else:
+            obj['top_subcategory'] = self.translate_label(label_3, self.labels_3)
+            obj['prob_subcategory'] = []
+
+        return obj
