@@ -84,12 +84,11 @@ def run_email_pipeline(conf):
                        conf.get('data', 'results_topics_dir'),
                        conf.solr_url + conf.get('solr', 'topic_collection')).run()
 
-    if conf.get('hierarchy_scores', 'run'):
-        NetworkAnalyser(conf).run()
-
     if conf.get('neo4j', 'import'):
         Neo4JFileWriter(conf, conf.get('data', 'results_correspondent_dir'), mode='nodes').run()
         Neo4JFileWriter(conf, conf.get('data', 'results_injected_dir'), mode='edges').run()
+        if conf.get('hierarchy_scores', 'run'):
+            NetworkAnalyser(conf).run()
         NetworkUploader(conf).run()
 
     SparkProvider.stop_spark_context()
