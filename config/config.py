@@ -87,15 +87,15 @@ class Config:
             'file_clustering_tool': '${models:directory}/clustering_tool.pickle'
         },
         'hierarchy_score_weights': {
-            'degree': 0,
-            'number_of_emails': 0.5,
+            'degree': 1,
+            'number_of_emails': 1,
             'clustering_values': 1,
-            'hubs': 2,
+            'hubs': 1,
             'authorities': 1,
             'response_score': 1,
             'average_time': 1,
             'mean_shortest_paths': 1,
-            'number_of_cliques': 3,
+            'number_of_cliques': 1,
             'raw_clique_score': 1,
             'weighted_clique_score': 1
         }

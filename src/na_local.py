@@ -22,8 +22,8 @@ class NetworkAnalyser:
     def __init__(self,
                  solr_url='http://sopedu.hpi.uni-potsdam.de:8983/solr/emails',
                  neo4j_host='http://172.16.64.28',  # 'http://sopedu.hpi.uni-potsdam.de',
-                 http_port=61100,
-                 bolt_port=61000):
+                 http_port=60100,
+                 bolt_port=60000):
         """Set solr config and path where rdd is read from."""
         self.solr_url = solr_url
         self.neo4j_host = neo4j_host
@@ -31,19 +31,17 @@ class NetworkAnalyser:
         self.bolt_port = bolt_port
         self.conf = {
             'hierarchy_scores': {
-                'weights': {
-                    'degree': 0,
-                    'number_of_emails': 0.5,
-                    'clustering_values': 1,
-                    'hubs': 2,
-                    'authorities': 1,
-                    'response_score': 1,
-                    'average_time': 1,
-                    'mean_shortest_paths': 1,
-                    'number_of_cliques': 3,
-                    'raw_clique_score': 1,
-                    'weighted_clique_score': 1
-                }
+                'degree': 1,
+                'number_of_emails': 1,
+                'clustering_values': 1,
+                'hubs': 1,
+                'authorities': 1,
+                'response_score': 1,
+                'average_time': 1,
+                'mean_shortest_paths': 1,
+                'number_of_cliques': 1,
+                'raw_clique_score': 1,
+                'weighted_clique_score': 1
             }
         }
 
@@ -74,7 +72,7 @@ class NetworkAnalyser:
         """Analyse the network. Parameter upload decides if data in neo4j will be updated."""
         graph, digraph = self._build_graph()
 
-        weights = dict(self.conf.get('hierarchy_scores', 'weights')).get('weights')
+        weights = self.conf.get('hierarchy_scores', 'weights')
         social_hierarchy_detector = SocialHierarchyDetector()
         social_hierarchy_labels = social_hierarchy_detector.detect_social_hierarchy(digraph, graph, weights)
         self._save_results_locally(social_hierarchy_labels, 'hierarchy.json')

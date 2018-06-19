@@ -104,7 +104,6 @@ class SocialHierarchyDetector:
         for i in range(own_queue.qsize()):
             name, metric = own_queue.get()
             if type(metric) is not dict:
-                print('No dict')
                 continue
 
             weight = weights.get(name)
