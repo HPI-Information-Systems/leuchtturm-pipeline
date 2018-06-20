@@ -87,9 +87,19 @@ class Config:
         'clustering': {
             'file_clustering_tool': '${models:directory}/clustering_tool.pickle'
         },
-<<<<<<< HEAD
         'hierarchy_scores': {
             'run': True
+        },
+        'correspondent_aggregation': {
+            # Add domains that should be ignored in the organisation extraction here, please use lowercase.
+            'false_organisations': [
+                'yahoo',
+                'aol',
+                'gmail',
+                'hotmail',
+                'gmx',
+                'web'
+            ]
         },
         'hierarchy_scores_weights': {
             'degree': 1,
@@ -103,18 +113,6 @@ class Config:
             'number_of_cliques': 1,
             'raw_clique_score': 1,
             'weighted_clique_score': 1
-=======
-        'correspondent_aggregation': {
-            # Add domains that should be ignored in the organisation extraction here, please use lowercase.
-            'false_organisations': [
-                'yahoo',
-                'aol',
-                'gmail',
-                'hotmail',
-                'gmx',
-                'web'
-            ]
->>>>>>> dev
         }
     }
 
