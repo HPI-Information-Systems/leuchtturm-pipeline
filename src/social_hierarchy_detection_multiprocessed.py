@@ -141,7 +141,7 @@ class SocialHierarchyDetector:
         for node in graph.nodes:
             score = 0
             for metric, weight in metrics:
-                score += metric[node] * weight
+                score += metric[node] * float(weight)
             score = score / len(metrics)
             hierarchy_scores[node] = round(score)
 
