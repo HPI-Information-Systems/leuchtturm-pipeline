@@ -6,6 +6,7 @@ from textacy.preprocess import preprocess_text, replace_urls, replace_emails, re
 
 from .common import Pipe
 
+
 class PhraseDetection(Pipe):
     """Phrase Detection on emails."""
 
