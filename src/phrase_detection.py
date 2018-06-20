@@ -62,40 +62,28 @@ class PhraseDetection(Pipe):
         super().__init__(conf)
         self.read_from = read_from
 
-    def run_on_document(self, raw_message):
+    def run_on_document(self, raw_message, top_keyphrases):
         """Get top phrases for a leuchtturm document."""
         document = json.loads(raw_message)
-        document['top_phrases'] = keyterms.sgrank(textacy.Doc(document[self.read_from], lang='en'))
 
-        # print(document['top_phrases'])
+        document['top_phrases'] = []
+        for phrase in top_keyphrases:
+            if phrase[0].lower() in document[self.read_from].lower():
+                document['top_phrases'].append(phrase)
 
-        return document['top_phrases']
+        return json.dumps(document, ensure_ascii=False)
 
     def run(self, rdd):
         """Run task in a spark context."""
         corpus = rdd.map(lambda document: json.loads(document)[self.read_from]).collect()
 
-        corpus_joined = '. '.join(corpus)
+        corpus_joined = '\n\n\n'.join(corpus)
 
-        keyphrases = keyterms.sgrank(textacy.Doc(corpus_joined, lang='en'))
+        keyphrases = keyterms.sgrank(textacy.Doc(corpus_joined, lang='en'), n_keyterms=100)
 
-        print(keyphrases[:15])
+        print(keyphrases[:25])
         print('\n')
 
-        rdd_phrases = rdd.flatMap(lambda document: self.run_on_document(document))
-        rdd_phrases = rdd_phrases.aggregateByKey((0, 0), lambda a, b: (a[0] + b,    a[1] + 1),
-                                                 lambda a, b: (a[0] + b[0], a[1] + b[1]))
-        no_filter = rdd_phrases.filter(lambda v: v[1][1] > 0).mapValues(lambda v: v[0] / v[1]).sortBy(
-            lambda x: x[1], False).collect()
-        print(no_filter[:15])
-        print('\n')
+        rdd = rdd.map(lambda document: self.run_on_document(document, keyphrases))
 
-        one_filter = rdd_phrases.filter(lambda v: v[1][1] > 1).mapValues(lambda v: v[0] / v[1]).sortBy(
-            lambda x: x[1], False).collect()
-        print(one_filter[:15])
-        print('\n')
-
-        two_filter = rdd_phrases.filter(lambda v: v[1][1] > 2).mapValues(lambda v: v[0] / v[1]).sortBy(
-            lambda x: x[1], False).collect()
-        print(two_filter[:15])
-        print('\n')
+        return rdd
