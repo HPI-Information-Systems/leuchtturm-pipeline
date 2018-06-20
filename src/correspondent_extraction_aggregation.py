@@ -322,7 +322,7 @@ class CorrespondentDataAggregation(Pipe):
 
         organisations = [org for org in organisations if org.lower() not in false_organisations]
 
-        if len(organisations):
+        if organisations:
             most_common_organisation = max(set(organisations), key=organisations.count)
             document['organisation'] = most_common_organisation
 
