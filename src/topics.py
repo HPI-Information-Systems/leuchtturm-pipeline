@@ -8,9 +8,14 @@ import numpy as np
 from scipy.linalg import norm
 from gensim.models.ldamodel import LdaModel
 from gensim.corpora import Dictionary
+from nltk import word_tokenize
 from nltk.corpus import stopwords as nltksw
 from nltk.stem.wordnet import WordNetLemmatizer
+from textacy.preprocess import preprocess_text
+from textacy.preprocess import replace_urls, replace_emails, replace_phone_numbers, replace_numbers
 from datetime import datetime
+from string import whitespace
+import re
 
 from .common import Pipe
 
@@ -114,50 +119,89 @@ class TopicModelPreprocessing(Pipe):
         self.stopwords = set(nltksw.words('english'))
         self.lemma = WordNetLemmatizer()
 
-    def tokenize(self, body):
-        """Split the body into words."""
-        return body.lower().split()
-
-    def remove_various_words(self, bow, sender, recipients):
-        """Clean the bow from distracting words."""
-        names = [part.lower() for part in sender['name'].split()]
+    def _normalize_split_correspondent_names(self, sender, recipients):
+        name_parts = {part.lower() for part in sender['name'].split()}
         for recipient in recipients:
             for part in recipient['name'].split():
-                names.append(part.lower())
+                name_parts.add(part.lower())
+        return name_parts
 
+    def remove_salutation(self, body):
+        """Remove salutation operators from the body if applicable."""
+        salutation_operators = \
+            {'hi', 'hello', 'hey', 'all', 'dear', 'sir', 'madam', 'good', 'morning', 'afternoon', 'greetings'}
+
+        def remove_salutation_operators(bow):
+            return [word for word in bow if word not in salutation_operators]
+
+        split_body = body.split('\n', 1)
+        if len(split_body) != 2:
+            return body
+        salutation_candidate = word_tokenize(split_body[0])
+        body_candidate = split_body[1]
+
+        return ' '.join(remove_salutation_operators(salutation_candidate)) + '\n' + body_candidate
+
+    def tokenize_and_remove_various_words(self, body, name_parts):
+        """Clean the bow from distracting words."""
+        body = preprocess_text(
+            body,
+            no_currency_symbols=True,
+            no_contractions=True,
+            no_accents=True
+        )
+        for func in [replace_urls, replace_emails, replace_phone_numbers, replace_numbers]:
+            body = func(body, replace_with='')
+
+        bow = word_tokenize(body)
         processed_bow = []
+
         for word in bow:
             # remove names of the sender and the recipients of the email
-            word = word if word not in names else ''
+            word = word if word not in name_parts else ''
             # remove punctuation characters
-            word = word.strip(punctuation)
+            word = re.sub(r'[' + re.escape(punctuation) + r']', '', word)
             # remove stopwords
             word = word if word not in self.stopwords else ''
             # remove very short words as they often don't carry any meaning
             word = word if len(word) > 2 else ''
-            # remove numbers
-            word = word if not self._is_numeric(word) else ''
             if word:
                 processed_bow.append(word)
 
         return processed_bow
 
-    def _is_numeric(self, word):
-        for char in word:
-            if not (char.isdigit() or char in punctuation):
-                return False
-        return True
-
     def lemmatize(self, bow):
-        """Lemmatize each word in a bow."""
-        return [self.lemma.lemmatize(word) for word in bow]
+        """Lemmatize each word in a bow as well as possible."""
+        processed_bow = []
+
+        for word in bow:
+            lemmatized_word_noun = self.lemma.lemmatize(word, 'n')
+            lemmatized_word_verb = self.lemma.lemmatize(word, 'v')
+            if word != lemmatized_word_noun and word != lemmatized_word_verb:
+                processed_bow.append(min([lemmatized_word_noun, lemmatized_word_verb], key=len))
+            elif word != lemmatized_word_noun:
+                processed_bow.append(lemmatized_word_noun)
+            elif word != lemmatized_word_verb:
+                processed_bow.append(lemmatized_word_verb)
+            else:
+                lemmatized_word_adjective = self.lemma.lemmatize(word, 'a')
+                if word != lemmatized_word_adjective:
+                    processed_bow.append(lemmatized_word_adjective)
+                else:
+                    processed_bow.append(word)
+
+        return processed_bow
 
     def run_on_document(self, item):
         """Run TM preprocessing on document."""
         document = json.loads(item)
 
-        bow = self.tokenize(document[self.read_from])
-        bow = self.remove_various_words(bow, document['header']['sender'], document['header']['recipients'])
+        name_parts = self._normalize_split_correspondent_names(
+            document['header']['sender'], document['header']['recipients']
+        )
+        body = document[self.read_from].strip(whitespace).lower()
+        body = self.remove_salutation(body)
+        bow = self.tokenize_and_remove_various_words(body, name_parts)
         bow = self.lemmatize(bow)
 
         document[self.write_to] = bow
@@ -167,7 +211,6 @@ class TopicModelPreprocessing(Pipe):
         """Run pipe in spark context."""
         print('lt_logs', datetime.now(), 'Starting TM preprocessing...')
         rdd = rdd.map(self.run_on_document)
-        print('lt_logs', datetime.now(), 'Finished TM preprocessing.')
         return rdd
 
 
@@ -342,7 +385,10 @@ class TopicModelPrediction(Pipe):
         bow_dictionarized = self.dictionary.value.doc2bow(bow)
 
         doc_topics = []
-        for topic in self.model.value.get_document_topics(bow_dictionarized):
+        for topic in self.model.value.get_document_topics(
+                bow_dictionarized,
+                minimum_probability=self.conf.get('topic_modelling', 'minimum_prediction_probability')
+        ):
             topic_obj = {}
             topic_id = topic[0]
             word_id_conf_tuples = self.model.value.get_topic_terms(topic_id, topn=10)
