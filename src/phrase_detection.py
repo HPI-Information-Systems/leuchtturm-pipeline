@@ -42,7 +42,7 @@ class PhraseDetection(Pipe):
         for func in [replace_urls, replace_emails, replace_phone_numbers, replace_numbers]:
             corpus_cleaned = func(corpus_cleaned, replace_with='')
 
-        keyphrases = keyterms.sgrank(Doc(corpus_joined, lang='en'), n_keyterms=100)
+        keyphrases = keyterms.sgrank(Doc(corpus_joined, lang='en_core_web_sm'), n_keyterms=100)
 
         rdd = rdd.map(lambda document: self.run_on_document(document, keyphrases))
 
