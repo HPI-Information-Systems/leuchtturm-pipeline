@@ -73,9 +73,10 @@ class Config:
         'topic_modelling': {
             'train_model': True,
             'iterations': 1000,
-            'num_topics': 100,
+            'num_topics': 50,
             'alpha_numerator': 50,
             'eta': 0.1,
+            'minimum_prediction_probability': 0.02,
             'file_model': '${models:directory}/topicmodel_${data:dataset}.pickle',
             'file_dictionary': '${models:directory}/topicdict_${data:dataset}.pickle'
         },
@@ -86,6 +87,7 @@ class Config:
         'clustering': {
             'file_clustering_tool': '${models:directory}/clustering_tool.pickle'
         },
+<<<<<<< HEAD
         'hierarchy_scores': {
             'run': True
         },
@@ -101,6 +103,18 @@ class Config:
             'number_of_cliques': 1,
             'raw_clique_score': 1,
             'weighted_clique_score': 1
+=======
+        'correspondent_aggregation': {
+            # Add domains that should be ignored in the organisation extraction here, please use lowercase.
+            'false_organisations': [
+                'yahoo',
+                'aol',
+                'gmail',
+                'hotmail',
+                'gmx',
+                'web'
+            ]
+>>>>>>> dev
         }
     }
 
