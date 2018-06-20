@@ -88,6 +88,7 @@ class Config:
             'file_clustering_tool': '${models:directory}/clustering_tool.pickle'
         },
         'correspondent_aggregation': {
+            # Add domains that should be ignored in the organisation extraction here, please use lowercase.
             'false_organisations': [
                 'yahoo',
                 'aol',
