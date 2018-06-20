@@ -89,7 +89,7 @@ class Config:
         'hierarchy_scores': {
             'run': True
         },
-        'hierarchy_score_weights': {
+        'hierarchy_scores_weights': {
             'degree': 1,
             'number_of_emails': 1,
             'clustering_values': 1,
