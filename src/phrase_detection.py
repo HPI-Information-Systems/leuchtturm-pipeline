@@ -5,8 +5,8 @@ import itertools
 import nltk
 import string
 import gensim
-import textacy
-from textacy import keyterms
+from textacy import keyterms, Doc
+from textacy.preprocess import preprocess_text, replace_urls, replace_emails, replace_phone_numbers, replace_numbers
 
 from .common import Pipe
 
@@ -62,12 +62,12 @@ class PhraseDetection(Pipe):
         super().__init__(conf)
         self.read_from = read_from
 
-    def run_on_document(self, raw_message, top_keyphrases):
+    def run_on_document(self, raw_message, keyphrases):
         """Get top phrases for a leuchtturm document."""
         document = json.loads(raw_message)
 
         document['top_phrases'] = []
-        for phrase in top_keyphrases:
+        for phrase in keyphrases:
             if phrase[0].lower() in document[self.read_from].lower():
                 document['top_phrases'].append(phrase)
 
@@ -79,10 +79,17 @@ class PhraseDetection(Pipe):
 
         corpus_joined = '\n\n\n'.join(corpus)
 
-        keyphrases = keyterms.sgrank(textacy.Doc(corpus_joined, lang='en'), n_keyterms=100)
+        corpus_cleaned = preprocess_text(
+            corpus_joined,
+            no_currency_symbols=True,
+            no_contractions=True,
+            no_accents=True,
+            no_punct=True
+        )
+        for func in [replace_urls, replace_emails, replace_phone_numbers, replace_numbers]:
+            corpus_cleaned = func(corpus_cleaned, replace_with='')
 
-        print(keyphrases[:25])
-        print('\n')
+        keyphrases = keyterms.sgrank(Doc(corpus_joined, lang='en'), n_keyterms=100)
 
         rdd = rdd.map(lambda document: self.run_on_document(document, keyphrases))
 
