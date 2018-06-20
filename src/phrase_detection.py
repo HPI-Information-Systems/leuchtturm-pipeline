@@ -15,35 +15,29 @@ class PhraseDetection(Pipe):
         super().__init__(conf)
         self.read_from = read_from
 
-    def run_on_document(self, raw_message, keyphrases):
+    def run_on_document(self, raw_message):
         """Get top phrases for a leuchtturm document."""
         document = json.loads(raw_message)
 
-        document['top_phrases'] = []
-        for phrase in keyphrases:
-            if phrase[0].lower() in document[self.read_from].lower():
-                document['top_phrases'].append(phrase)
-
-        return json.dumps(document, ensure_ascii=False)
-
-    def run(self, rdd):
-        """Run task in a spark context."""
-        corpus = rdd.map(lambda document: json.loads(document)[self.read_from]).collect()
-
-        corpus_joined = '\n\n\n'.join(corpus)
-
-        corpus_cleaned = preprocess_text(
-            corpus_joined,
+        text_cleaned = preprocess_text(
+            document[self.read_from],
             no_currency_symbols=True,
             no_contractions=True,
             no_accents=True,
             no_punct=True
         )
         for func in [replace_urls, replace_emails, replace_phone_numbers, replace_numbers]:
-            corpus_cleaned = func(corpus_cleaned, replace_with='')
+            text_cleaned = func(text_cleaned, replace_with='')
 
-        keyphrases = keyterms.sgrank(Doc(corpus_joined, lang='en_core_web_sm'), n_keyterms=100)
+        if len(text_cleaned) > 1000000:
+            text_cleaned = text_cleaned[:1000000]
 
-        rdd = rdd.map(lambda document: self.run_on_document(document, keyphrases))
+        document['keyphrases'] = keyterms.sgrank(Doc(text_cleaned, lang='en_core_web_sm'), n_keyterms=5)
+
+        return json.dumps(document, ensure_ascii=False)
+
+    def run(self, rdd):
+        """Run task in a spark context."""
+        rdd = rdd.map(lambda document: self.run_on_document(document))
 
         return rdd
