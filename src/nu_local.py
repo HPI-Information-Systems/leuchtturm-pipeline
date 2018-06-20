@@ -2,18 +2,19 @@
 import json
 import py2neo
 from datetime import datetime
-from .common import Pipe
 
 
-class NetworkUploader(Pipe):
+class NetworkUploader():
     """This class uploads the results of NetworkAnalyser to neo4j."""
 
-    def __init__(self, conf):
-        """Initialize with a config."""
-        super().__init__(conf)
-        self.neo4j_host = conf.get('neo4j', 'protocol') + '://' + conf.get('neo4j', 'host')
-        self.http_port = conf.get('neo4j', 'http_port')
-        self.bolt_port = conf.get('neo4j', 'bolt_port')
+    def __init__(self,
+                 neo4j_host='http://172.16.64.28',  # 'http://sopedu.hpi.uni-potsdam.de',
+                 http_port=61100,
+                 bolt_port=61000):
+        """Initialize."""
+        self.neo4j_host = neo4j_host
+        self.http_port = http_port
+        self.bolt_port = bolt_port
         self.attribute_names = ['hierarchy', 'community', 'role']
 
     def run(self):
@@ -33,3 +34,7 @@ class NetworkUploader(Pipe):
                                'SET node.' + attribute + ' = ln.' + attribute,
                                labelled_nodes=labelled_nodes, attribute=attribute)
             print(datetime.now(), 'lt_logs', '- finished upload of ' + attribute + ' labels.', flush=True)
+
+
+nu = NetworkUploader()
+nu.run()

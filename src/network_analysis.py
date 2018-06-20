@@ -31,15 +31,18 @@ class NetworkAnalyser(Pipe):
         """Run network analysis. Obligatory for Pipe inheritence."""
         self.analyse_network()
 
-    def _save_results_locally(self, nodes, dictionary, filename):
-        result = dict()
+    def _save_results_locally(self, nodes, dic_list, filename):
+        buf = dict()
         for node in nodes:
             identifying_name = node['p.identifying_name']
             neo_id = node['id(p)']
-            if identifying_name and neo_id:
-                result[identifying_name] = dictionary[neo_id]
+            buf[neo_id] = identifying_name
+
+        for dic in dic_list:
+            dic['node_id'] = buf[dic['node_id']]
+
         with open(filename, 'w') as fp:
-            json.dump(result, fp)
+            json.dump(dic_list, fp)
 
     def analyse_network(self):
         """Analyse the network. Parameter upload decides if data in neo4j will be updated."""

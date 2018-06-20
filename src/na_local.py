@@ -1,4 +1,4 @@
-"""This Module makes the network analysis functionality available."""
+"""This Module makes the network analysis functionality available. Put config/config.py in src."""
 
 import py2neo
 import networkx as nx
@@ -8,9 +8,7 @@ import matplotlib.pyplot as plt
 from community_detection import CommunityDetector
 from role_detection import RoleDetector
 from social_hierarchy_detection_multiprocessed import SocialHierarchyDetector
-
-from py2neo.packages.httpstream import http
-http.socket_timeout = 604800  # one week
+from config import Config
 
 
 class NetworkAnalyser:
@@ -22,36 +20,22 @@ class NetworkAnalyser:
     def __init__(self,
                  solr_url='http://sopedu.hpi.uni-potsdam.de:8983/solr/emails',
                  neo4j_host='http://172.16.64.28',  # 'http://sopedu.hpi.uni-potsdam.de',
-                 http_port=60100,
-                 bolt_port=60000):
+                 http_port=61100,
+                 bolt_port=61000):
         """Set solr config and path where rdd is read from."""
         self.solr_url = solr_url
         self.neo4j_host = neo4j_host
         self.http_port = http_port
         self.bolt_port = bolt_port
-        self.conf = {
-            'hierarchy_scores': {
-                'degree': 1,
-                'number_of_emails': 1,
-                'clustering_values': 1,
-                'hubs': 1,
-                'authorities': 1,
-                'response_score': 1,
-                'average_time': 1,
-                'mean_shortest_paths': 1,
-                'number_of_cliques': 1,
-                'raw_clique_score': 1,
-                'weighted_clique_score': 1
-            }
-        }
+        self.conf = Config()
 
     def _build_graph(self):
         """Fetch data from neo4j and build graph."""
         neo_connection = py2neo.Graph(self.neo4j_host, http_port=self.http_port, bolt_port=self.bolt_port)
         edges = neo_connection.run('MATCH (source)-[r]->(target) \
                                     RETURN id(source), id(target), size(r.mail_list) as cnt, r.time_list as tml')
-        nodes = neo_connection.run('MATCH (p:Person) RETURN id(p), p.email_addresses, \
-            p.identifying_name, p.hierarchy')
+        nodes = list(neo_connection.run('MATCH (p:Person) RETURN id(p), p.email_addresses, \
+            p.identifying_name, p.hierarchy'))
 
         digraph = nx.DiGraph()
 
@@ -72,9 +56,8 @@ class NetworkAnalyser:
         """Analyse the network. Parameter upload decides if data in neo4j will be updated."""
         graph, digraph, nodes = self._build_graph()
 
-        weights = self.conf.get('hierarchy_scores', 'weights')
         social_hierarchy_detector = SocialHierarchyDetector()
-        social_hierarchy_labels = social_hierarchy_detector.detect_social_hierarchy(digraph, graph, weights)
+        social_hierarchy_labels = social_hierarchy_detector.detect_social_hierarchy(digraph, graph, self.conf)
         self._save_results_locally(nodes, social_hierarchy_labels, 'hierarchy.json')
 
         community_detector = CommunityDetector(graph)
@@ -90,15 +73,18 @@ class NetworkAnalyser:
         graph, __ = self._build_graph()
         self._run_statistics(graph)
 
-    def _save_results_locally(self, nodes, dictionary, filename):
-        result = dict()
+    def _save_results_locally(self, nodes, dic_list, filename):
+        buf = dict()
         for node in nodes:
             identifying_name = node['p.identifying_name']
             neo_id = node['id(p)']
-            if identifying_name and neo_id:
-                result[identifying_name] = dictionary[neo_id]
+            buf[neo_id] = identifying_name
+
+        for dic in dic_list:
+            dic['node_id'] = buf[dic['node_id']]
+
         with open(filename, 'w') as fp:
-            json.dump(result, fp)
+            json.dump(dic_list, fp)
 
     def _run_statistics(self, graph):
         hierarchy_scores = nx.get_node_attributes(graph, 'hierarchy')
