@@ -18,7 +18,7 @@ class PhraseDetection(Pipe):
         self.read_from = read_from
 
     def run_on_document(self, raw_message, keyphrases):
-        """Get top phrases for a leuchtturm document."""
+        """Get keyphrases for a leuchtturm document."""
         document = json.loads(raw_message)
 
         document['top_phrases'] = []
@@ -29,6 +29,7 @@ class PhraseDetection(Pipe):
         return json.dumps(document, ensure_ascii=False)
 
     def get_keyphrases_for_chunk(self, chunk):
+        """Get keyphrases for a text chunk."""
         for func in [replace_urls, replace_emails, replace_phone_numbers, replace_numbers]:
             chunk = func(chunk, replace_with='')
         chunk = preprocess_text(
@@ -45,13 +46,13 @@ class PhraseDetection(Pipe):
 
         length = corpus.map(lambda text: len(text)).reduce(add)
         print(length)
-        corpus = corpus.repartition(max(math.floor(length/500000), 1))
+        corpus = corpus.repartition(max(math.floor(length / 500000), 1))
 
         print(corpus.collect())
 
         phrases_rdd = corpus.flatMap(lambda chunk: self.get_keyphrases_for_chunk(chunk))
 
-        phrases_rdd = phrases_rdd.aggregateByKey((0, 0), lambda a, b: (a[0] + b,    a[1] + 1),
+        phrases_rdd = phrases_rdd.aggregateByKey((0, 0), lambda a, b: (a[0] + b, a[1] + 1),
                                                  lambda a, b: (a[0] + b[0], a[1] + b[1]))
         no_filter = phrases_rdd.filter(lambda v: v[1][1] > 0).mapValues(lambda v: v[0] / v[1]).sortBy(
             lambda x: x[1], False).collect()
