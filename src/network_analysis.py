@@ -49,7 +49,7 @@ class NetworkAnalyser(Pipe):
         neo_connection = py2neo.Graph(self.neo4j_host, http_port=self.http_port, bolt_port=self.bolt_port)
         edges = neo_connection.run('MATCH (source)-[r]->(target) \
                                     RETURN id(source), id(target), size(r.mail_list) as cnt, r.time_list as tml')
-        nodes = neo_connection.run('MATCH (p:Person) RETURN id(p), p.email_addresses, p.identifying_name')
+        nodes = list(neo_connection.run('MATCH (p:Person) RETURN id(p), p.email_addresses, p.identifying_name'))
 
         digraph = nx.DiGraph()
 
