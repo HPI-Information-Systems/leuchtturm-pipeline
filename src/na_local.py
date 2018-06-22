@@ -58,15 +58,15 @@ class NetworkAnalyser:
 
         social_hierarchy_detector = SocialHierarchyDetector()
         social_hierarchy_labels = social_hierarchy_detector.detect_social_hierarchy(digraph, graph, self.conf)
-        self._save_results_locally(nodes, social_hierarchy_labels, 'hierarchy.json')
+        self._save_results_locally(nodes, social_hierarchy_labels, 'hierarchy' + str(self.http_port) + '.json')
 
         community_detector = CommunityDetector(graph)
         community_labels = community_detector.clauset_newman_moore()
-        self._save_results_locally(nodes, community_labels, 'community.json')
+        self._save_results_locally(nodes, community_labels, 'community' + str(self.http_port) + '.json')
 
         role_detector = RoleDetector()
         role_labels = role_detector.rolx(graph)
-        self._save_results_locally(nodes, role_labels, 'role.json')
+        self._save_results_locally(nodes, role_labels, 'role' + str(self.http_port) + '.json')
 
     def run_statistics(self):
         """Run statistics on hierarchy values in neo4j."""

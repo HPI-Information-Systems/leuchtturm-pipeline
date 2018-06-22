@@ -20,7 +20,7 @@ class NetworkUploader():
     def run(self):
         """Run network uploader. Obligatory for Pipe inheritence."""
         for attribute_name in self.attribute_names:
-            with open(attribute_name + '.json') as f:
+            with open(attribute_name + str(self.http_port) + '.json') as f:
                 data = json.load(f)
             self.update_network(data, attribute_name)
 
