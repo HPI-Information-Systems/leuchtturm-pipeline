@@ -78,7 +78,8 @@ class Config:
             'eta': 0.1,
             'minimum_prediction_probability': 0.02,
             'file_model': '${models:directory}/topicmodel_${data:dataset}.pickle',
-            'file_dictionary': '${models:directory}/topicdict_${data:dataset}.pickle'
+            'file_dictionary': '${models:directory}/topicdict_${data:dataset}.pickle',
+            'file_corpus': '${models:directory}/topiccorpus_${data:dataset}.pickle'
         },
         'classification': {
             'train_model': False,
