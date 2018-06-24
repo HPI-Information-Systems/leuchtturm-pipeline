@@ -3,7 +3,6 @@
 import ujson as json
 from textacy import keyterms, Doc
 from textacy.preprocess import preprocess_text, replace_urls, replace_emails, replace_phone_numbers, replace_numbers
-from operator import add
 import math
 
 from .common import Pipe
@@ -44,9 +43,9 @@ class PhraseDetection(Pipe):
         """Run task in a spark context."""
         corpus = rdd.map(lambda document: json.loads(document)[self.read_from] + '.')
 
-        length = corpus.map(lambda text: len(text)).reduce(add)
+        length = corpus.map(lambda text: len(text)).sum()
         print(length)
-        corpus = corpus.repartition(max(math.floor(length / 500000), 1))
+        corpus = corpus.repartition(max(math.ceil(length / 500000), 1))
 
         print(corpus.collect())
 
