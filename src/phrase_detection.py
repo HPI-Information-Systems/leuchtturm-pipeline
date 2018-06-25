@@ -46,7 +46,7 @@ class PhraseDetection(Pipe):
 
         corpus_joined = '. '.join(corpus.collect())
 
-        corpus_chunked = [corpus_joined[i:i + 900000] for i in range(0, len(corpus_joined), 900000)]
+        corpus_chunked = [corpus_joined[i:i + 100000] for i in range(0, len(corpus_joined), 100000)]
 
         sc = SparkProvider.spark_context(self.conf)
 
