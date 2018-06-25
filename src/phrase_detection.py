@@ -3,8 +3,7 @@
 import ujson as json
 from textacy import keyterms, Doc
 from textacy.preprocess import preprocess_text, replace_urls, replace_emails, replace_phone_numbers, replace_numbers
-import math
-from src.common import Pipeline, SparkProvider
+from src.common import SparkProvider
 
 from .common import Pipe
 
