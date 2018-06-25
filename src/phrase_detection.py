@@ -4,6 +4,7 @@ import ujson as json
 from textacy import keyterms, Doc
 from textacy.preprocess import preprocess_text, replace_urls, replace_emails, replace_phone_numbers, replace_numbers
 import math
+from src.common import Pipeline, SparkProvider
 
 from .common import Pipe
 
@@ -15,6 +16,7 @@ class PhraseDetection(Pipe):
         """Set params. read_from: field to search entities in."""
         super().__init__(conf)
         self.read_from = read_from
+        self.conf = conf
 
     def run_on_document(self, raw_message, keyphrases):
         """Get keyphrases for a leuchtturm document."""
@@ -43,20 +45,20 @@ class PhraseDetection(Pipe):
         """Run task in a spark context."""
         corpus = rdd.map(lambda document: json.loads(document)[self.read_from] + '.')
 
-        length = corpus.map(lambda text: len(text)).sum()
-        print(length)
-        corpus = corpus.repartition(max(math.ceil(length / 500000), 1))
+        corpus_joined = '. '.join(corpus.collect())
 
-        print(corpus.collect())
+        corpus_chunked = [corpus_joined[i:i + 900000] for i in range(0, len(corpus_joined), 900000)]
 
-        phrases_rdd = corpus.flatMap(lambda chunk: self.get_keyphrases_for_chunk(chunk))
+        sc = SparkProvider.spark_context(self.conf)
+
+        chunked_rdd = sc.parallelize(corpus_chunked)
+
+        phrases_rdd = chunked_rdd.flatMap(lambda chunk: self.get_keyphrases_for_chunk(chunk))
 
         phrases_rdd = phrases_rdd.aggregateByKey((0, 0), lambda a, b: (a[0] + b, a[1] + 1),
                                                  lambda a, b: (a[0] + b[0], a[1] + b[1]))
         no_filter = phrases_rdd.filter(lambda v: v[1][1] > 0).mapValues(lambda v: v[0] / v[1]).sortBy(
             lambda x: x[1], False).collect()
-
-        print(no_filter)
 
         rdd = rdd.map(lambda document: self.run_on_document(document, no_filter))
 
