@@ -2,7 +2,8 @@
 
 import ujson as json
 from textacy import keyterms, Doc
-from textacy.preprocess import preprocess_text, replace_urls, replace_emails, replace_phone_numbers, replace_numbers
+from textacy.preprocess \
+    import preprocess_text, replace_urls, replace_emails, replace_phone_numbers, replace_numbers, remove_punct
 from src.common import SparkProvider
 
 from .common import Pipe
@@ -38,7 +39,10 @@ class PhraseDetection(Pipe):
             no_contractions=True,
             no_accents=True
         )
-        return keyterms.sgrank(Doc(chunk, lang='en_core_web_sm'), ngrams=(2, 3, 4, 5, 6), n_keyterms=100)
+        chunk = remove_punct(chunk, marks='|')
+        return keyterms.sgrank(
+            Doc(chunk, lang='en_core_web_sm'), ngrams=(2, 3, 4, 5, 6), n_keyterms=500, window_width=5000
+        )
 
     def run(self, rdd):
         """Run task in a spark context."""
