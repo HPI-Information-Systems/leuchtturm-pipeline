@@ -22,10 +22,10 @@ class PhraseDetection(Pipe):
         """Get keyphrases for a leuchtturm document."""
         document = json.loads(raw_message)
 
-        document['top_phrases'] = []
+        document['keyphrases'] = []
         for phrase in keyphrases:
             if phrase[0].lower() in document[self.read_from].lower():
-                document['top_phrases'].append(phrase)
+                document['keyphrases'].append(phrase)
 
         return json.dumps(document, ensure_ascii=False)
 
@@ -46,7 +46,7 @@ class PhraseDetection(Pipe):
 
     def run(self, rdd):
         """Run task in a spark context."""
-        corpus = rdd.map(lambda document: json.loads(document)[self.read_from] + '.')
+        corpus = rdd.map(lambda document: json.loads(document)[self.read_from])
 
         corpus_joined = '. '.join(corpus.collect())
 
