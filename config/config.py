@@ -74,7 +74,7 @@ class Config:
             'train_model': True,
             'iterations': 1000,
             'num_topics': 50,
-            'alpha_numerator': 50,
+            'alpha_numerator': 5,
             'eta': 0.1,
             'minimum_prediction_probability': 0.02,
             'file_model': '${models:directory}/topicmodel_${data:dataset}.pickle',
