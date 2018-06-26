@@ -41,7 +41,7 @@ class PhraseDetection(Pipe):
         )
         chunk = remove_punct(chunk, marks='|')
         return keyterms.sgrank(
-            Doc(chunk, lang='en_core_web_sm'), ngrams=(2, 3, 4, 5, 6), n_keyterms=500, window_width=3000
+            Doc(chunk, lang='en_core_web_sm'), ngrams=(2, 3, 4, 5, 6), n_keyterms=500, window_width=2000
         )
 
     def run(self, rdd):
@@ -50,7 +50,7 @@ class PhraseDetection(Pipe):
 
         corpus_joined = '. '.join(corpus.collect())
 
-        corpus_chunked = [corpus_joined[i:i + 100000] for i in range(0, len(corpus_joined), 100000)]
+        corpus_chunked = [corpus_joined[i:i + 90000] for i in range(0, len(corpus_joined), 90000)]
 
         sc = SparkProvider.spark_context(self.conf)
 
