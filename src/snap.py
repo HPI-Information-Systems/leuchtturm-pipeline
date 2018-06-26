@@ -8,10 +8,10 @@ from datetime import datetime
 class Snap:
     """This class contains the information about the snap binaries and holds the functionality to execute them."""
 
-    BIN_BIGCLAM = os.path.abspath('./src/libs/snap/bigclam')
-    BIN_CENTRALITY = os.path.abspath('./src/libs/snap/centrality')
-    BIN_COMMUNITY = os.path.abspath('./src/libs/snap/community')
-    BIN_ROLX = os.path.abspath('./src/libs/snap/testrolx')
+    BIN_BIGCLAM = os.path.abspath('./snap/bigclam')
+    BIN_CENTRALITY = os.path.abspath('./snap/centrality')
+    BIN_COMMUNITY = os.path.abspath('./snap/community')
+    BIN_ROLX = os.path.abspath('./snap/testrolx')
 
     TMP_FOLDER = os.path.abspath('./tmp/snap-tmp/')
     TMP_FILE_EDGES = 'edges'

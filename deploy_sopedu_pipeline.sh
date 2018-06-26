@@ -20,9 +20,12 @@ cp ~/gitlab-runner/models/* models/ && cd models && zip --quiet models.zip * && 
 rm models/*
 # zip src dir to ship it as py-files
 zip -r --quiet src.zip src || return
+# zip snap dir to ship it as archives
+zip -r --quiet snap.zip snap || return
 # zip config dir to ship it as archives
 cd config && zip -r --quiet config_raw.zip * && mv config_raw.zip .. && cd .. || return
 zip -r --quiet config.zip config || return
+
 
 # load variables from selected config
 source <(python config/ini2bash.py -c $1)
@@ -52,7 +55,7 @@ PYSPARK_PYTHON=./leuchtturm_env/bin/python \
     spark-submit --master yarn --deploy-mode cluster \
     --driver-memory $SPARK_DRIVER_MEMORY --executor-memory $SPARK_EXECUTOR_MEMORY \
     --num-executors $SPARK_NUM_EXECUTORS --executor-cores $SPARK_EXECUTOR_CORES \
-    --archives leuchtturm_env.zip#leuchtturm_env,models.zip#models,config_raw.zip#config \
+    --archives leuchtturm_env.zip#leuchtturm_env,models.zip#models,config_raw.zip#config,snap.zip#snap \
     --py-files src.zip,config.zip \
     run_pipeline.py -c=$1 2>/dev/null
 
