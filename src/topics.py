@@ -232,7 +232,7 @@ class TopicModelTraining(Pipe):
         """Create a gensim Dictionary that can be used to convert documents so that they can be used by LDAModel."""
         print('lt_logs', datetime.now(), 'Starting dictionary creation...')
 
-        dictionary = Dictionary(corpus)
+        dictionary = Dictionary(corpus, prune_at=999999999999)
 
         dict_words = [word for word in dictionary.values()]
         dictionary.filter_extremes(
