@@ -378,17 +378,16 @@ class CorrespondentIdInjection(Pipe):
                 (corr for corr in self.correspondent_rdd if original_name in corr['aliases']), None)
         return correspondent
 
-    def assign_identifying_name_and_organisation_for_sender(self, document):
+    def assign_identifying_names_and_organisations(self, document):
         """Write identifying_name and organisation back onto sender of one email."""
         original_name = document['header']['sender']['name']
         original_email_address = document['header']['sender']['email']
 
         correspondent = self._find_matching_correspondent(original_name, original_email_address)
 
-        if correspondent and correspondent['identifying_name']:
-            document['header']['sender']['identifying_name'] = correspondent['identifying_name']
-            if correspondent.get('organisation'):
-                document['header']['sender']['organisation'] = correspondent['organisation']
+        if correspondent:
+            document['header']['sender']['identifying_name'] = correspondent.get('identifying_name', '')
+            document['header']['sender']['organisation'] = correspondent.get('organisation', '')
         else:
             document['header']['sender']['identifying_name'] = ''
 
@@ -402,10 +401,9 @@ class CorrespondentIdInjection(Pipe):
 
             correspondent = self._find_matching_correspondent(original_name, original_email_address)
 
-            if correspondent and correspondent['identifying_name']:
-                document['header']['recipients'][i]['identifying_name'] = correspondent['identifying_name']
-                if correspondent.get('organisation'):
-                    document['header']['recipients'][i]['organisation'] = correspondent['organisation']
+            if correspondent:
+                document['header']['recipients'][i]['identifying_name'] = correspondent.get('identifying_name', '')
+                document['header']['recipients'][i]['organisation'] = correspondent.get('organisation')
             else:
                 document['header']['recipients'][i]['identifying_name'] = ''
         return document
