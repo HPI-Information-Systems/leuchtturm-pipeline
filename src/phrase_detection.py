@@ -41,7 +41,7 @@ class PhraseDetection(Pipe):
         )
         chunk = remove_punct(chunk, marks='|')
         return keyterms.sgrank(
-            Doc(chunk, lang='en_core_web_sm'), ngrams=(2, 3, 4, 5, 6), n_keyterms=500, window_width=5000
+            Doc(chunk, lang='en_core_web_sm'), ngrams=(2, 3, 4, 5, 6), n_keyterms=500, window_width=3000
         )
 
     def run(self, rdd):
