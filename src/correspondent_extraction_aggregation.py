@@ -399,7 +399,8 @@ class CorrespondentIdInjection(Pipe):
 
             if correspondent:
                 document['header']['recipients'][i]['identifying_name'] = correspondent.get('identifying_name', '')
-                document['header']['recipients'][i]['organisation'] = correspondent.get('organisation')
+                document['header']['recipients'][i]['organisation'] = correspondent.get('organisation', '')
+
             else:
                 document['header']['recipients'][i]['identifying_name'] = ''
         return document
