@@ -9,6 +9,7 @@ from src.reader import EmlReader, TextFileReader
 from src.preprocessing import EmailDecoding, EmailSplitting, HeaderParsing, TextCleaning, LanguageDetection
 from src.deduplication import EmailDeduplication
 from src.ner import SpacyNer
+from src.phrase_detection import PhraseDetection
 from src.topics import TopicModelPreprocessing, TopicModelTraining, TopicModelTrainingOld, TopicModelPrediction, TopicSimilarity
 from src.writer import TextFileWriter, SolrFileWriter, Neo4JFileWriter
 from src.signature_extraction import SignatureExtraction
@@ -35,8 +36,8 @@ def run_email_pipeline(conf):
             write_body_without_signature_to='body_without_signature',
             write_signature_to='signature'
         ),
+        PhraseDetection(conf, read_from='body'),
         LanguageDetection(conf, read_from='body'),
-        SpacyNer(conf, read_from='body'),
         EmailCategoryClassification(conf),
         EmailClusterPrediction(conf),
         TopicModelPreprocessing(conf, read_from='body_without_signature', write_to='bow'),
