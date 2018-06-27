@@ -251,13 +251,11 @@ class TopicModelTraining(Pipe):
         removed_frequent_words = set(dict_words) - set(dict_words_wo_frequent)
         removed_infrequent_words = set(dict_words_wo_frequent) - set(dict_words_wo_infrequent)
         try:
-            ensure_path(self.conf.get('tm_preprocessing', 'file_removed_frequent_words'))
-            ensure_path(self.conf.get('tm_preprocessing', 'file_removed_infrequent_words'))
-            ensure_path(self.conf.get('topic_modelling', 'file_dictionary'))
             with open(self.conf.get('tm_preprocessing', 'file_removed_frequent_words'), 'wb') as file:
                 file.write(str(removed_frequent_words).encode())
             with open(self.conf.get('tm_preprocessing', 'file_removed_infrequent_words'), 'wb') as file:
                 file.write(str(removed_infrequent_words).encode())
+            ensure_path(self.conf.get('topic_modelling', 'file_dictionary'))
             with open(self.conf.get('topic_modelling', 'file_dictionary'), 'wb') as pfile:
                 pickle.dump(dictionary, pfile)
         except Exception:
