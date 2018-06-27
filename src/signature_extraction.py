@@ -118,7 +118,7 @@ class SignatureExtraction(Pipe):
             Uses the email address of the sending correspondent to improve extraction results.
             """
             body, signature = talon_signature.extract(
-                body[-300:],
+                body,
                 sender=sender_email_address
             )
             if not signature:
@@ -126,29 +126,12 @@ class SignatureExtraction(Pipe):
             return body, signature
 
         for data_item in data_items:
-            timestamp = datetime.now()
             document = json.loads(data_item)
-            body_length = len(document[self.write_body_without_signature_to])
-            first_body_characters = document[self.write_body_without_signature_to][:10].replace('\n', '\\n')
-            last_body_characters = document[self.write_body_without_signature_to][-10:].replace('\n', '\\n')
-            print('lt_logs', timestamp,
-                  'Start extraction on', document['path'],
-                  'sender email address:', document['header']['sender']['email'],
-                  flush=True)
-            print('lt_logs', timestamp,
-                  'Length:', str(body_length),
-                  'Start:', first_body_characters,
-                  'End:', last_body_characters,
-                  flush=True)
             document[self.write_body_without_signature_to], document[self.write_signature_to] = extract_signature(
                 document[self.write_body_without_signature_to],
                 document['header']['sender']['email']
             )
             del document[self.read_from]
-            print('lt_logs', datetime.now(),
-                  'Finish extraction on single body from', timestamp,
-                  'Time diff (in s) was', (datetime.now() - timestamp).total_seconds(),
-                  flush=True)
             yield json.dumps(document, ensure_ascii=False)
 
         print('lt_logs', datetime.now(),
