@@ -7,6 +7,7 @@ import errno
 
 
 def ensure_path(filename):
+    """Ensure that a given path exists in the file system. If not, create necessary directories."""
     if not os.path.exists(os.path.dirname(filename)):
         try:
             os.makedirs(os.path.dirname(filename))
