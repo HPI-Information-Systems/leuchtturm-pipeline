@@ -25,7 +25,7 @@ class PhraseDetection(Pipe):
 
         document['keyphrases'] = []
         for phrase in keyphrases:
-            if phrase[0].lower() in document[self.read_from].lower():
+            if phrase[0] in document[self.read_from].lower():
                 document['keyphrases'].append(phrase)
 
         return json.dumps(document, ensure_ascii=False)
@@ -61,6 +61,8 @@ class PhraseDetection(Pipe):
         sc = SparkProvider.spark_context(self.conf)
         chunked_rdd = sc.parallelize(corpus_chunked)
         phrases_rdd = chunked_rdd.flatMap(lambda chunk: self.get_keyphrases_for_chunk(chunk))
+        phrases_rdd = phrases_rdd.map(lambda phrase: (phrase[0].lower(), phrase[1]))
+        print(phrases_rdd)
         phrases_rdd = phrases_rdd.aggregateByKey((0, 0), lambda a, b: (a[0] + b, a[1] + 1),
                                                  lambda a, b: (a[0] + b[0], a[1] + b[1]))
         phrases_list = phrases_rdd.mapValues(lambda v: v[0] / v[1]).sortBy(lambda x: x[1], False).collect()
