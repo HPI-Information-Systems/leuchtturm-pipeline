@@ -97,6 +97,12 @@ class Config:
                 'gmx',
                 'web'
             ]
+        },
+        'phrase_detection': {
+            'amount': 500,
+            'window_width': 2000,
+            'chunk_size': 80000,
+            'length': (2, 3, 4, 5, 6)
         }
     }
 
