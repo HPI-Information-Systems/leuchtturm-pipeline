@@ -275,8 +275,8 @@ class TopicModelTraining(Pipe):
             corpus_dictionarized,
             num_topics=self.conf.get('topic_modelling', 'num_topics'),
             iterations=self.conf.get('topic_modelling', 'iterations'),
-            eta=self.conf.get('topic_modelling', 'eta'),
-            alpha=self.conf.get('topic_modelling', 'alpha_numerator') / self.conf.get('topic_modelling', 'num_topics')
+            eta=self.conf.get('topic_modelling', 'beta'),
+            alpha=self.conf.get('topic_modelling', 'alpha')
         )
         try:
             with open(self.conf.get('topic_modelling', 'file_model'), 'wb') as pfile:
