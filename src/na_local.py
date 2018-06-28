@@ -53,7 +53,7 @@ class NetworkAnalyser:
         return graph, digraph, nodes
 
     def analyse_network(self):
-        """Analyse the network. Parameter upload decides if data in neo4j will be updated."""
+        """Analyse the network and store results locally."""
         graph, digraph, nodes = self._build_graph()
 
         social_hierarchy_detector = SocialHierarchyDetector()

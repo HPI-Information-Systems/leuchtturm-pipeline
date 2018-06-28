@@ -45,7 +45,7 @@ class NetworkAnalyser(Pipe):
             json.dump(dic_list, fp)
 
     def analyse_network(self):
-        """Analyse the network. Parameter upload decides if data in neo4j will be updated."""
+        """Analyse the network and store results locally."""
         neo_connection = py2neo.Graph(self.neo4j_host, http_port=self.http_port, bolt_port=self.bolt_port)
         edges = neo_connection.run('MATCH (source)-[r]->(target) \
                                     RETURN id(source), id(target), size(r.mail_list) as cnt, r.time_list as tml')
