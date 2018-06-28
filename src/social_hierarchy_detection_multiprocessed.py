@@ -183,15 +183,15 @@ class SocialHierarchyDetector:
             unresponsed = []
             neighbours = graph[node]
             for neighbour in neighbours:
+                if node == neighbour:
+                    continue  # take out loops
+
                 timestamps_to_neighbour = neighbours[neighbour]['timeline']
                 timestamps_from_neighbour = []
                 try:
                     timestamps_from_neighbour = graph.edges[neighbour, node]['timeline']
-                except Exception:
-                    pass
-
-                if timestamps_from_neighbour and timestamps_to_neighbour[0] == timestamps_from_neighbour[0]:
-                    continue  # take out loops
+                except KeyError:
+                    pass  # has no answers
 
                 for t1 in timestamps_to_neighbour:
                     for t2 in timestamps_from_neighbour:
@@ -240,9 +240,7 @@ class SocialHierarchyDetector:
         print(datetime.now(), 'lt_logs', 'Start counting cliques', flush=True)
         start = time.time()
         cliques = list(nx.find_cliques(graph))
-        n = 0
-        for clique in cliques:
-            n += 1
+        n = len(cliques)
         metric = dict()
         for node in graph.nodes:
             count = 0
@@ -341,7 +339,7 @@ class SocialHierarchyDetector:
             shortest_paths = nx.single_source_shortest_path_length(graph, node)
             mean = sum(shortest_paths.values()) / len(shortest_paths)
             amount_neighbors = len(nx.descendants(graph, node))
-            if amount_neighbors is not 0:
+            if amount_neighbors > 0:
                 mean /= amount_neighbors
             else:  # should not happen as we pre-delete leave nodes
                 mean = 1
