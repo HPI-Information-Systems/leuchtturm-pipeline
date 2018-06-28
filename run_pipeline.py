@@ -88,7 +88,7 @@ def run_email_pipeline(conf):
     if conf.get('neo4j', 'import'):
         Neo4JFileWriter(conf, conf.get('data', 'results_correspondent_dir'), mode='nodes').run()
         Neo4JFileWriter(conf, conf.get('data', 'results_injected_dir'), mode='edges').run()
-        if conf.get('hierarchy_scores', 'run'):
+        if conf.get('network_analysis', 'run'):
             NetworkAnalyser(conf).run()
         NetworkUploader(conf).run()
 

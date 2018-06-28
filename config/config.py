@@ -87,7 +87,7 @@ class Config:
         'clustering': {
             'file_clustering_tool': '${models:directory}/clustering_tool.pickle'
         },
-        'hierarchy_scores': {
+        'network_analysis': {
             'run': True
         },
         'correspondent_aggregation': {
