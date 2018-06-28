@@ -73,18 +73,18 @@ class NetworkAnalyser:
         graph, __ = self._build_graph()
         self._run_statistics(graph)
 
-    def _save_results_locally(self, nodes, dic_list, filename):
+    def _save_results_locally(self, nodes, result_list, filename):
         buf = dict()
         for node in nodes:
             identifying_name = node['p.identifying_name']
             neo_id = node['id(p)']
             buf[neo_id] = identifying_name
 
-        for dic in dic_list:
+        for dic in result_list:
             dic['node_id'] = buf[dic['node_id']]
 
         with open(filename, 'w') as fp:
-            json.dump(dic_list, fp)
+            json.dump(result_list, fp)
 
     def _run_statistics(self, graph):
         hierarchy_scores = nx.get_node_attributes(graph, 'hierarchy')

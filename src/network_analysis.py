@@ -31,18 +31,18 @@ class NetworkAnalyser(Pipe):
         """Run network analysis. Obligatory for Pipe inheritence."""
         self.analyse_network()
 
-    def _save_results_locally(self, nodes, dic_list, filename):
+    def _save_results_locally(self, nodes, result_list, filename):
         buf = dict()
         for node in nodes:
             identifying_name = node['p.identifying_name']
             neo_id = node['id(p)']
             buf[neo_id] = identifying_name
 
-        for dic in dic_list:
+        for dic in result_list:
             dic['node_id'] = buf[dic['node_id']]
 
         with open(filename, 'w') as fp:
-            json.dump(dic_list, fp)
+            json.dump(result_list, fp)
 
     def analyse_network(self):
         """Analyse the network and store results locally."""
