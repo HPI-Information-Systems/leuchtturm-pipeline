@@ -378,30 +378,29 @@ class CorrespondentIdInjection(Pipe):
                 (corr for corr in self.correspondent_rdd if original_name in corr['aliases']), None)
         return correspondent
 
-    def assign_identifying_name_for_sender(self, document):
-        """Write identifying_name back onto sender of one email."""
+    def assign_correspondent_identifying_names_and_organisations(self, document):
+        """Write identifying_names and organisations back onto sender and recipients of one email."""
         original_name = document['header']['sender']['name']
         original_email_address = document['header']['sender']['email']
 
         correspondent = self._find_matching_correspondent(original_name, original_email_address)
 
-        if correspondent and correspondent['identifying_name']:
-            document['header']['sender']['identifying_name'] = correspondent['identifying_name']
+        if correspondent:
+            document['header']['sender']['identifying_name'] = correspondent.get('identifying_name', '')
+            document['header']['sender']['organisation'] = correspondent.get('organisation', '')
         else:
             document['header']['sender']['identifying_name'] = ''
 
-        return document
-
-    def assign_identifying_name_for_recipients(self, document):
-        """Write identifying_name back onto recipients of one email."""
         for i in range(len(document['header']['recipients'])):
             original_name = document['header']['recipients'][i]['name']
             original_email_address = document['header']['recipients'][i]['email']
 
             correspondent = self._find_matching_correspondent(original_name, original_email_address)
 
-            if correspondent and correspondent['identifying_name']:
-                document['header']['recipients'][i]['identifying_name'] = correspondent['identifying_name']
+            if correspondent:
+                document['header']['recipients'][i]['identifying_name'] = correspondent.get('identifying_name', '')
+                document['header']['recipients'][i]['organisation'] = correspondent.get('organisation', '')
+
             else:
                 document['header']['recipients'][i]['identifying_name'] = ''
         return document
@@ -409,8 +408,7 @@ class CorrespondentIdInjection(Pipe):
     def run_on_document(self, data):
         """Wrap writing the identifying_name back onto sender and recipient entries for one email."""
         document = json.loads(data)
-        document = self.assign_identifying_name_for_sender(document)
-        document = self.assign_identifying_name_for_recipients(document)
+        document = self.assign_correspondent_identifying_names_and_organisations(document)
         return json.dumps(document, ensure_ascii=False)
 
     def run(self, rdd):
