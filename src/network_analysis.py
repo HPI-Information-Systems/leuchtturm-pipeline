@@ -38,8 +38,8 @@ class NetworkAnalyser(Pipe):
             neo_id = node['id(p)']
             buf[neo_id] = identifying_name
 
-        for dic in result_list:
-            dic['node_id'] = buf[dic['node_id']]
+        for dictionary in result_list:
+            dictionary['node_id'] = buf[dictionary['node_id']]
 
         with open(filename, 'w') as fp:
             json.dump(result_list, fp)
