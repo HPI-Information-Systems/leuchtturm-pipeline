@@ -73,7 +73,7 @@ class Config:
         'topic_modelling': {
             'train_model': True,
             'iterations': 1000,
-            'num_topics': 50,
+            'num_topics': 25,
             'alpha': 0.1,
             'beta': 200 / 13794530,  # denominator matches the number of distinct words in the enron corpus
             'minimum_prediction_probability': 0.02,
