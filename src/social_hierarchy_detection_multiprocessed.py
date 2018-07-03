@@ -109,9 +109,9 @@ class SocialHierarchyDetector:
             weight = conf.get('hierarchy_scores_weights', name)
 
             if name == 'average_time' or name == 'mean_shortest_paths':
-                metrics.append((self._normalize(metric, high=False), weight))
+                metrics.append((self._normalize(metric, high=False), weight, name))
             else:
-                metrics.append((self._normalize(metric), weight))
+                metrics.append((self._normalize(metric), weight, name))
 
         hierarchy_scores = self._aggregate(graph, metrics)
         hierarchy_scores_formatted = self._format_for_upload(hierarchy_scores)
@@ -140,17 +140,20 @@ class SocialHierarchyDetector:
         hierarchy_scores = dict()
         for node in graph.nodes:
             score = 0
-            for metric, weight in metrics:
-                score += metric[node] * float(weight)
-            score = score / len(metrics)
-            hierarchy_scores[node] = round(score)
+            metrics_of_node = dict()
+            for metric, weight, name in metrics:
+                weighted_value = metric[node] * float(weight)
+                score += weighted_value
+                metrics_of_node[name] = round(weighted_value)
+            score = round(score / len(metrics))
+            hierarchy_scores[node] = {'score': score, 'metrics': metrics_of_node}
 
         return hierarchy_scores
 
     def _format_for_upload(self, metric):
         scores_formatted = []
-        for node, score in metric.items():
-            scores_formatted.append({'node_id': node, 'hierarchy': score})
+        for node, subdic in metric.items():
+            scores_formatted.append({'node_id': node, 'hierarchy': subdic['score'], 'metrics': subdic['metrics']})
 
         return scores_formatted
 
