@@ -155,7 +155,7 @@ class EmailSplitting(Pipe):
     nachricht_von_betreff_heuristic = r'(.*Nachricht---.*\n.*Von:((\n|.)*?)Betreff:.*)'
 
 
-    header_regex = re.compile('(%s|%s|%s|%s|%s|%s|%s)' % (
+    header_regex = re.compile('(%s|%s|%s|%s|%s|%s|%s|%s)' % (
         forwarded_by_heuristic,
         begin_forwarded_message_heuristic,
         original_message_heuristic,
