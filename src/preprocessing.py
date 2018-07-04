@@ -152,7 +152,7 @@ class EmailSplitting(Pipe):
     date_to_subject_heuristic = r'(.*\n.*(on )?\d{2}\/\d{2}\/\d{2,4}\s\d{2}:\d{2}(:\d{2})?\s?(AM|PM|am|pm)?.*\n.*(\n.*)?To: (\n|.)*?Subject: .*)'  # NOQA
     from_to_subject_heuristic = r'(.*From:((\n|.)*?)Subject:.*)'
     von_betreff_heuristic = r'(.*Von:((\n|.)*?)Betreff:.*)'
-    urspruengliche_nachricht_heuristic = r'(.*Ursprüngliche Nachricht.*\n.*Von:((\n|.)*?)Betreff:.*)'
+    nachricht_heuristic = r'(.*Nachricht---.*\n.*Von:((\n|.)*?)Betreff:.*)'
 
 
     header_regex = re.compile('(%s|%s|%s|%s|%s|%s)' % (
@@ -163,8 +163,8 @@ class EmailSplitting(Pipe):
         date_to_subject_heuristic,
         from_to_subject_heuristic,
         von_betreff_heuristic,
-        urspruengliche_nachricht_heuristic
-    ), re.UNICODE)
+        nachricht_heuristic
+    ))
 
     def __init__(self, conf, keep_thread_connected=False, use_quagga=False):
         """Set params if needed here."""
