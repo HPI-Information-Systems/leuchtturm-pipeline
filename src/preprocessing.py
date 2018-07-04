@@ -1,5 +1,4 @@
 """Pipes to preprocess emails, extract their meta-data, segmentation, ... for leuchtturm pipelines."""
-# -*- coding: utf8 -*-
 
 import ast
 from email import message_from_string
@@ -165,7 +164,7 @@ class EmailSplitting(Pipe):
         from_to_subject_heuristic,
         von_betreff_heuristic,
         urspruengliche_nachricht_heuristic
-    ))
+    ), re.UNICODE)
 
     def __init__(self, conf, keep_thread_connected=False, use_quagga=False):
         """Set params if needed here."""
