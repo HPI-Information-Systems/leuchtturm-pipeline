@@ -1,4 +1,5 @@
 """Pipes to preprocess emails, extract their meta-data, segmentation, ... for leuchtturm pipelines."""
+# -*- coding: utf8 -*-
 
 import ast
 from email import message_from_string
