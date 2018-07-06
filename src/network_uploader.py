@@ -15,6 +15,9 @@ class NetworkUploader(Pipe):
         self.http_port = conf.get('neo4j', 'http_port')
         self.bolt_port = conf.get('neo4j', 'bolt_port')
         self.attribute_names = ['hierarchy', 'community', 'role']
+        self.metrics = ['number_of_emails', 'degree', 'clustering_values', 'hubs', 'authorities', 'number_of_cliques',
+                        'mean_shortest_paths', 'response_score', 'average_time', 'raw_clique_score',
+                        'weighted_clique_score']
 
     def run(self):
         """Run network uploader. Obligatory for Pipe inheritence."""
@@ -22,6 +25,9 @@ class NetworkUploader(Pipe):
             with open(attribute_name + '.json') as f:
                 data = json.load(f)
             self.update_network(data, attribute_name)
+            if attribute_name == 'hierarchy':
+                for metric in self.metrics:
+                    self.update_network(data, metric)
 
     def update_network(self, labelled_nodes, attribute):
         """Update neo4j's data with the detected labels."""

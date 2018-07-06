@@ -153,7 +153,7 @@ class SocialHierarchyDetector:
     def _format_for_upload(self, metric):
         scores_formatted = []
         for node, subdic in metric.items():
-            scores_formatted.append({'node_id': node, 'hierarchy': subdic['score'], 'metrics': subdic['metrics']})
+            scores_formatted.append(dict({'node_id': node, 'hierarchy': subdic['score']}, **subdic['metrics']))
 
         return scores_formatted
 
