@@ -180,7 +180,6 @@ class SocialHierarchyDetector:
         start = time.time()
         metric_response_score = dict()
         metric_average_time = dict()
-        cnt = 0
         for node in graph.nodes:
             responses = []
             unresponsed = []
@@ -214,7 +213,6 @@ class SocialHierarchyDetector:
                 avg_time = 432000  # five days max
             else:
                 avg_time = total / len(responses)
-                cnt += 1
 
             metric_average_time[node] = avg_time
         end = time.time()
@@ -341,16 +339,17 @@ class SocialHierarchyDetector:
         for node in graph.nodes:
             shortest_paths = nx.single_source_shortest_path_length(graph, node)
             mean = sum(shortest_paths.values()) / len(shortest_paths)
-            amount_neighbors = len(nx.descendants(graph, node))
-            if amount_neighbors > 0:
-                mean /= amount_neighbors
-            else:  # should not happen as we pre-delete leave nodes
-                mean = 1
             table_of_means[node] = mean
-        n = len(table_of_means)
+
+        sup = max(table_of_means.values())
+        print(sup)
+        for node, mean in table_of_means.items():  # set loop on max (baddest) value
+            if mean == 0:
+                table_of_means[node] = sup
+
         end = time.time()
         print(datetime.now(),
               'lt_logs',
-              'Calculated ' + str(n) + ' mean shortest paths, took: ' + str(end - start) + 's',
+              'Calculated ' + str(len(table_of_means)) + ' mean shortest paths, took: ' + str(end - start) + 's',
               flush=True)
         queue.put(('mean_shortest_paths', table_of_means))
