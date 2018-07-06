@@ -146,19 +146,23 @@ class EmailSplitting(Pipe):
     """
 
     forwarded_by_heuristic = r'(.*-{3}.*Forwarded by((\n|.)*?)Subject:.*)'
-    begin_forwarded_message_heuristic = r'(.*Begin forwarded message:((\n|.)*?)To:.*)'
+    begin_forwarded_message_heuristic = r'(.*(f|F)orwarded (m|M)essage:((\n|.)*?)To:.*(\nCc:.*)?)'
     original_message_heuristic = r'(.*-{3}.*Original Message((\n|.)*?)Subject:.*)'
     reply_seperator_heuristic = r'(.*_{3}.*Reply Separator((\n|.)*?)Date.*)'
     date_to_subject_heuristic = r'(.*\n.*(on )?\d{2}\/\d{2}\/\d{2,4}\s\d{2}:\d{2}(:\d{2})?\s?(AM|PM|am|pm)?.*\n.*(\n.*)?To: (\n|.)*?Subject: .*)'  # NOQA
     from_to_subject_heuristic = r'(.*From:((\n|.)*?)Subject:.*)'
+    von_betreff_heuristic = r'(.*Von:((\n|.)*?)Betreff:.*)'
+    nachricht_von_betreff_heuristic = r'(.*Nachricht---.*\n.*Von:((\n|.)*?)Betreff:.*)'
 
-    header_regex = re.compile('(%s|%s|%s|%s|%s|%s)' % (
+    header_regex = re.compile('(%s|%s|%s|%s|%s|%s|%s|%s)' % (
         forwarded_by_heuristic,
         begin_forwarded_message_heuristic,
         original_message_heuristic,
         reply_seperator_heuristic,
         date_to_subject_heuristic,
-        from_to_subject_heuristic
+        from_to_subject_heuristic,
+        von_betreff_heuristic,
+        nachricht_von_betreff_heuristic
     ))
 
     def __init__(self, conf, keep_thread_connected=False, use_quagga=False):
