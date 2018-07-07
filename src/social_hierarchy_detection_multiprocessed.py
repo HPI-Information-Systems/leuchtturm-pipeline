@@ -151,11 +151,8 @@ class SocialHierarchyDetector:
         return hierarchy_scores
 
     def _format_for_upload(self, metric):
-        scores_formatted = []
-        for node, subdic in metric.items():
-            scores_formatted.append(dict({'node_id': node, 'hierarchy': subdic['score']}, **subdic['metrics']))
-
-        return scores_formatted
+        return [dict({'node_id': node, 'hierarchy': data['score']}, **data['metrics'])
+                for node, data in metric.items()]
 
     def _number_of_emails(self, graph, queue):
         print(datetime.now(), 'lt_logs', 'Start counting emails', flush=True)
@@ -342,8 +339,7 @@ class SocialHierarchyDetector:
             table_of_means[node] = mean
 
         sup = max(table_of_means.values())
-        print(sup)
-        for node, mean in table_of_means.items():  # set loop on max (baddest) value
+        for node, mean in table_of_means.items():  # set loop on max (worst) value
             if mean == 0:
                 table_of_means[node] = sup
 
