@@ -17,7 +17,7 @@ from datetime import datetime
 from string import whitespace
 import re
 
-from .common import Pipe
+from .common import Pipe, ensure_path
 
 
 class TopicModelTrainingOld(Pipe):
@@ -255,6 +255,7 @@ class TopicModelTraining(Pipe):
                 file.write(str(removed_frequent_words).encode())
             with open(self.conf.get('tm_preprocessing', 'file_removed_infrequent_words'), 'wb') as file:
                 file.write(str(removed_infrequent_words).encode())
+            ensure_path(self.conf.get('topic_modelling', 'file_dictionary'))
             with open(self.conf.get('topic_modelling', 'file_dictionary'), 'wb') as pfile:
                 pickle.dump(dictionary, pfile)
         except Exception:
@@ -279,6 +280,7 @@ class TopicModelTraining(Pipe):
             alpha=self.conf.get('topic_modelling', 'alpha')
         )
         try:
+            ensure_path(self.conf.get('topic_modelling', 'file_model'))
             with open(self.conf.get('topic_modelling', 'file_model'), 'wb') as pfile:
                 pickle.dump(lda, pfile)
         except Exception:

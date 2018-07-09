@@ -88,6 +88,9 @@ class Config:
         'clustering': {
             'file_clustering_tool': '${models:directory}/clustering_tool.pickle'
         },
+        'network_analysis': {
+            'run': True
+        },
         'correspondent_aggregation': {
             # Add domains that should be ignored in the organisation extraction here, please use lowercase.
             'false_organisations': [
@@ -98,6 +101,25 @@ class Config:
                 'gmx',
                 'web'
             ]
+        },
+        'phrase_detection': {
+            'amount': 500,
+            'window_width': 2000,
+            'chunk_size': 80000,
+            'length': (2, 3, 4, 5, 6)
+        },
+        'hierarchy_scores_weights': {
+            'degree': 1,
+            'number_of_emails': 1,
+            'clustering_values': 1,
+            'hubs': 1,
+            'authorities': 1,
+            'response_score': 1,
+            'average_time': 1,
+            'mean_shortest_paths': 1,
+            'number_of_cliques': 1,
+            'raw_clique_score': 1,
+            'weighted_clique_score': 1
         }
     }
 

@@ -1,3 +1,6 @@
+# temporary directory for snap results
+snap-tmp/*
+
 # Source directory for email raw text
 *.eml
 *.txt
