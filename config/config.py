@@ -75,7 +75,7 @@ class Config:
             'iterations': 1000,
             'num_topics': 25,
             'alpha': 0.1,
-            'beta': 0.1,  # denominator matches the number of distinct words in the enron corpus
+            'beta': 0.1,
             'minimum_prediction_probability': 0.02,
             'file_model': '${models:directory}/topicmodel_${data:dataset}.pickle',
             'file_dictionary': '${models:directory}/topicdict_${data:dataset}.pickle',

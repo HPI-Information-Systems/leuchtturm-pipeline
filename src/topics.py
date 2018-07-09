@@ -289,7 +289,6 @@ class TopicModelTraining(Pipe):
         except Exception:
             print('lt_logs', datetime.now(), 'Saving the TM corpus to disk didnt work')
 
-
         print('lt_logs', datetime.now(), 'Finished TM training.')
         return lda, dictionary
 
