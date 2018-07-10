@@ -103,8 +103,8 @@ class Config:
         },
         'phrase_detection': {
             'amount': 500,
-            'window_width': 2000,
-            'chunk_size': 80000,
+            'window_width': 1500,
+            'chunk_size': 50000,
             'length': (2, 3, 4, 5, 6)
         },
         'hierarchy_scores_weights': {
