@@ -103,9 +103,9 @@ class Config:
             ]
         },
         'phrase_detection': {
-            'amount': 500,
-            'window_width': 2000,
-            'chunk_size': 80000,
+            'amount': 100,
+            'window_width': 1000,
+            'chunk_size': 10000,
             'length': (2, 3, 4, 5, 6)
         },
         'hierarchy_scores_weights': {
