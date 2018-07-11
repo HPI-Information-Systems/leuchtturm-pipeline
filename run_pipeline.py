@@ -90,7 +90,7 @@ def run_email_pipeline(conf):
         Neo4JFileWriter(conf, conf.get('data', 'results_injected_dir'), mode='edges').run()
         if conf.get('network_analysis', 'run'):
             NetworkAnalyser(conf).run()
-        NetworkUploader(conf).run()
+            NetworkUploader(conf).run()
 
     SparkProvider.stop_spark_context()
 
