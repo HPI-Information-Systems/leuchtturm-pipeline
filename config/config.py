@@ -73,12 +73,13 @@ class Config:
         'topic_modelling': {
             'train_model': True,
             'iterations': 1000,
-            'num_topics': 50,
-            'alpha_numerator': 50,
-            'eta': 0.1,
+            'num_topics': 25,
+            'alpha': 0.1,
+            'beta': 0.1,
             'minimum_prediction_probability': 0.02,
             'file_model': '${models:directory}/topicmodel_${data:dataset}.pickle',
-            'file_dictionary': '${models:directory}/topicdict_${data:dataset}.pickle'
+            'file_dictionary': '${models:directory}/topicdict_${data:dataset}.pickle',
+            'file_corpus': '${models:directory}/topiccorpus_${data:dataset}.pickle'
         },
         'classification': {
             'train_model': False,

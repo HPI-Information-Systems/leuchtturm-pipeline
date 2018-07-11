@@ -232,7 +232,7 @@ class TopicModelTraining(Pipe):
         """Create a gensim Dictionary that can be used to convert documents so that they can be used by LDAModel."""
         print('lt_logs', datetime.now(), 'Starting dictionary creation...')
 
-        dictionary = Dictionary(corpus)
+        dictionary = Dictionary(corpus, prune_at=999999999999)
 
         dict_words = [word for word in dictionary.values()]
         dictionary.filter_extremes(
@@ -276,8 +276,8 @@ class TopicModelTraining(Pipe):
             corpus_dictionarized,
             num_topics=self.conf.get('topic_modelling', 'num_topics'),
             iterations=self.conf.get('topic_modelling', 'iterations'),
-            eta=self.conf.get('topic_modelling', 'eta'),
-            alpha=self.conf.get('topic_modelling', 'alpha_numerator') / self.conf.get('topic_modelling', 'num_topics')
+            eta=self.conf.get('topic_modelling', 'beta'),
+            alpha=self.conf.get('topic_modelling', 'alpha')
         )
         try:
             ensure_path(self.conf.get('topic_modelling', 'file_model'))
@@ -285,6 +285,11 @@ class TopicModelTraining(Pipe):
                 pickle.dump(lda, pfile)
         except Exception:
             print('lt_logs', datetime.now(), 'Saving the TM to disk didnt work')
+        try:
+            with open(self.conf.get('topic_modelling', 'file_corpus'), 'wb') as pfile:
+                pickle.dump(corpus_dictionarized, pfile)
+        except Exception:
+            print('lt_logs', datetime.now(), 'Saving the TM corpus to disk didnt work')
 
         print('lt_logs', datetime.now(), 'Finished TM training.')
         return lda, dictionary
