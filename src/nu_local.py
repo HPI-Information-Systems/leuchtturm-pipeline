@@ -2,7 +2,6 @@
 import json
 import py2neo
 from datetime import datetime
-from copy import deepcopy
 
 
 class NetworkUploader():
