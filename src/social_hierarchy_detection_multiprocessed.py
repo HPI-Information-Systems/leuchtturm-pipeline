@@ -142,9 +142,9 @@ class SocialHierarchyDetector:
             score = 0
             metrics_of_node = dict()
             for metric, weight, name in metrics:
+                metrics_of_node[name] = metric[node]
                 weighted_value = metric[node] * float(weight)
                 score += weighted_value
-                metrics_of_node[name] = round(weighted_value)
             score = round(score / len(metrics))
             hierarchy_scores[node] = {'score': score, 'metrics': metrics_of_node}
 
