@@ -36,10 +36,7 @@ class NetworkUploader():
         community = sorted(community_raw, key=lambda k: k['node_id'])
         role = sorted(role_raw, key=lambda k: k['node_id'])
 
-        for i in range(len(community)):  # community and role are equally long
-            community_element = community[i]
-            role_element = role[i]
-
+        for community_element, role_element in zip(community, role):  # community and role are equally long
             identifying_name = community_element['node_id']
             community_value = community_element['community']
             role_value = role_element['role']
