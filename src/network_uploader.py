@@ -21,9 +21,9 @@ class NetworkUploader(Pipe):
 
     def run(self):
         """Run network uploader. Obligatory for Pipe inheritence."""
-        hierarchy_raw = json.load(open('hierarchy' + str(self.http_port) + '.json'))
-        community_raw = json.load(open('community' + str(self.http_port) + '.json'))
-        role_raw = json.load(open('role' + str(self.http_port) + '.json'))
+        hierarchy_raw = json.load(open('hierarchy.json'))
+        community_raw = json.load(open('community.json'))
+        role_raw = json.load(open('role.json'))
 
         hierarchy = dict()
         for data in hierarchy_raw:
