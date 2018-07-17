@@ -100,6 +100,8 @@ class SignatureExtraction(Pipe):
         for pattern in attached_files_patterns:
             body = re.sub(pattern, '\n', body, flags=re.IGNORECASE)
 
+        body = re.sub(r'(\[IMAGE\][ \t]*)+', '', body)
+
         return body
 
     def run_on_partition(self, data_items):
