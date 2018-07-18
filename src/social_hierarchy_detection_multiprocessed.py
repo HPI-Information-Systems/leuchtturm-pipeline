@@ -109,9 +109,9 @@ class SocialHierarchyDetector:
             weight = conf.get('hierarchy_scores_weights', name)
 
             if name == 'average_time' or name == 'mean_shortest_paths':
-                metrics.append((self._normalize(metric, high=False), weight))
+                metrics.append((self._normalize(metric, high=False), weight, name))
             else:
-                metrics.append((self._normalize(metric), weight))
+                metrics.append((self._normalize(metric), weight, name))
 
         hierarchy_scores = self._aggregate(graph, metrics)
         hierarchy_scores_formatted = self._format_for_upload(hierarchy_scores)
@@ -140,19 +140,19 @@ class SocialHierarchyDetector:
         hierarchy_scores = dict()
         for node in graph.nodes:
             score = 0
-            for metric, weight in metrics:
-                score += metric[node] * float(weight)
-            score = score / len(metrics)
-            hierarchy_scores[node] = round(score)
+            metrics_of_node = dict()
+            for metric, weight, name in metrics:
+                metrics_of_node[name] = metric[node]
+                weighted_value = metric[node] * float(weight)
+                score += weighted_value
+            score = round(score / len(metrics))
+            hierarchy_scores[node] = {'score': score, 'metrics': metrics_of_node}
 
         return hierarchy_scores
 
     def _format_for_upload(self, metric):
-        scores_formatted = []
-        for node, score in metric.items():
-            scores_formatted.append({'node_id': node, 'hierarchy': score})
-
-        return scores_formatted
+        return [dict({'node_id': node, 'hierarchy': data['score']}, **data['metrics'])
+                for node, data in metric.items()]
 
     def _number_of_emails(self, graph, queue):
         print(datetime.now(), 'lt_logs', 'Start counting emails', flush=True)
@@ -177,7 +177,6 @@ class SocialHierarchyDetector:
         start = time.time()
         metric_response_score = dict()
         metric_average_time = dict()
-        cnt = 0
         for node in graph.nodes:
             responses = []
             unresponsed = []
@@ -211,7 +210,6 @@ class SocialHierarchyDetector:
                 avg_time = 432000  # five days max
             else:
                 avg_time = total / len(responses)
-                cnt += 1
 
             metric_average_time[node] = avg_time
         end = time.time()
@@ -338,16 +336,16 @@ class SocialHierarchyDetector:
         for node in graph.nodes:
             shortest_paths = nx.single_source_shortest_path_length(graph, node)
             mean = sum(shortest_paths.values()) / len(shortest_paths)
-            amount_neighbors = len(nx.descendants(graph, node))
-            if amount_neighbors > 0:
-                mean /= amount_neighbors
-            else:  # should not happen as we pre-delete leave nodes
-                mean = 1
             table_of_means[node] = mean
-        n = len(table_of_means)
+
+        sup = max(table_of_means.values())
+        for node, mean in table_of_means.items():  # set loop on max (worst) value
+            if mean == 0:
+                table_of_means[node] = sup
+
         end = time.time()
         print(datetime.now(),
               'lt_logs',
-              'Calculated ' + str(n) + ' mean shortest paths, took: ' + str(end - start) + 's',
+              'Calculated ' + str(len(table_of_means)) + ' mean shortest paths, took: ' + str(end - start) + 's',
               flush=True)
         queue.put(('mean_shortest_paths', table_of_means))
