@@ -28,9 +28,7 @@ class NetworkUploader(Pipe):
         hierarchy = dict()
         for data in hierarchy_raw:
             node = data['node_id']
-            hierarchy[node] = {}
-            for key, value in data.items():
-                hierarchy[node][key] = value
+            hierarchy[node] = data
 
         community = sorted(community_raw, key=lambda k: k['node_id'])
         role = sorted(role_raw, key=lambda k: k['node_id'])
