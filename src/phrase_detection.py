@@ -6,8 +6,49 @@ from textacy.preprocess \
     import preprocess_text, replace_urls, replace_emails, replace_phone_numbers, replace_numbers, remove_punct
 from src.common import SparkProvider
 from ast import literal_eval as make_tuple
+import gensim
+import itertools
+import nltk
+import string
+from src.sgrank import sgrank_for_multiple_documents
 
 from .common import Pipe
+
+
+def clean_text(text):
+    for func in [replace_urls, replace_emails, replace_phone_numbers, replace_numbers]:
+        text = func(text, replace_with='')
+
+    text = preprocess_text(
+        text,
+        no_currency_symbols=True,
+        no_contractions=True,
+        no_accents=True
+    )
+    return remove_punct(text, marks='|')
+
+
+def extract_candidate_phrases(text):
+    # tokenize, POS-tag, and split using regular expressions
+    text_cleaned = clean_text(text)
+
+    chunker = nltk.chunk.regexp.RegexpParser(r'KT: {(<JJ>* <NN.*>+ <IN>)? <JJ>* <NN.*>+}')
+    tagged_sents = nltk.pos_tag_sents(nltk.word_tokenize(sent) for sent in nltk.sent_tokenize(text_cleaned))
+    all_phrases = list(itertools.chain.from_iterable(nltk.chunk.tree2conlltags(chunker.parse(tagged_sent))
+                                                     for tagged_sent in tagged_sents))
+
+    def lambda_unpack(f):
+        return lambda args: f(*args)
+
+    # join constituent words into a single phrase
+    candidates = [' '.join(word for word, pos, chunk in group).lower() for key, group in
+                  itertools.groupby(all_phrases, lambda_unpack(lambda word, pos, chunk: chunk != 'O')) if key]
+
+    # exclude candidates that are stop words or entirely punctuation
+    punct = set(string.punctuation)
+    stop_words = set(nltk.corpus.stopwords.words('english'))
+
+    return [cand for cand in candidates if cand not in stop_words and not all(char in punct for char in cand)]
 
 
 class PhraseDetection(Pipe):
@@ -23,6 +64,8 @@ class PhraseDetection(Pipe):
         """Get keyphrases for a leuchtturm document."""
         document = json.loads(raw_message)
 
+        document['keyphrases_single'] = self.get_keyphrases_for_text(document[self.read_from], 10)
+
         document['keyphrases'] = []
         for phrase in keyphrases:
             if phrase[0] in document[self.read_from].lower():
@@ -30,39 +73,72 @@ class PhraseDetection(Pipe):
 
         return json.dumps(document, ensure_ascii=False)
 
-    def get_keyphrases_for_chunk(self, chunk):
-        """Get keyphrases for a text chunk."""
-        for func in [replace_urls, replace_emails, replace_phone_numbers, replace_numbers]:
-            chunk = func(chunk, replace_with='')
+    def get_keyphrases_for_text(self, text, n_keyterms):
+        """Get keyphrases for a text."""
 
-        chunk = preprocess_text(
-            chunk,
-            no_currency_symbols=True,
-            no_contractions=True,
-            no_accents=True
-        )
-        chunk = remove_punct(chunk, marks='|')
+        text = clean_text(text)
 
-        return keyterms.sgrank(
-            Doc(chunk, lang='en_core_web_sm'),
+        return sgrank_for_multiple_documents(
+            Doc(text, lang='en_core_web_sm'),
             ngrams=make_tuple(self.conf.get('phrase_detection', 'length')),
-            n_keyterms=self.conf.get('phrase_detection', 'amount'),
+            n_keyterms=n_keyterms,
             window_width=self.conf.get('phrase_detection', 'window_width')
         )
 
+    def score_keyphrases_by_tfidf(self, documents):
+        documents = documents.map(json.loads)
+
+        def add_boc_text(document):
+            text = document['header']['subject'] + '. ' + document[self.read_from]
+            cands = extract_candidate_phrases(text)
+            document['phrases_boc_text'] = cands
+            return document
+
+        documents = documents.map(add_boc_text)
+
+        boc_texts = documents.map(lambda document: document['phrases_boc_text']).collect()
+        dictionary = gensim.corpora.Dictionary(boc_texts)
+
+        def add_bow(document):
+            document['phrases_bow'] = dictionary.doc2bow(document.pop('phrases_boc_text', []))
+            return document
+
+        documents = documents.map(add_bow)
+
+        corpus = documents.map(lambda document: document['phrases_bow']).collect()
+        tfidf = gensim.models.TfidfModel(corpus)
+
+        def add_tfidf(document):
+            phrases = tfidf[document.pop('phrases_bow', [])]
+            document['keyphrases_tfidf'] = []
+            phrases.sort(key=lambda tup: tup[1], reverse=True)
+            for phrase in phrases:
+                document['keyphrases_tfidf'].append([dictionary.get(phrase[0]), phrase[1]])
+
+            return document
+
+        documents = documents.map(add_tfidf)
+
+        return documents.map(json.dumps)
+
     def run(self, rdd):
         """Run task in a spark context."""
-        corpus = rdd.map(lambda document: json.loads(document)[self.read_from])
-        corpus_joined = '. '.join(corpus.collect())
+        rdd = self.score_keyphrases_by_tfidf(rdd)
+
+        corpus = rdd.map(
+            lambda document: json.loads(document)['header']['subject'] + '. ' + json.loads(document)[self.read_from]
+        ).collect()
+        corpus_joined = '. '.join(corpus)
 
         chunk_size = self.conf.get('phrase_detection', 'chunk_size')
         corpus_chunked = [corpus_joined[i:i + chunk_size] for i in range(0, len(corpus_joined), chunk_size)]
 
         sc = SparkProvider.spark_context(self.conf)
         chunked_rdd = sc.parallelize(corpus_chunked)
-        phrases_rdd = chunked_rdd.flatMap(lambda chunk: self.get_keyphrases_for_chunk(chunk))
+        phrases_rdd = chunked_rdd.flatMap(
+            lambda chunk: self.get_keyphrases_for_text(chunk, self.conf.get('phrase_detection', 'amount'))
+        )
         phrases_rdd = phrases_rdd.map(lambda phrase: (phrase[0].lower(), phrase[1]))
-        print(phrases_rdd)
         phrases_rdd = phrases_rdd.aggregateByKey((0, 0), lambda a, b: (a[0] + b, a[1] + 1),
                                                  lambda a, b: (a[0] + b[0], a[1] + b[1]))
         phrases_list = phrases_rdd.mapValues(lambda v: v[0] / v[1]).sortBy(lambda x: x[1], False).collect()
