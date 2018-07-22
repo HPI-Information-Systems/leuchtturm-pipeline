@@ -5,7 +5,7 @@ from textacy import keyterms, Doc
 from textacy.preprocess \
     import preprocess_text, replace_urls, replace_emails, replace_phone_numbers, replace_numbers, remove_punct
 from src.common import SparkProvider
-from ast import literal_eval as make_tuple
+from ast import literal_eval
 import gensim
 import itertools
 import nltk
@@ -66,9 +66,11 @@ class PhraseDetection(Pipe):
 
         document['keyphrases_single'] = self.get_keyphrases_for_text(document[self.read_from], 10)
 
+        common_words = literal_eval(self.conf.get('phrase_detection', 'common_words'))
+
         document['keyphrases'] = []
         for phrase in keyphrases:
-            if phrase[0] in document[self.read_from].lower():
+            if phrase[0] not in common_words and phrase[0] in document[self.read_from].lower():
                 document['keyphrases'].append(phrase)
 
         return json.dumps(document, ensure_ascii=False)
@@ -80,7 +82,7 @@ class PhraseDetection(Pipe):
 
         return sgrank_for_multiple_documents(
             Doc(text, lang='en_core_web_sm'),
-            ngrams=make_tuple(self.conf.get('phrase_detection', 'length')),
+            ngrams=literal_eval(self.conf.get('phrase_detection', 'length')),
             n_keyterms=n_keyterms,
             window_width=self.conf.get('phrase_detection', 'window_width')
         )
