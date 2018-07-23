@@ -16,7 +16,7 @@ from .common import Pipe
 
 
 def clean_text(text):
-    """Cleans the input text."""
+    """Clean the input text."""
     for func in [replace_urls, replace_emails, replace_phone_numbers, replace_numbers]:
         text = func(text, replace_with='')
 
@@ -30,7 +30,7 @@ def clean_text(text):
 
 
 def extract_candidate_phrases(text):
-    """Extracts candidate phrases for the text."""
+    """Extract candidate phrases for the text."""
     text_cleaned = clean_text(text)
     # tokenize, POS-tag, and split using regular expressions
     chunker = nltk.chunk.regexp.RegexpParser(r'KT: {(<JJ>* <NN.*>+ <IN>)? <JJ>* <NN.*>+}')
@@ -94,7 +94,7 @@ class PhraseDetection(Pipe):
         )
 
     def add_keyphrases_by_tfidf(self, documents):
-        """Add keyphrases by tfidf"""
+        """Add keyphrases by tfidf."""
         documents = documents.map(json.loads)
 
         def add_boc_text(document):

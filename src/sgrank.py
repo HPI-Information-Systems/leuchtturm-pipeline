@@ -9,7 +9,7 @@ import math
 from operator import itemgetter
 from cytoolz import itertoolz
 import networkx as nx
-from textacy import extract, vsm
+from textacy import extract
 
 LOGGER = logging.getLogger(__name__)
 
@@ -107,8 +107,8 @@ def sgrank_for_multiple_documents(doc, ngrams=(1, 2, 3, 4, 5, 6), normalize='lem
     edge_weights = defaultdict(lambda: defaultdict(float))
     for t1, t2s in sum_logdists.items():
         for t2 in t2s:
-            edge_weights[t1][t2] = ((1.0 + sum_logdists[t1][t2]) / n_coocs[t1][t2]) * term_weights[t1]\
-                                   * term_weights[t2]
+            edge_weights[t1][t2] =\
+                ((1.0 + sum_logdists[t1][t2]) / n_coocs[t1][t2]) * term_weights[t1] * term_weights[t2]
     # normalize edge weights by sum of outgoing edge weights per term (node)
     norm_edge_weights = []
     for t1, t2s in edge_weights.items():
