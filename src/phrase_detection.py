@@ -75,10 +75,13 @@ class PhraseDetection(Pipe):
 
         common_words = literal_eval(self.conf.get('phrase_detection', 'common_words'))
 
-        document['keyphrases'] = []
+        document['keyphrases_multiple'] = []
+        document['keyphrases_multiple_filtered'] = []
         for phrase in keyphrases:
-            if phrase[0] not in common_words and phrase[0] in document[self.read_from].lower():
-                document['keyphrases'].append(phrase)
+            if phrase[0] in document[self.read_from].lower():
+                document['keyphrases_multiple'].append(phrase)
+                if phrase[0] not in common_words:
+                    document['keyphrases_multiple_filtered'].append(phrase)
 
         return json.dumps(document, ensure_ascii=False)
 
