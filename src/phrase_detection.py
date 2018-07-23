@@ -16,6 +16,7 @@ from .common import Pipe
 
 
 def clean_text(text):
+    """Cleans the input text."""
     for func in [replace_urls, replace_emails, replace_phone_numbers, replace_numbers]:
         text = func(text, replace_with='')
 
@@ -29,9 +30,9 @@ def clean_text(text):
 
 
 def extract_candidate_phrases(text):
-    # tokenize, POS-tag, and split using regular expressions
+    """Extracts candidate phrases for the text."""
     text_cleaned = clean_text(text)
-
+    # tokenize, POS-tag, and split using regular expressions
     chunker = nltk.chunk.regexp.RegexpParser(r'KT: {(<JJ>* <NN.*>+ <IN>)? <JJ>* <NN.*>+}')
     tagged_sents = nltk.pos_tag_sents(nltk.word_tokenize(sent) for sent in nltk.sent_tokenize(text_cleaned))
     all_phrases = list(itertools.chain.from_iterable(nltk.chunk.tree2conlltags(chunker.parse(tagged_sent))
@@ -64,7 +65,13 @@ class PhraseDetection(Pipe):
         """Get keyphrases for a leuchtturm document."""
         document = json.loads(raw_message)
 
-        document['keyphrases_single'] = self.get_keyphrases_for_text(document[self.read_from], 10)
+        text = clean_text(document['header']['subject'] + '. ' + document[self.read_from])
+        document['keyphrases_single'] = keyterms.sgrank(
+            Doc(text, lang='en_core_web_sm'),
+            ngrams=literal_eval(self.conf.get('phrase_detection', 'length')),
+            n_keyterms=10,
+            window_width=self.conf.get('phrase_detection', 'window_width')
+        )
 
         common_words = literal_eval(self.conf.get('phrase_detection', 'common_words'))
 
@@ -77,7 +84,6 @@ class PhraseDetection(Pipe):
 
     def get_keyphrases_for_text(self, text, n_keyterms):
         """Get keyphrases for a text."""
-
         text = clean_text(text)
 
         return sgrank_for_multiple_documents(
@@ -87,7 +93,8 @@ class PhraseDetection(Pipe):
             window_width=self.conf.get('phrase_detection', 'window_width')
         )
 
-    def score_keyphrases_by_tfidf(self, documents):
+    def add_keyphrases_by_tfidf(self, documents):
+        """Add keyphrases by tfidf"""
         documents = documents.map(json.loads)
 
         def add_boc_text(document):
@@ -121,11 +128,11 @@ class PhraseDetection(Pipe):
 
         documents = documents.map(add_tfidf)
 
-        return documents.map(json.dumps)
+        return documents.map(lambda document: json.dumps(document, ensure_ascii=False))
 
     def run(self, rdd):
         """Run task in a spark context."""
-        rdd = self.score_keyphrases_by_tfidf(rdd)
+        rdd = self.add_keyphrases_by_tfidf(rdd)
 
         corpus = rdd.map(
             lambda document: json.loads(document)['header']['subject'] + '. ' + json.loads(document)[self.read_from]
