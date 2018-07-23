@@ -109,19 +109,19 @@ class PhraseDetection(Pipe):
         documents = documents.map(add_boc_text)
 
         boc_texts = documents.map(lambda document: document['phrases_boc_text']).collect()
-        dictionary = gensim.corpora.Dictionary(boc_texts)
+        gen_dictionary = gensim.corpora.Dictionary(boc_texts)
 
-        def add_bow(document):
+        def add_bow(document, dictionary):
             document['phrases_bow'] = dictionary.doc2bow(document.pop('phrases_boc_text', []))
             return document
 
-        documents = documents.map(add_bow)
+        documents = documents.map(lambda document: add_bow(document, gen_dictionary))
 
         corpus = documents.map(lambda document: document['phrases_bow']).collect()
         tfidf = gensim.models.TfidfModel(corpus)
 
-        def add_tfidf(document):
-            phrases = tfidf[document.pop('phrases_bow', [])]
+        def add_tfidf(document, dictionary, tfidf_model):
+            phrases = tfidf_model[document.pop('phrases_bow', [])]
             document['keyphrases_tfidf'] = []
             phrases.sort(key=lambda tup: tup[1], reverse=True)
             for phrase in phrases:
@@ -129,7 +129,7 @@ class PhraseDetection(Pipe):
 
             return document
 
-        documents = documents.map(add_tfidf)
+        documents = documents.map(lambda document: add_tfidf(document, gen_dictionary, tfidf))
 
         return documents.map(lambda document: json.dumps(document, ensure_ascii=False))
 
