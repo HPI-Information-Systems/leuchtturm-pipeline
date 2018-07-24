@@ -42,7 +42,7 @@ def run_email_pipeline(conf):
         LanguageDetection(conf, read_from='body'),
         #EmailCategoryClassification(conf),
         #EmailClusterPrediction(conf),
-        TopicModelPreprocessing(conf, read_from='body_without_signature', write_to='bow'),
+        #TopicModelPreprocessing(conf, read_from='body_without_signature', write_to='bow'),
     ]
     writer = TextFileWriter(conf, path=conf.get('data', 'results_dir'))
     results_rdd = Pipeline(reader, pipes, writer).run()
@@ -55,7 +55,7 @@ def run_email_pipeline(conf):
 
     reader = TextFileReader(conf, path=conf.get('data', 'results_dir'))
     pipes = [
-        TopicModelPrediction(conf, topic_ranks=topic_ranks, read_from='bow', model=topic_model_broadcast, dictionary=topic_dictionary_broadcast)
+        #TopicModelPrediction(conf, topic_ranks=topic_ranks, read_from='bow', model=topic_model_broadcast, dictionary=topic_dictionary_broadcast)
     ]
     writer = TextFileWriter(conf, path=conf.get('data', 'results_topics_dir'))
     Pipeline(reader, pipes, writer).run()
