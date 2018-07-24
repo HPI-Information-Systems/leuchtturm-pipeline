@@ -76,12 +76,16 @@ class PhraseDetection(Pipe):
         common_words = literal_eval(self.conf.get('phrase_detection', 'common_words'))
 
         document['keyphrases_multiple'] = []
+        document['keyphrases_multiple_co'] = []
         document['keyphrases_multiple_filtered'] = []
+        document['keyphrases_multiple_filtered_co'] = []
         for phrase in keyphrases:
             if phrase[0] in document[self.read_from].lower():
-                document['keyphrases_multiple'].append(phrase)
+                document['keyphrases_multiple'].append(phrase[0])
+                document['keyphrases_multiple_co'].append(phrase)
                 if phrase[0] not in common_words:
-                    document['keyphrases_multiple_filtered'].append(phrase)
+                    document['keyphrases_multiple_filtered'].append(phrase[0])
+                    document['keyphrases_multiple_filtered_co'].append(phrase)
 
         return json.dumps(document, ensure_ascii=False)
 
@@ -123,9 +127,11 @@ class PhraseDetection(Pipe):
         def add_tfidf(document, dictionary, tfidf_model):
             phrases = tfidf_model[document.pop('phrases_bow', [])]
             document['keyphrases_tfidf'] = []
+            document['keyphrases_tfidf_co'] = []
             phrases.sort(key=lambda tup: tup[1], reverse=True)
             for phrase in phrases:
-                document['keyphrases_tfidf'].append([dictionary.get(phrase[0]), phrase[1]])
+                document['keyphrases_tfidf'].append(dictionary.get(phrase[0]))
+                document['keyphrases_tfidf_co'].append([dictionary.get(phrase[0]), phrase[1]])
 
             return document
 
@@ -135,7 +141,7 @@ class PhraseDetection(Pipe):
 
     def run(self, rdd):
         """Run task in a spark context."""
-        rdd = self.add_keyphrases_by_tfidf(rdd)
+        # rdd = self.add_keyphrases_by_tfidf(rdd)
 
         corpus = rdd.map(
             lambda document: json.loads(document)['header']['subject'] + '. ' + json.loads(document)[self.read_from]
