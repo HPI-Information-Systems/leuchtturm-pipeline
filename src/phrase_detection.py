@@ -78,8 +78,6 @@ class PhraseDetection(Pipe):
         for x in range(len(tfidf.get_feature_names())):
             idf_map[tfidf.get_feature_names()[x]] = tfidf.idf_[x]
 
-        print(idf_map)
-
         chunk_size = self.conf.get('phrase_detection', 'chunk_size')
         corpus_chunked = [corpus_joined[i:i + chunk_size] for i in range(0, len(corpus_joined), chunk_size)]
 
