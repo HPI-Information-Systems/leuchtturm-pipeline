@@ -41,7 +41,7 @@ class PhraseDetection(Pipe):
         text = clean_text(document['header']['subject'] + '. ' + document[self.read_from])
         document['keyphrases_single'] = keyterms.sgrank(
             Doc(text, lang='en_core_web_sm'),
-            ngrams=literal_eval(self.conf.get('phrase_detection', 'length')),
+            ngrams=(1, 2, 3, 4, 5, 6),
             n_keyterms=5,
             window_width=self.conf.get('phrase_detection', 'window_width'),
             idf=idf
