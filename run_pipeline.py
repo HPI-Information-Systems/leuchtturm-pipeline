@@ -40,8 +40,8 @@ def run_email_pipeline(conf):
         ),
         PhraseDetection(conf, read_from='body_without_signature'),
         LanguageDetection(conf, read_from='body'),
-        #EmailCategoryClassification(conf),
-        #EmailClusterPrediction(conf),
+        EmailCategoryClassification(conf),
+        EmailClusterPrediction(conf),
         TopicModelPreprocessing(conf, read_from='body_without_signature', write_to='bow'),
     ]
     writer = TextFileWriter(conf, path=conf.get('data', 'results_dir'))
