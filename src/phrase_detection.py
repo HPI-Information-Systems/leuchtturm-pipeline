@@ -6,7 +6,6 @@ from textacy.preprocess \
     import preprocess_text, replace_urls, replace_emails, replace_phone_numbers, replace_numbers, remove_punct
 from src.common import SparkProvider
 from ast import literal_eval
-from sklearn.feature_extraction.text import TfidfVectorizer
 from .common import Pipe
 from .sgrank import sgrank_for_multiple_documents
 
@@ -34,18 +33,9 @@ class PhraseDetection(Pipe):
         self.read_from = read_from
         self.conf = conf
 
-    def run_on_document(self, raw_message, keyphrases, idf):
+    def run_on_document(self, raw_message, keyphrases):
         """Get keyphrases for a leuchtturm document."""
         document = json.loads(raw_message)
-
-        text = clean_text(document['header']['subject'] + '. ' + document[self.read_from])
-        document['keyphrases_single'] = keyterms.sgrank(
-            Doc(text, lang='en_core_web_sm'),
-            ngrams=(1, 2, 3, 4, 5, 6),
-            n_keyterms=5,
-            window_width=self.conf.get('phrase_detection', 'window_width'),
-            idf=idf
-        )
 
         document['keyphrases_multiple'] = []
         for phrase in keyphrases:
@@ -72,12 +62,6 @@ class PhraseDetection(Pipe):
         ).collect()
         corpus_joined = '. '.join(corpus)
 
-        tfidf = TfidfVectorizer(max_features=500)
-        tfidf.fit(corpus)
-        idf_map = {}
-        for x in range(len(tfidf.get_feature_names())):
-            idf_map[tfidf.get_feature_names()[x]] = tfidf.idf_[x]
-
         chunk_size = self.conf.get('phrase_detection', 'chunk_size')
         corpus_chunked = [corpus_joined[i:i + chunk_size] for i in range(0, len(corpus_joined), chunk_size)]
 
@@ -91,6 +75,6 @@ class PhraseDetection(Pipe):
                                                  lambda a, b: (a[0] + b[0], a[1] + b[1]))
         phrases_list = phrases_rdd.mapValues(lambda v: v[0] / v[1]).sortBy(lambda x: x[1], False).collect()
 
-        rdd = rdd.map(lambda document: self.run_on_document(document, phrases_list, idf_map))
+        rdd = rdd.map(lambda document: self.run_on_document(document, phrases_list))
 
         return rdd
