@@ -1,7 +1,7 @@
 """Phrase Detection pipes for leuchtturm pipelines."""
 
 import ujson as json
-from textacy import keyterms, Doc
+from textacy import Doc
 from textacy.preprocess \
     import preprocess_text, replace_urls, replace_emails, replace_phone_numbers, replace_numbers, remove_punct
 from src.common import SparkProvider
