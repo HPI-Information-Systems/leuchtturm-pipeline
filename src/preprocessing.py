@@ -281,7 +281,7 @@ class HeaderParsing(Pipe):
         """Split a string that is likely a header into its fields."""
         header_string = self.prepare_header_string(header_string)
 
-        separator_re = re.compile(r'\s((?=(x-)?from:)|(?=((x|reply)-)?to:)|(?=(x-)?b?cc:)|(?=date:)|(?=sent(-by)?:)|(?=subject:))', re.IGNORECASE)  # NOQA
+        separator_re = re.compile(r'\s((?=(x-)?from:)|(?=((x|reply)-)?to:)|(?=(x-)?b?cc:)|(?=date:)|(?=sent(-by)?:)|(?=subject:)|(?=von:)|(?=gesendet:)|(?=an:)|(?=betreff:))', re.IGNORECASE)  # NOQA
         header_fields = separator_re.split(header_string)  # split into separate headers
         header_fields = [header_field for header_field in header_fields if header_field]  # filter none and empty
         for index, header_field in enumerate(header_fields):
@@ -407,6 +407,8 @@ class HeaderParsing(Pipe):
 
         if self.get_header_value(headers, 'from'):
             header['sender'] = self.parse_correspondent(self.get_header_value(headers, 'from'))
+        elif self.get_header_value(headers, 'von'):
+            header['sender'] = self.parse_correspondent(self.get_header_value(headers, 'von'))
         elif headers and len(headers[0]) == 1:  # special header, missing from key in first line
             sender = re.sub(r'(on )?\d{2}/\d{2}/\d{2,4}\s\d{2}:\d{2}(:\d{2})?\s?(am|pm)?', '',
                             headers[0][0], flags=re.IGNORECASE)  # rm date
@@ -417,6 +419,9 @@ class HeaderParsing(Pipe):
         delimiter = ',' if 'original message' not in header_string.lower() else ';'  # catch 'to: lastname, firstname'
         if self.get_header_value(headers, 'to'):
             header['recipients'] += self.parse_recipients(self.get_header_value(headers, 'to'),
+                                                          kind='to', delimiter=delimiter)
+        elif self.get_header_value(headers, 'an'):
+            header['recipients'] += self.parse_recipients(self.get_header_value(headers, 'an'),
                                                           kind='to', delimiter=delimiter)
         if self.get_header_value(headers, 'cc'):
             header['recipients'] += self.parse_recipients(self.get_header_value(headers, 'cc'),
@@ -429,6 +434,8 @@ class HeaderParsing(Pipe):
             header['date'], header['date_changed'] = self.parse_date(self.get_header_value(headers, 'date'))
         elif self.get_header_value(headers, 'sent'):
             header['date'], header['date_changed'] = self.parse_date(self.get_header_value(headers, 'sent'))
+        elif self.get_header_value(headers, 'gesendet'):
+            header['date'], header['date_changed'] = self.parse_date(self.get_header_value(headers, 'gesendet'))
         elif headers:
             date = re.search(r'\d{2}/\d{2}/\d{2,4}\s\d{2}:\d{2}(:\d{2})?\s?(am|pm)?',
                              self.prepare_header_string(header_string), flags=re.IGNORECASE)  # get date
@@ -437,6 +444,8 @@ class HeaderParsing(Pipe):
 
         if self.get_header_value(headers, 'subject'):
             header['subject'] = self.parse_subject(self.get_header_value(headers, 'subject'))
+        elif self.get_header_value(headers, 'betreff'):
+            header['subject'] = self.parse_subject(self.get_header_value(headers, 'betreff'))
 
         return header
 
