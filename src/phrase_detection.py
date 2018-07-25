@@ -72,7 +72,7 @@ class PhraseDetection(Pipe):
         ).collect()
         corpus_joined = '. '.join(corpus)
 
-        tfidf = TfidfVectorizer()
+        tfidf = TfidfVectorizer(max_features=500)
         tfidf.fit(corpus)
         idf_map = {}
         for x in range(len(tfidf.get_feature_names())):
