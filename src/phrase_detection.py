@@ -38,8 +38,9 @@ class PhraseDetection(Pipe):
         document = json.loads(raw_message)
 
         document['keyphrases'] = []
+        document_content = document['header']['subject'] + '. ' + document[self.read_from].lower()
         for phrase in keyphrases:
-            if phrase[0] in document[self.read_from].lower():
+            if phrase[0] in document_content:
                 document['keyphrases'].append(phrase)
 
         return json.dumps(document, ensure_ascii=False)
