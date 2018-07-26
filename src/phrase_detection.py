@@ -37,10 +37,10 @@ class PhraseDetection(Pipe):
         """Get keyphrases for a leuchtturm document."""
         document = json.loads(raw_message)
 
-        document['keyphrases_multiple'] = []
+        document['keyphrases'] = []
         for phrase in keyphrases:
             if phrase[0] in document[self.read_from].lower():
-                document['keyphrases_multiple'].append(phrase)
+                document['keyphrases'].append(phrase)
 
         return json.dumps(document, ensure_ascii=False)
 

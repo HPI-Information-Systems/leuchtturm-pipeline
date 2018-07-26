@@ -42,7 +42,7 @@ def sgrank_for_multiple_documents(doc, ngrams=(1, 2, 3, 4, 5, 6), normalize='lem
     # get normalized term strings, as desired
     # paired with positional index in document and length in a 3-tuple
     if normalize == 'lemma':
-        terms = [(term.lemma_, term.start, len(term)) for term in terms]
+        terms = [(term.lemma_, term.start, len(term)) for term in terms if len(term.lemma_) > 6]
     elif normalize == 'lower':
         terms = [(term.orth_.lower(), term.start, len(term)) for term in terms]
     elif not normalize:
