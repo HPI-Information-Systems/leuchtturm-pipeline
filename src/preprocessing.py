@@ -101,7 +101,7 @@ class EmailDecoding(Pipe):
         for header in filtered_headers:
             try:
                 header_dec = str(make_header(decode_header(header[1])))
-            except UnicodeDecodeError:
+            except (UnicodeDecodeError, LookupError):
                 header_dec = header[1]
             headers += header[0] + ': ' + header_dec + '\n'
 
@@ -119,18 +119,21 @@ class EmailDecoding(Pipe):
     def run_on_document(self, document):
         """Get main body and extract attachement names on a leuchtturm doc."""
         doc = json.loads(document)
-        message = message_from_string(doc['raw'])
+        try:
+            message = message_from_string(doc['raw'])
 
-        minimal_header = textacy.preprocess.fix_bad_unicode(self.get_main_header(message))
-        body = textacy.preprocess.fix_bad_unicode(self.get_body(message))
+            minimal_header = textacy.preprocess.fix_bad_unicode(self.get_main_header(message))
+            body = textacy.preprocess.fix_bad_unicode(self.get_body(message))
 
-        doc['raw'] = minimal_header + '\n\n' + body
-        if self.split_header_body:
-            doc['header'] = minimal_header
-            doc['body'] = body
-        if self.get_attachment_names:
-            doc['attachments'] = self.get_attachments(message)
-
+            doc['raw'] = minimal_header + '\n\n' + body
+            if self.split_header_body:
+                doc['header'] = minimal_header
+                doc['body'] = body
+            if self.get_attachment_names:
+                doc['attachments'] = self.get_attachments(message)
+        except Exception as e:
+            print(json.dumps(doc, indent=2))
+            raise e
         return json.dumps(doc, ensure_ascii=False)
 
     def run(self, rdd):
@@ -183,6 +186,7 @@ class EmailSplitting(Pipe):
 
         found_headers = list(EmailSplitting.header_regex.finditer(original_body))
         headers = [header.group() for header in found_headers]
+        headers = [h for h in headers if len(h.strip()) > 0]
         headers = [original_header] + headers
 
         remaining_email = email
@@ -199,7 +203,13 @@ class EmailSplitting(Pipe):
             if index < len(headers) - 1:
                 next_header = headers[index + 1]
 
-            current_parts = remaining_email.split(current_header, 1)
+            try:
+                current_parts = remaining_email.split(current_header, 1)
+            except ValueError as e:
+                print('current header:', current_header)
+                print('next header:', next_header)
+                print('remaining email:', remaining_email)
+                raise e
 
             if next_header:
                 parts.append((current_header, current_parts[1].split(next_header)[0]))
@@ -213,29 +223,32 @@ class EmailSplitting(Pipe):
         document = json.loads(raw_message)
 
         parts = []
-        if self.use_quagga:
-            parts = self.detect_parts_quagga(document['raw'])
-        else:
-            parts = self.detect_parts(document['raw'])
+        try:
+            if self.use_quagga:
+                parts = self.detect_parts_quagga(document['raw'])
+            else:
+                parts = self.detect_parts(document['raw'])
 
-        part_docs = []
-        splitted_emails = []
+            part_docs = []
+            splitted_emails = []
 
-        original_doc_id = document['doc_id']
-        for index, (header, body) in enumerate(parts):
-            obj = document
-            obj['header'] = header
-            obj['body'] = body.strip(whitespace)
+            original_doc_id = document['doc_id']
+            for index, (header, body) in enumerate(parts):
+                obj = document
+                obj['header'] = header
+                obj['body'] = body.strip(whitespace)
 
-            if len(parts) > 1:  # if there are multiple parts, add an identifier to the original document id
-                obj['doc_id'] = original_doc_id + '_part_' + str(index + 1) + '_of_' + str(len(parts))
+                if len(parts) > 1:  # if there are multiple parts, add an identifier to the original document id
+                    obj['doc_id'] = original_doc_id + '_part_' + str(index + 1) + '_of_' + str(len(parts))
 
-            part_docs.append(obj.copy())
+                part_docs.append(obj.copy())
 
-        for index, part in enumerate(part_docs):
-            part['successor'] = part_docs[index - 1]['doc_id'] if not index == 0 else None
-            part['predecessor'] = part_docs[index + 1]['doc_id'] if not index == len(part_docs) - 1 else None
-            splitted_emails.append(part.copy())
+            for index, part in enumerate(part_docs):
+                part['successor'] = part_docs[index - 1]['doc_id'] if not index == 0 else None
+                part['predecessor'] = part_docs[index + 1]['doc_id'] if not index == len(part_docs) - 1 else None
+                splitted_emails.append(part.copy())
+        except Exception as e:
+            print(json.dumps(document, indent=2))
 
         if self.keep_thread_connected:
             document['parts'] = splitted_emails
@@ -281,7 +294,9 @@ class HeaderParsing(Pipe):
         """Split a string that is likely a header into its fields."""
         header_string = self.prepare_header_string(header_string)
 
-        separator_re = re.compile(r'\s((?=(x-)?from:)|(?=((x|reply)-)?to:)|(?=(x-)?b?cc:)|(?=date:)|(?=sent(-by)?:)|(?=subject:)|(?=von:)|(?=gesendet:)|(?=an:)|(?=betreff:))', re.IGNORECASE)  # NOQA
+        separator_re = re.compile(
+            r'\s((?=(x-)?from:)|(?=((x|reply)-)?to:)|(?=(x-)?b?cc:)|(?=date:)|(?=sent(-by)?:)|(?=subject:)|(?=von:)|(?=gesendet:)|(?=an:)|(?=betreff:))',
+            re.IGNORECASE)  # NOQA
         header_fields = separator_re.split(header_string)  # split into separate headers
         header_fields = [header_field for header_field in header_fields if header_field]  # filter none and empty
         for index, header_field in enumerate(header_fields):
@@ -452,12 +467,15 @@ class HeaderParsing(Pipe):
     def run_on_document(self, raw_message):
         """Get body and header information for a leuchtturm document."""
         document = json.loads(raw_message)
-
-        if 'parts' in document:
-            for part in document['parts']:
-                part['header'] = self.parse_header(part['header'])
-        else:
-            document['header'] = self.parse_header(document['header'])
+        try:
+            if 'parts' in document:
+                for part in document['parts']:
+                    part['header'] = self.parse_header(part['header'])
+            else:
+                document['header'] = self.parse_header(document['header'])
+        except Exception as e:
+            print(json.dumps(document, indent=2))
+            raise e
 
         return json.dumps(document, ensure_ascii=False)
 
@@ -562,18 +580,72 @@ class TextCleaning(Pipe):
         """Transform a document into clean text."""
         document = json.loads(raw_message)
         clean = document[self.read_from]
+        try:
+            for func in [self.convert_to_ascii, self.remove_header]:
+                clean = func(clean)
 
-        for func in [self.convert_to_ascii, self.remove_header]:
-            clean = func(clean)
+            clean_original_ws = clean
 
-        clean_original_ws = clean
+            if not self.readable:
+                clean_original_ws = self.remove_strict(clean_original_ws)
+                clean = self.remove_strict(clean)
 
-        if not self.readable:
-            clean_original_ws = self.remove_strict(clean_original_ws)
-            clean = self.remove_strict(clean)
+            document[self.write_to_original_ws] = clean_original_ws
+            document[self.write_to] = clean
+        except Exception as e:
+            print(json.dumps(document, indent=2))
+            raise e
 
-        document[self.write_to_original_ws] = clean_original_ws
-        document[self.write_to] = clean
+        return json.dumps(document, ensure_ascii=False)
+
+    def run(self, rdd):
+        """Run pipe in spark context."""
+        return rdd.map(lambda x: self.run_on_document(x))
+
+
+class DummyValues(Pipe):
+    """
+    Add dummy values to
+    """
+
+    def __init__(self, conf):
+        """Set params."""
+        super().__init__(conf)
+
+    def run_on_document(self, raw_message):
+        document = json.loads(raw_message)
+
+        document['category'] = {
+            "top_category": "business",
+            "prob_category": {
+                "business": 0.8,
+                "personal": 0.1,
+                "spam": 0.1
+            },
+            "top_subcategory": "strategy",
+            "prob_subcategory": [
+                ["document_editing", 0.1],
+                ["employment", 0.1],
+                ["feedback", 0.1],
+                ["logistic", 0.1],
+                ["strategy", 0.6]
+            ]
+        }
+        document['keyphrases'] = [
+            ["Lorem Ipsum Dummy", 0.1]
+        ]
+        document['cluster.top_subject_words'] = ['dummy'],
+        document['cluster.top_body_words'] = ['dummy']
+        document['cluster.email_is_thread'] = 0.12,
+        document['cluster.email_is_internal'] = 0.04
+        document['cluster.recipients_is_single'] = 0.58
+        document['cluster.sent_during_business_hours'] = 0.85
+        document['successor'] = None
+        document['predecessor'] = None
+        document['body_without_signature'] = document['body']
+        document['sent_from_mobile'] = None
+        document['signature'] = ''
+        document['lang'] = 'en'
 
         return json.dumps(document, ensure_ascii=False)
 

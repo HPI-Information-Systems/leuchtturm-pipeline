@@ -42,7 +42,8 @@ class SparkProvider(object):
         spark_conf = SparkConf().set('spark.hive.mapred.supports.subdirectories', 'true') \
             .set('spark.hadoop.mapreduce.input.fileinputformat.input.dir.recursive', 'true') \
             .set('spark.driver.memory', conf.get('spark', 'driver_memory')) \
-            .set('spark.executor.memory', conf.get('spark', 'executor_memory'))
+            .set('spark.executor.memory', conf.get('spark', 'executor_memory')) \
+            .set('spark.executor.cores', conf.get('spark', 'executor_cores'))
 
         return spark_conf
 
@@ -54,8 +55,6 @@ class SparkProvider(object):
     @staticmethod
     def spark_parallelism(conf):
         """If running on cluster return high degree of parallelism."""
-        if conf.get('spark', 'run_local'):
-            return 1
         return conf.get('spark', 'parallelism')
 
 

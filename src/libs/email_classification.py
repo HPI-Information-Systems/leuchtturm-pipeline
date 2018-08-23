@@ -5,7 +5,7 @@ from email import message_from_string, utils
 import os
 import re
 from string import whitespace
-
+import warnings
 import dateparser
 import pickle
 from html2text import HTML2Text
@@ -348,6 +348,8 @@ class Features:
 
         # label-encode
         for column in Features._label_encode:
+            print(len(df[column]))
+            warnings.filterwarnings(action='ignore', category=DeprecationWarning)
             encoder = LabelEncoder().fit(df[column])
             df[column] = encoder.transform(df[column])
 

@@ -17,21 +17,87 @@ class Config:
     DEFAULT_CONFIG_FILE = './config/default.ini'
     DEFAULTS = {
         'settings': {
-            'log_level': 'INFO'
+            'log_level': 'INFO',
+            'sklearn_warnings': False
         },
         'data': {
             'dataset': 'dataset',
             'source_dir': './data/input',
             'working_dir': './data/processed',
-            'results_dir': '${data:working_dir}/pipeline_results',
-            'results_correspondent_dir': '${results_dir}_correspondent',
-            'results_injected_dir': '${results_dir}_injected',
-            'results_topics_dir': '${results_dir}_topics',
+            'results_topics_dir': '${working_dir}/pipeline_results_topics',
+            'results_correspondent_dir': '${working_dir}/pipeline_results_correspondent',
+            'results_injected_dir': '${working_dir}/pipeline_results_injected',
+            'results_stage_01': '${working_dir}/pipeline_results_01',
+            'results_stage_02': '${working_dir}/pipeline_results_02',
+            'results_stage_03': '${working_dir}/pipeline_results_03',
+            'results_stage_04': '${working_dir}/pipeline_results_04',
+            'results_stage_05': '${working_dir}/pipeline_results_05',
+            'results_stage_06': '${working_dir}/pipeline_results_06',
+            'results_stage_07': '${results_topics_dir}',
+            'results_stage_08': '${results_correspondent_dir}',
+            'results_stage_09': '${results_injected_dir}',
             'time_min': 0,
             'time_max': 2147483647
         },
+        'stage_01': {  # EML parsing, splitting
+            'input': '${data:source_dir}',
+            'output': '${data:results_stage_01}',
+            'run': True,
+            'write': True
+        },
+        'stage_02': {  # de-duplication
+            'input': '${data:results_stage_01}',
+            'output': '${data:results_stage_02}',
+            'run': True,
+            'write': True
+        },
+        'stage_03': {  # cleaning, signature extraction
+            'input': '${data:results_stage_02}',
+            'output': '${data:results_stage_03}',
+            'run': True,
+            'write': True
+        },
+        'stage_04': {  # phrase detection, language detection
+            'input': '${data:results_stage_03}',
+            'output': '${data:results_stage_04}',
+            'run': True,
+            'write': True
+        },
+        'stage_05': {  # classification
+            'input': '${data:results_stage_04}',
+            'output': '${data:results_stage_05}',
+            'run': True,
+            'write': True
+        },
+        'stage_06': {  # clustering
+            'input': '${data:results_stage_05}',
+            'output': '${data:results_stage_06}',
+            'run': True,
+            'write': True
+        },
+        'stage_07': {  # topic modelling
+            'input': '${data:results_stage_06}',
+            'output': '${data:results_stage_07}',
+            'run': True,
+            'write': True
+        },
+        'stage_08': {  # correspondent aggregation
+            'input': '${data:results_stage_06}',
+            'output': '${data:results_stage_08}',
+            'run': True,
+            'write': True
+        },
+        'stage_09': {  # correspondent IDs
+            'input_1': '${data:results_stage_08}',
+            'input_2': '${data:results_stage_06}',
+            'output': '${data:results_stage_09}',
+            'run': True,
+            'write': True
+        },
         'solr': {
-            'import': False,
+            'import': True,
+            'import_from_1': '${data:results_injected_dir}',
+            'import_from_2': '${data:results_topics_dir}',
             'protocol': 'http',
             'host': '0.0.0.0',
             'port': 8983,
@@ -43,21 +109,24 @@ class Config:
         },
         'neo4j': {
             'import': False,
+            'import_from_1': '${data:results_correspondent_dir}',
+            'import_from_2': '${data:results_injected_dir}',
             'protocol': 'http',
             'host': '0.0.0.0',
             'http_port': 7474,
             'bolt_port': 7687,
             'data_location': './data/neo4j',
             'log_location': './data/logs/neo4j',
+            'csv_file': '${data:working_dir}/neo4j_graph.csv',
             'create_node_index': True
         },
         'spark': {
-            'driver_memory': '6g',
-            'executor_memory': '4g',
-            'run_local': False,
-            'num_executors': 23,
+            'driver_memory': '5g',
+            'executor_memory': '5g',
+            'run_local': True,
+            'num_executors': 1,
             'executor_cores': 4,
-            'parallelism': 276
+            'parallelism': 2
         },
         'models': {
             'directory': './models'
@@ -89,7 +158,10 @@ class Config:
             'file_clustering_tool': '${models:directory}/clustering_tool.pickle'
         },
         'network_analysis': {
-            'run': True
+            'run': True,
+            'hierarchy_file': '${data:working_dir}/hierarchy.json',
+            'community_file': '${data:working_dir}/community.json',
+            'role_file': '${data:working_dir}/role.json'
         },
         'correspondent_aggregation': {
             # Add domains that should be ignored in the organisation extraction here, please use lowercase.
@@ -106,7 +178,7 @@ class Config:
             'amount': 100,
             'window_width': 1000,
             'chunk_size': 10000,
-            'length': (2, 3, 4, 5, 6),
+            'length': [2, 3, 4, 5, 6]
         },
         'hierarchy_scores_weights': {
             'degree': 1,

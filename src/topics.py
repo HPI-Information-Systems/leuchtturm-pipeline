@@ -271,7 +271,6 @@ class TopicModelTraining(Pipe):
         corpus_dictionarized = [dictionary.doc2bow(document) for document in corpus]
 
         print('lt_logs', datetime.now(), 'Starting TM training...')
-
         lda = LdaModel(
             corpus_dictionarized,
             num_topics=self.conf.get('topic_modelling', 'num_topics'),
@@ -412,10 +411,15 @@ class TopicModelPrediction(Pipe):
 
     def run_on_document(self, raw_message):
         """Predict topics for a leuchtturm document."""
-        document = json.loads(raw_message)
-        doc_topics = self.get_topics_for_doc(document['doc_id'], document[self.read_from])
+        try:
+            document = json.loads(raw_message)
+            doc_topics = self.get_topics_for_doc(document['doc_id'], document[self.read_from])
 
-        return [json.dumps(topic, ensure_ascii=False) for topic in doc_topics]
+            return [json.dumps(topic, ensure_ascii=False) for topic in doc_topics]
+        except Exception as e:
+            print('ERROR during topic model application ignored:')
+            print(e)
+            return raw_message
 
     def run_on_partition(self, partition):
         """Run task in spark context. Partitionwise for performance reasosn."""

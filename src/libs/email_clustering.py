@@ -13,6 +13,7 @@ from string import whitespace
 import dateparser
 from datetime import datetime
 
+
 class Preprocessing:
     # Preprocessing is used to extract all information and fields that are / might be needed to extract the features
     @staticmethod
@@ -55,7 +56,8 @@ class Preprocessing:
 
             body_complete = Preprocessing.remove_html_tags(Preprocessing.parse_body(message), check_for_tags=True)
             body_without_inline_headers = Preprocessing.remove_inline_headers(body_complete)
-            body_clean = Preprocessing.clean_text(Preprocessing.remove_html_tags(body_without_inline_headers, check_for_tags=False))
+            body_clean = Preprocessing.clean_text(
+                Preprocessing.remove_html_tags(body_without_inline_headers, check_for_tags=False))
             d['body_clean'].append(body_clean if body_clean else ' ')
             d['body_length'].append(len(body_complete))
             d['email_is_thread'].append(len(body_complete) > len(body_without_inline_headers))
@@ -73,18 +75,21 @@ class Preprocessing:
             d['sender_is_internal'].append(sender_is_internal)
 
             recipients = Preprocessing.parse_to_emails(message)
-            cc_recipients =  Preprocessing.parse_cc_emails(message)
+            cc_recipients = Preprocessing.parse_cc_emails(message)
             d['recipients'].append(recipients if recipients else 'UNKNOWN')
             d['recipients_cc'].append(cc_recipients if cc_recipients else 'UNKNOWN')
             recipients_amount = Preprocessing.count_emails(recipients) + Preprocessing.count_emails(cc_recipients)
             d['recipients_amount'].append(recipients_amount)
             d['recipients_is_single'].append(recipients_amount == 1)
 
-            recipients_domains = Preprocessing.get_recipient_domain(recipients) + Preprocessing.get_recipient_domain(cc_recipients)
+            recipients_domains = Preprocessing.get_recipient_domain(recipients) + Preprocessing.get_recipient_domain(
+                cc_recipients)
             recipients_domains_unique = list(set(recipients_domains))
             d['recipients_domains'].append(recipients_domains_unique if recipients_domains_unique else 'UNKNOWN')
-            d['recipients_domains_most_frequent'].append(max(set(recipients_domains), key=recipients_domains.count) if recipients_domains else 'UNKNOWN')
-            recipients_is_internal = len([x for x in recipients_domains_unique if 'enron' in x]) == len(recipients_domains_unique)
+            d['recipients_domains_most_frequent'].append(
+                max(set(recipients_domains), key=recipients_domains.count) if recipients_domains else 'UNKNOWN')
+            recipients_is_internal = len([x for x in recipients_domains_unique if 'enron' in x]) == len(
+                recipients_domains_unique)
             d['recipients_is_internal'].append(recipients_is_internal)
 
             d['email_is_internal'].append(sender_is_internal & recipients_is_internal)
@@ -152,7 +157,7 @@ class Preprocessing:
         begin_forwarded_message_heuristic = r'(.*Begin forwarded message:((\n|.)*?)To:.*)'
         original_message_heuristic = r'(.*-{3}.*Original Message((\n|.)*?)Subject:.*)'
         reply_seperator_heuristic = r'(.*_{3}.*Reply Separator((\n|.)*?)Date.*)'
-        date_to_subject_heuristic = r'(.*\n.*(on )?\d{2}\/\d{2}\/\d{2,4}\s\d{2}:\d{2}(:\d{2})?\s?(AM|PM|am|pm)?.*\n.*(\n.*)?To: (\n|.)*?Subject: .*)' # NOQA
+        date_to_subject_heuristic = r'(.*\n.*(on )?\d{2}\/\d{2}\/\d{2,4}\s\d{2}:\d{2}(:\d{2})?\s?(AM|PM|am|pm)?.*\n.*(\n.*)?To: (\n|.)*?Subject: .*)'  # NOQA
         from_to_subject_heuristic = r'(.*From:((\n|.)*?)Subject:.*)'
 
         header_regex = re.compile('(%s|%s|%s|%s|%s|%s)' % (
@@ -168,9 +173,9 @@ class Preprocessing:
     @staticmethod
     def clean_text(text):
         return preprocess_text(text, fix_unicode=True, lowercase=True, transliterate=True,
-                        no_urls=True, no_emails=True, no_phone_numbers=True,
-                        no_numbers=True, no_currency_symbols=True, no_punct=True,
-                        no_contractions=True, no_accents=True)
+                               no_urls=True, no_emails=True, no_phone_numbers=True,
+                               no_numbers=True, no_currency_symbols=True, no_punct=True,
+                               no_contractions=True, no_accents=True)
 
     @staticmethod
     def parse_from_email(message):
@@ -275,10 +280,11 @@ class Preprocessing:
 
     @staticmethod
     def remove_nan_drop(data, column):
-    	# TODO: replace with better strategy for handling nan values (maybe different strategies for different columns)
-    	data = data.loc[pd.notnull(data[column]), :]
-    	data = data.reset_index(drop=True)
-    	return data
+        # TODO: replace with better strategy for handling nan values (maybe different strategies for different columns)
+        data = data.loc[pd.notnull(data[column]), :]
+        data = data.reset_index(drop=True)
+        return data
+
 
 class FolderSplitting:
     @staticmethod
@@ -296,6 +302,7 @@ class FolderSplitting:
                     indeces = selection.sample(size).index
                 for index in indeces:
                     df.loc[df.index == index, 'folder_chunk'] = i + 1
+
 
 class FolderAggregation:
     @staticmethod
@@ -338,14 +345,17 @@ class FolderAggregation:
                 df_avg = df_avg.append(pd.DataFrame([row], columns=df_avg.columns), ignore_index=True)
         return df_avg
 
+
 class Features:
     @staticmethod
     def get_vectorizer(max_features, use_porter=False, norm='l2'):
         def get_porter_tfidf_vectorizer():
             stemmer = PorterStemmer()
             analyzer = TfidfVectorizer().build_analyzer()
+
             def stemmed_words(doc):
                 return (stemmer.stem(w) for w in analyzer(doc))
+
             return TfidfVectorizer(strip_accents='ascii', min_df=0.7, max_df=5, analyzer=stemmed_words)
 
         if (use_porter):
@@ -415,9 +425,9 @@ class Features:
 
     @staticmethod
     def add_sent_month_feature(d, df):
-        d['feat_sent_month_1'] = ((1 <= df.date_day) & (df.date_day <= 3)).apply(lambda x: int(x)) # month beginning
-        d['feat_sent_month_2'] = ((4 <= df.date_day) & (df.date_day <= 27)).apply(lambda x: int(x)) # month during
-        d['feat_sent_month_3'] = (28 <= df.date_day).apply(lambda x: int(x)) # month end
+        d['feat_sent_month_1'] = ((1 <= df.date_day) & (df.date_day <= 3)).apply(lambda x: int(x))  # month beginning
+        d['feat_sent_month_2'] = ((4 <= df.date_day) & (df.date_day <= 27)).apply(lambda x: int(x))  # month during
+        d['feat_sent_month_3'] = (28 <= df.date_day).apply(lambda x: int(x))  # month end
         return d
 
     @staticmethod
@@ -427,6 +437,7 @@ class Features:
                 return int(min <= hour < max)
             except:
                 return -1
+
         d['feat_sent_between_1'] = df.date_hour.apply(lambda x: sent_between(x, 0, 3))
         d['feat_sent_between_2'] = df.date_hour.apply(lambda x: sent_between(x, 3, 6))
         d['feat_sent_between_3'] = df.date_hour.apply(lambda x: sent_between(x, 6, 9))
@@ -447,8 +458,10 @@ class Features:
 
     @staticmethod
     def add_recipients_amount_feature(d, df):
-        d['feat_recipients_amount_1'] = ((0 <= df.recipients_amount) & (df.recipients_amount <= 1)).apply(lambda x: int(x))
-        d['feat_recipients_amount_2'] = ((1 < df.recipients_amount) & (df.recipients_amount <= 10)).apply(lambda x: int(x))
+        d['feat_recipients_amount_1'] = ((0 <= df.recipients_amount) & (df.recipients_amount <= 1)).apply(
+            lambda x: int(x))
+        d['feat_recipients_amount_2'] = ((1 < df.recipients_amount) & (df.recipients_amount <= 10)).apply(
+            lambda x: int(x))
         d['feat_recipients_amount_3'] = (10 < df.recipients_amount).apply(lambda x: int(x))
         return d
 
@@ -480,10 +493,13 @@ class Features:
         new_feat_df = pd.DataFrame(reduced).add_prefix(feat_prefix)
         return pd.concat([df_dropped, new_feat_df], axis=1)
 
+
 class Evaluation:
     @staticmethod
     def get_vect_words(vect):
-        return sorted(list(zip(vect.idf_, [x[1] for x in sorted([(v,k) for k,v in vect.vocabulary_.items()],key=lambda x: x[0])])), key=lambda x: x[0])
+        return sorted(list(
+            zip(vect.idf_, [x[1] for x in sorted([(v, k) for k, v in vect.vocabulary_.items()], key=lambda x: x[0])])),
+                      key=lambda x: x[0])
 
     # functions below insired by https://towardsdatascience.com/how-i-used-machine-learning-to-classify-emails-and-turn-them-into-insights-efed37c1e66
     @staticmethod
@@ -514,7 +530,7 @@ class Evaluation:
         dfs = []
         labels = np.unique(y)
         for label in labels:
-            ids = np.where(y==label)
+            ids = np.where(y == label)
             feats_df = Evaluation.top_mean_feats(X, features, ids, min_tfidf=min_tfidf, top_n=top_n)
             feats_df.label = label
             dfs.append(feats_df)
@@ -525,7 +541,7 @@ class Evaluation:
         dfs = []
         labels = np.unique(y)
         for label in labels:
-            ids = np.where(y==label)
+            ids = np.where(y == label)
             dfs.append((sum(X[ids]) / len(X[ids])))
         return dfs
 
@@ -564,7 +580,8 @@ class Evaluation:
                 features = features[:10]
             cluster_information_per_cluster[idx]['top_body_words'] = features
 
-        for feature in ['feat_email_is_thread', 'feat_email_is_internal', 'feat_recipients_is_single', 'feat_sent_during_business_hours']:
+        for feature in ['feat_email_is_thread', 'feat_email_is_internal', 'feat_recipients_is_single',
+                        'feat_sent_during_business_hours']:
             for idx, average in enumerate(Evaluation.average_per_cluster(df[feature].values, clusters)):
                 cluster_information_per_cluster[idx][feature.split('feat_')[1]] = average
 
@@ -575,7 +592,7 @@ class Evaluation:
         fig = plt.figure(figsize=(12, 9), facecolor="w")
         x = np.arange(len(dfs[0]))
         for i, df in enumerate(dfs):
-            ax = fig.add_subplot(1, len(dfs), i+1)
+            ax = fig.add_subplot(1, len(dfs), i + 1)
             ax.spines["top"].set_visible(False)
             ax.spines["right"].set_visible(False)
             ax.set_frame_on(False)
@@ -583,13 +600,14 @@ class Evaluation:
             ax.get_yaxis().tick_left()
             ax.set_xlabel("Tf-Idf Score", labelpad=16, fontsize=14)
             ax.set_title("cluster = " + str(df.label), fontsize=16)
-            ax.ticklabel_format(axis='x', style='sci', scilimits=(-2,2))
+            ax.ticklabel_format(axis='x', style='sci', scilimits=(-2, 2))
             ax.barh(x, df.score, align='center', color='#7530FF')
             ax.set_yticks(x)
-            ax.set_ylim([-1, x[-1]+1])
+            ax.set_ylim([-1, x[-1] + 1])
             yticks = ax.set_yticklabels(df.features)
             plt.subplots_adjust(bottom=0.09, right=0.97, left=0.15, top=0.95, wspace=0.52)
         plt.show()
+
 
 class EmailClusteringTool:
 

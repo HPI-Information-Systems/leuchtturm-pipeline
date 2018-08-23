@@ -33,14 +33,16 @@ class EmlReader(Pipe):
         self.filename_is_doc_id = filename_is_doc_id
         self.apply_email_filter = apply_email_filter
 
-    def is_valid_email(self, document):
+    def is_valid_email(self, x):
         """Return true if string is a RFC822 compliant email."""
-        return len(email.message_from_string(document).defects) == 0
+        ret = x[0].endswith('.eml') and len(email.message_from_string(x[1]).defects) == 0
+        if not ret:
+            print(' > ignoring {}'.format(x[0]), flush=True)
+        return ret
 
     def create_document(self, document, path):
         """Create json entry for a document."""
         doc_id = path.split(os.sep)[-1].split('.')[0] if self.filename_is_doc_id else str(uuid.uuid4())
-
         return json.dumps({'doc_id': doc_id,
                            'path': path,
                            'raw': document}, ensure_ascii=False)
@@ -49,7 +51,7 @@ class EmlReader(Pipe):
         """Run task in a spark context. Return rdd."""
         rdd = SparkProvider.spark_context(self.conf).wholeTextFiles(self.source_directory,
                                                                     minPartitions=self.parallelism)
-        rdd = rdd.filter(lambda x: self.is_valid_email(x[1])) if self.apply_email_filter else rdd
+        rdd = rdd.filter(lambda x: self.is_valid_email(x)) if self.apply_email_filter else rdd
         rdd = rdd.map(lambda x: self.create_document(x[1], x[0]))
 
         return rdd

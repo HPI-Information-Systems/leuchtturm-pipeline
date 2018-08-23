@@ -11,6 +11,7 @@ class NetworkUploader(Pipe):
     def __init__(self, conf):
         """Initialize with a config."""
         super().__init__(conf)
+        self.conf = conf
         self.neo4j_host = conf.get('neo4j', 'protocol') + '://' + conf.get('neo4j', 'host')
         self.http_port = conf.get('neo4j', 'http_port')
         self.bolt_port = conf.get('neo4j', 'bolt_port')
@@ -21,9 +22,9 @@ class NetworkUploader(Pipe):
 
     def run(self):
         """Run network uploader. Obligatory for Pipe inheritence."""
-        hierarchy_raw = json.load(open('hierarchy.json'))
-        community_raw = json.load(open('community.json'))
-        role_raw = json.load(open('role.json'))
+        hierarchy_raw = json.load(open(self.conf.get('network_analysis', 'hierarchy_file')))
+        community_raw = json.load(open(self.conf.get('network_analysis', 'community_file')))
+        role_raw = json.load(open(self.conf.get('network_analysis', 'role_file')))
 
         hierarchy = dict()
         for data in hierarchy_raw:

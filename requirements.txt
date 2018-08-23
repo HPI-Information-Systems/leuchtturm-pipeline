@@ -7,7 +7,8 @@ html2text
 dateparser
 langdetect
 gensim
-https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-2.0.0/en_core_web_sm-2.0.0.tar.gz  # spacy
+spacy
+# python -m spacy download en_core_web_sm
 textacy
 matplotlib
 numpy
@@ -15,6 +16,7 @@ keras
 git+https://www.github.com/keras-team/keras-contrib.git
 sklearn
 tensorflow
+networkx
 h5py
 pandas
 pysolr
@@ -25,3 +27,8 @@ regex
 pandas
 dill
 nltk  # IMPORTANT download nltk data via "conda install -c conda-forge nltk_data" or "python -m nltk.downloader all"
+# import nltk
+# nltk.download('stopwords')
+# nltk.download('punkt')
+# nltk.download('wordnet')
+ujson

@@ -3,6 +3,7 @@
 import ujson as json
 from datetime import datetime
 import time
+import shutil
 
 from py2neo import Graph
 from pysolr import Solr
@@ -80,6 +81,7 @@ class Neo4JNodeWriter(Pipe):
         """Collect docs partitionwise and upload them."""
         start_time = datetime.now()
         print('lt_logs', start_time, 'Start Neo4j Node Upload on partition...', flush=True)
+        print('lt_logs', 'ports: {} | {}'.format(self.http_port, self.bolt_port), flush=True)
         correspondents = [json.loads(item) for item in partition]
         graph = Graph(host=self.neo4j_host, http_port=self.http_port, bolt_port=self.bolt_port)
         graph.run('UNWIND $correspondents AS correspondent '
@@ -192,6 +194,30 @@ class Neo4JFileWriter(Pipe):
             results = sc.textFile(part)
             self.neo4j_writer.run(results)
         if self.mode == 'nodes' and self.conf.get('neo4j', 'create_node_index'):
+            print('bolt port:',self.conf.get('neo4j', 'bolt_port'))
+            graph = Graph(
+                host=self.conf.get('neo4j', 'host'),
+                http_port=self.conf.get('neo4j', 'http_port'),
+                bolt_port=self.conf.get('neo4j', 'bolt_port')
+            )
+            graph.schema.create_index('Person', 'identifying_name')
+
+
+class CSVgraphWriter(Pipe):
+    def __init__(self, conf):
+        """Set Neo4j instance config."""
+        super().__init__(conf)
+        self.conf = conf
+        # conf.get('data', 'results_correspondent_dir') #  mode = 'nodes'
+        # conf.get('data', 'results_injected_dir')      #  mode='edges'
+
+    def run(self):
+        """Run task in spark context."""
+        sc = SparkProvider.spark_context(self.conf)
+        for part in sc.wholeTextFiles(self.path).map(lambda x: x[0]).collect():
+            results = sc.textFile(part)
+            self.neo4j_writer.run(results)
+        if self.mode == 'nodes' and self.conf.get('neo4j', 'create_node_index'):
             graph = Graph(
                 host=self.conf.get('neo4j', 'host'),
                 http_port=self.conf.get('neo4j', 'http_port'),
@@ -210,6 +236,7 @@ class TextFileWriter(Pipe):
     def __init__(self, conf, path):
         """Set output path."""
         super().__init__(conf)
+        # shutil.rmtree(path, ignore_errors=True)
         self.path = path
 
     def run(self, rdd):
