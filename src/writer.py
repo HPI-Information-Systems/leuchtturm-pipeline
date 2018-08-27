@@ -10,6 +10,35 @@ from pysolr import Solr
 from .common import Pipe, SparkProvider
 
 
+class SolrUploader(Pipe):
+    def __init__(self, conf, collection):
+        """Set solr config and path where rdd is read from."""
+        super().__init__(conf)
+        self.conf = conf
+        self.rows_per_request = conf.get('solr', 'rows_per_request')
+        self.solr_url = conf.solr_url + collection
+        self.solr_client = Solr(self.solr_url)
+
+    def run_on_partition(self, partition):
+        def flatten_document(dd, separator='.', prefix=''):
+            """Flatten a nested python dict. Function in method because cannot pickle recursive methods."""
+            return {prefix + separator + k if prefix else k: v
+                    for kk, vv in dd.items()
+                    for k, v in flatten_document(vv, separator, kk).items()} if isinstance(dd, dict) else {prefix: dd}
+
+        buffer = []
+        for doc_str in partition:
+            doc = json.loads(doc_str)
+            buffer.append(flatten_document(doc))
+            if len(buffer) >= self.rows_per_request:
+                self.solr_client.add(buffer)
+                buffer = []
+        self.solr_client.add(buffer)
+
+    def run(self, rdd):
+        rdd.foreachPartition(lambda x: self.run_on_partition(x))
+
+
 class SolrWriter(Pipe):
     """Write all documents to a solr instance.
 
@@ -25,6 +54,7 @@ class SolrWriter(Pipe):
 
     def run_on_partition(self, partition):
         """Collect docs partitionswise, flatten nested structures and upload."""
+
         def flatten_document(dd, separator='.', prefix=''):
             """Flatten a nested python dict. Function in method because cannot pickle recursive methods."""
             return {prefix + separator + k if prefix else k: v
@@ -37,7 +67,7 @@ class SolrWriter(Pipe):
     def run(self, rdd):
         """Run task in spark context."""
         rdd.coalesce(1) \
-           .foreachPartition(lambda x: self.run_on_partition(x))
+            .foreachPartition(lambda x: self.run_on_partition(x))
 
 
 class SolrFileWriter(Pipe):
@@ -92,7 +122,7 @@ class Neo4JNodeWriter(Pipe):
     def run(self, rdd):
         """Run task in spark context."""
         rdd.coalesce(1) \
-           .foreachPartition(self.run_on_partition)
+            .foreachPartition(self.run_on_partition)
 
 
 class Neo4JEdgeWriter(Pipe):
@@ -144,18 +174,18 @@ class Neo4JEdgeWriter(Pipe):
         graph = Graph(host=self.neo4j_host, http_port=self.http_port, bolt_port=self.bolt_port)
         graph.run(
             'UNWIND $mails AS mail '
-                'MATCH '
-                    '(a:Person {identifying_name: mail.sender_identifying_name}) '
-                'UNWIND mail.recipient_identifying_names AS recipient_identifying_name '
-                    'MATCH '
-                        '(b:Person {identifying_name: recipient_identifying_name}) '
-                    'MERGE (a)-[w:WRITESTO]->(b) '
-                        'ON CREATE SET '
-                            'w.mail_list = [mail.mail_id], '
-                            'w.time_list = [mail.mail_timestamp] '
-                        'ON MATCH SET '
-                            'w.mail_list = w.mail_list + mail.mail_id, '
-                            'w.time_list = w.time_list + mail.mail_timestamp',
+            'MATCH '
+            '(a:Person {identifying_name: mail.sender_identifying_name}) '
+            'UNWIND mail.recipient_identifying_names AS recipient_identifying_name '
+            'MATCH '
+            '(b:Person {identifying_name: recipient_identifying_name}) '
+            'MERGE (a)-[w:WRITESTO]->(b) '
+            'ON CREATE SET '
+            'w.mail_list = [mail.mail_id], '
+            'w.time_list = [mail.mail_timestamp] '
+            'ON MATCH SET '
+            'w.mail_list = w.mail_list + mail.mail_id, '
+            'w.time_list = w.time_list + mail.mail_timestamp',
             mails=documents
         )  # noqa
         print('lt_logs', datetime.now(), 'Finish Neo4j Edge Upload on partition from', start_time, flush=True)
@@ -163,8 +193,8 @@ class Neo4JEdgeWriter(Pipe):
     def run(self, rdd):
         """Run task in spark context."""
         rdd.map(self.prepare_for_upload) \
-           .coalesce(1) \
-           .foreachPartition(self.run_on_partition)
+            .coalesce(1) \
+            .foreachPartition(self.run_on_partition)
 
 
 class Neo4JFileWriter(Pipe):
@@ -194,7 +224,7 @@ class Neo4JFileWriter(Pipe):
             results = sc.textFile(part)
             self.neo4j_writer.run(results)
         if self.mode == 'nodes' and self.conf.get('neo4j', 'create_node_index'):
-            print('bolt port:',self.conf.get('neo4j', 'bolt_port'))
+            print('bolt port:', self.conf.get('neo4j', 'bolt_port'))
             graph = Graph(
                 host=self.conf.get('neo4j', 'host'),
                 http_port=self.conf.get('neo4j', 'http_port'),
@@ -203,27 +233,113 @@ class Neo4JFileWriter(Pipe):
             graph.schema.create_index('Person', 'identifying_name')
 
 
-class CSVgraphWriter(Pipe):
+class Neo4JNodeUploader(Pipe):
     def __init__(self, conf):
         """Set Neo4j instance config."""
         super().__init__(conf)
         self.conf = conf
-        # conf.get('data', 'results_correspondent_dir') #  mode = 'nodes'
-        # conf.get('data', 'results_injected_dir')      #  mode='edges'
+        self.neo4j_host = conf.get('neo4j', 'host')
+        self.http_port = conf.get('neo4j', 'http_port')
+        self.bolt_port = conf.get('neo4j', 'bolt_port')
+        self.buffer_size = conf.get('neo4j', 'rows_per_request')
+        self.neo_connection = Graph(host=self.neo4j_host, http_port=self.http_port, bolt_port=self.bolt_port)
 
-    def run(self):
-        """Run task in spark context."""
-        sc = SparkProvider.spark_context(self.conf)
-        for part in sc.wholeTextFiles(self.path).map(lambda x: x[0]).collect():
-            results = sc.textFile(part)
-            self.neo4j_writer.run(results)
-        if self.mode == 'nodes' and self.conf.get('neo4j', 'create_node_index'):
-            graph = Graph(
-                host=self.conf.get('neo4j', 'host'),
-                http_port=self.conf.get('neo4j', 'http_port'),
-                bolt_port=self.conf.get('neo4j', 'bolt_port')
+    def upload_batch(self, correspondents):
+        self.neo_connection.run('UNWIND $correspondents AS correspondent '
+                                'CREATE (a:Person) SET a = correspondent',
+                                correspondents=correspondents)
+
+    def run_on_partition(self, partition):
+        buffer = []
+        for doc_str in partition:
+            buffer.append(json.loads(doc_str))
+            if len(buffer) > self.buffer_size:
+                self.upload_batch(buffer)
+                buffer = []
+        self.upload_batch(buffer)
+
+    def run(self, rdd):
+        start_time = datetime.now()
+        print('lt_logs', start_time, 'Start Neo4j Node Upload on partition...', flush=True)
+        rdd.foreachPartition(self.run_on_partition)
+        print('lt_logs', datetime.now(), 'Finish Neo4j Node Upload on partition from', start_time, flush=True)
+
+        if self.conf.get('neo4j', 'create_node_index'):
+            print('Creating node index in neo4j for person names (on identifying_name) ...')
+            self.neo_connection.schema.create_index('Person', 'identifying_name')
+            print('Done with index!')
+
+
+class Neo4JEdgeUploader(Pipe):
+    def __init__(self, conf):
+        """Set Neo4j instance config."""
+        super().__init__(conf)
+        self.conf = conf
+        self.neo4j_host = conf.get('neo4j', 'host')
+        self.http_port = conf.get('neo4j', 'http_port')
+        self.bolt_port = conf.get('neo4j', 'bolt_port')
+        self.buffer_size = conf.get('neo4j', 'rows_per_request')
+        self.neo_connection = Graph(host=self.neo4j_host, http_port=self.http_port, bolt_port=self.bolt_port)
+
+    def prepare_for_upload(self, data):
+        """Reduce complexity of an email object so that it can be easier consumed by Neo4j."""
+        document = json.loads(data)
+
+        mail_id = document.get('doc_id', '')
+        header = document.get('header', {})
+        sender = header.get('sender', {})
+        recipients = header.get('recipients', [{}])
+        path = document.get('path', '')
+        try:
+            mail_timestamp = time.mktime(
+                datetime.strptime(header.get('date', ''), "%Y-%m-%dT%H:%M:%SZ").timetuple()
             )
-            graph.schema.create_index('Person', 'identifying_name')
+        except Exception:
+            mail_timestamp = 0.0  # timestamp for 1970-01-01T00:00:00+00:00'
+
+        result_document = {
+            'mail_id': mail_id,
+            'sender_identifying_name': sender.get('identifying_name', ''),
+            'recipient_identifying_names': [recipient.get('identifying_name', '') for recipient in recipients],
+            'path': path,
+            'mail_timestamp': mail_timestamp
+        }
+
+        return json.dumps(result_document)
+
+    def upload_batch(self, documents):
+        self.neo_connection.run(
+            'UNWIND $mails AS mail '
+            'MATCH '
+            '(a:Person {identifying_name: mail.sender_identifying_name}) '
+            'UNWIND mail.recipient_identifying_names AS recipient_identifying_name '
+            'MATCH '
+            '(b:Person {identifying_name: recipient_identifying_name}) '
+            'MERGE (a)-[w:WRITESTO]->(b) '
+            'ON CREATE SET '
+            'w.mail_list = [mail.mail_id], '
+            'w.time_list = [mail.mail_timestamp] '
+            'ON MATCH SET '
+            'w.mail_list = w.mail_list + mail.mail_id, '
+            'w.time_list = w.time_list + mail.mail_timestamp',
+            mails=documents
+        )
+
+    def run_on_partition(self, partition):
+        buffer = []
+        for doc_str in partition:
+            buffer.append(json.loads(doc_str))
+            if len(buffer) > self.buffer_size:
+                self.upload_batch(buffer)
+                buffer = []
+        self.upload_batch(buffer)
+
+    def run(self, rdd):
+        start_time = datetime.now()
+        print('lt_logs', start_time, 'Start Neo4j Edge Upload on partition...', flush=True)
+        rdd.map(self.prepare_for_upload) \
+            .foreachPartition(self.run_on_partition)
+        print('lt_logs', datetime.now(), 'Finish Neo4j Edge Upload on partition from', start_time, flush=True)
 
 
 class TextFileWriter(Pipe):

@@ -8,7 +8,8 @@ from src.preprocessing import EmailDecoding, EmailSplitting, HeaderParsing, Text
 from src.deduplication import EmailDeduplication
 from src.phrase_detection import PhraseDetection
 from src.topics import TopicModelPreprocessing, TopicModelTraining, TopicModelPrediction, TopicSimilarity
-from src.writer import TextFileWriter, SolrFileWriter, Neo4JFileWriter  # , CSVGraphWriter
+from src.writer import TextFileWriter, SolrFileWriter, Neo4JFileWriter, \
+    SolrUploader, Neo4JEdgeUploader, Neo4JNodeUploader
 from src.signature_extraction import SignatureExtraction
 from src.correspondent_extraction_aggregation \
     import CorrespondentDataExtraction, CorrespondentDataAggregation, CorrespondentIdInjection
@@ -157,18 +158,29 @@ def run_email_pipeline(conf):
         print(' ##########################\n'
               ' # #    SOLR IMPORT     # #\n'
               ' ##########################')
-        SolrFileWriter(conf, conf.get('solr', 'import_from_1'),
-                       conf.solr_url + conf.get('solr', 'collection')).run()
-        SolrFileWriter(conf, conf.get('solr', 'import_from_2'),
-                       conf.solr_url + conf.get('solr', 'topic_collection')).run()
+
+        solr_import_1 = TextFileReader(conf, path=conf.get('solr', 'import_from_1')).run()
+        SolrUploader(conf, conf.get('solr', 'collection')).run(solr_import_1)
+
+        solr_import_2 = TextFileReader(conf, path=conf.get('solr', 'import_from_2')).run()
+        SolrUploader(conf, conf.get('solr', 'topic_collection')).run(solr_import_2)
+
+        # SolrFileWriter(conf, conf.get('solr', 'import_from_1'), conf.get('solr', 'collection')).run()
+        # SolrFileWriter(conf, conf.get('solr', 'import_from_2'), conf.get('solr', 'topic_collection')).run()
 
     if conf.get('neo4j', 'import'):
         print(' ##########################\n'
               ' # #   NEO4J IMPORT     # #\n'
               ' ##########################')
-        Neo4JFileWriter(conf, conf.get('neo4j', 'import_from_1'), mode='nodes').run()
-        Neo4JFileWriter(conf, conf.get('neo4j', 'import_from_2'), mode='edges').run()
-        # CSVGraphWriter(conf).run()
+        nodes_rdd = TextFileReader(conf, path=conf.get('neo4j', 'import_from_1')).run()
+        Neo4JNodeUploader(conf).run(nodes_rdd)
+
+        edges_rdd = TextFileReader(conf, path=conf.get('neo4j', 'import_from_2')).run()
+        Neo4JEdgeUploader(conf).run(edges_rdd)
+
+        # Neo4JFileWriter(conf, conf.get('neo4j', 'import_from_1'), mode='nodes').run()
+        # Neo4JFileWriter(conf, conf.get('neo4j', 'import_from_2'), mode='edges').run()
+
         if conf.get('network_analysis', 'run'):
             NetworkAnalyser(conf).run()
             NetworkUploader(conf).run()
