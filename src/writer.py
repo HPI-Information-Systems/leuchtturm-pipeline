@@ -17,7 +17,6 @@ class SolrUploader(Pipe):
         self.conf = conf
         self.rows_per_request = conf.get('solr', 'rows_per_request')
         self.solr_url = conf.solr_url + collection
-        self.solr_client = Solr(self.solr_url)
 
     def run_on_partition(self, partition):
         def flatten_document(dd, separator='.', prefix=''):
@@ -26,17 +25,18 @@ class SolrUploader(Pipe):
                     for kk, vv in dd.items()
                     for k, v in flatten_document(vv, separator, kk).items()} if isinstance(dd, dict) else {prefix: dd}
 
+        solr_client = Solr(self.solr_url)
         buffer = []
         for doc_str in partition:
             doc = json.loads(doc_str)
             buffer.append(flatten_document(doc))
             if len(buffer) >= self.rows_per_request:
-                self.solr_client.add(buffer)
+                solr_client.add(buffer)
                 buffer = []
-        self.solr_client.add(buffer)
+        solr_client.add(buffer)
 
     def run(self, rdd):
-        rdd.foreachPartition(lambda x: self.run_on_partition(x))
+        rdd.coalesce(1).foreachPartition(lambda x: self.run_on_partition(x))
 
 
 class SolrWriter(Pipe):
@@ -242,26 +242,27 @@ class Neo4JNodeUploader(Pipe):
         self.http_port = conf.get('neo4j', 'http_port')
         self.bolt_port = conf.get('neo4j', 'bolt_port')
         self.buffer_size = conf.get('neo4j', 'rows_per_request')
-        self.neo_connection = Graph(host=self.neo4j_host, http_port=self.http_port, bolt_port=self.bolt_port)
 
-    def upload_batch(self, correspondents):
-        self.neo_connection.run('UNWIND $correspondents AS correspondent '
-                                'CREATE (a:Person) SET a = correspondent',
-                                correspondents=correspondents)
+    def upload_batch(self, neo_connection, correspondents):
+        neo_connection.run('UNWIND $correspondents AS correspondent '
+                           'CREATE (a:Person) SET a = correspondent',
+                           correspondents=correspondents)
 
     def run_on_partition(self, partition):
+        neo_connection = Graph(host=self.neo4j_host, http_port=self.http_port, bolt_port=self.bolt_port)
         buffer = []
         for doc_str in partition:
             buffer.append(json.loads(doc_str))
             if len(buffer) > self.buffer_size:
-                self.upload_batch(buffer)
+                self.upload_batch(neo_connection, buffer)
                 buffer = []
-        self.upload_batch(buffer)
+        self.upload_batch(neo_connection, buffer)
 
     def run(self, rdd):
         start_time = datetime.now()
         print('lt_logs', start_time, 'Start Neo4j Node Upload on partition...', flush=True)
-        rdd.foreachPartition(self.run_on_partition)
+        rdd.coalesce(1)\
+            .foreachPartition(self.run_on_partition)
         print('lt_logs', datetime.now(), 'Finish Neo4j Node Upload on partition from', start_time, flush=True)
 
         if self.conf.get('neo4j', 'create_node_index'):
@@ -279,7 +280,6 @@ class Neo4JEdgeUploader(Pipe):
         self.http_port = conf.get('neo4j', 'http_port')
         self.bolt_port = conf.get('neo4j', 'bolt_port')
         self.buffer_size = conf.get('neo4j', 'rows_per_request')
-        self.neo_connection = Graph(host=self.neo4j_host, http_port=self.http_port, bolt_port=self.bolt_port)
 
     def prepare_for_upload(self, data):
         """Reduce complexity of an email object so that it can be easier consumed by Neo4j."""
@@ -307,7 +307,7 @@ class Neo4JEdgeUploader(Pipe):
 
         return json.dumps(result_document)
 
-    def upload_batch(self, documents):
+    def upload_batch(self, neo_connection, documents):
         self.neo_connection.run(
             'UNWIND $mails AS mail '
             'MATCH '
@@ -326,18 +326,20 @@ class Neo4JEdgeUploader(Pipe):
         )
 
     def run_on_partition(self, partition):
+        neo_connection = Graph(host=self.neo4j_host, http_port=self.http_port, bolt_port=self.bolt_port)
         buffer = []
         for doc_str in partition:
             buffer.append(json.loads(doc_str))
             if len(buffer) > self.buffer_size:
-                self.upload_batch(buffer)
+                self.upload_batch(neo_connection, buffer)
                 buffer = []
-        self.upload_batch(buffer)
+        self.upload_batch(neo_connection, buffer)
 
     def run(self, rdd):
         start_time = datetime.now()
         print('lt_logs', start_time, 'Start Neo4j Edge Upload on partition...', flush=True)
-        rdd.map(self.prepare_for_upload) \
+        rdd.map(self.prepare_for_upload)\
+            .coalesce(1) \
             .foreachPartition(self.run_on_partition)
         print('lt_logs', datetime.now(), 'Finish Neo4j Edge Upload on partition from', start_time, flush=True)
 
