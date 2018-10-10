@@ -128,3 +128,10 @@ venv.bak/
 # mypy
 .mypy_cache/
 .idea/
+
+solr/
+neo4j/
+tmp/
+tika-app-1.18.jar
+tika-server-1.18.jar
+data/
